@@ -1453,26 +1453,60 @@ def split_chapter_into_verses_with_formatting(
 
     >>> html_content = '''
     ... <span class="verse">
-    ... <sup class="versemarker">19</sup>
-    ... For through the law I died to the law, so that I might live for God. I have been crucified with Christ.
-    ... <sup id="footnote-caller-1" class="caller"><a href="#footnote-target-1">1</a></sup>
-    ... <div class="sectionhead-5"></div>
+    ... <sup class="versemarker">1</sup>
+    ... <span class="word-entry"> Généalogie </span>
+    ... <span class="word-entry">  </span>
+    ...  de
+    ... <span class="word-entry"> Jésus </span>
+    ... -
+    ... <span class="word-entry"> Christ </span>
+    ... ,
+    ... <span class="word-entry"> fils </span>
+    ...  de
+    ... <span class="word-entry"> David </span>
+    ... ,
+    ... <span class="word-entry"> fils </span>
+    ...  d'
+    ... <span class="word-entry"> Abraham </span>
+    ... .
+    ...
     ... </span>
     ... <span class="verse">
-    ... <sup class="versemarker">20</sup>
-    ... I have been crucified with Christ and I no longer live, but Christ lives in me. The life I now live in the body, I live by faith in the Son of God, who loved me and gave himself for me.
-    ... <sup id="footnote-caller-2" class="caller"><a href="#footnote-target-2">2</a></sup>
-    ... <div class="sectionhead-5"></div>
-    ... </span>
+    ... <sup class="versemarker">2</sup>
+    ... <span class="word-entry"> Abraham </span>
+    ...
+    ... <span class="word-entry"> engendra </span>
+    ...
+    ... <span class="word-entry"> Isaac </span>
+    ... ;
+    ... <span class="word-entry">  </span>
+    ...
+    ... <span class="word-entry"> Isaac </span>
+    ...
+    ... <span class="word-entry"> engendra </span>
+    ...
+    ... <span class="word-entry"> Jacob </span>
+    ... ;
+    ... <span class="word-entry">  </span>
+    ...
+    ... <span class="word-entry"> Jacob </span>
+    ...
+    ... <span class="word-entry"> engendra </span>
+    ...
+    ... <span class="word-entry"> Juda </span>
+    ...
+    ... <span class="word-entry"> et </span>
+    ...
+    ... <span class="word-entry"> ses </span>
+    ...
+    ... <span class="word-entry"> frères </span>
+    ... ;
     ... '''
     >>> from doc.domain.parsing import split_chapter_into_verses_with_formatting
     >>> chapter = USFMChapter(content=html_content, verses=None)
     >>> chapter.verses = split_chapter_into_verses_with_formatting(chapter)
-    >>> print(chapter.verses["19"])
-    <sup class="versemarker">19</sup>
-    For through the law I died to the law, so that I might live for God. I have been crucified with Christ.
-    <sup id="footnote-caller-1" class="caller"><a href="#footnote-target-1">1</a></sup>
-    <BLANKLINE>
+    >>> print(chapter.verses["1"])
+    <span class="verse"> Généalogie de Jésus - Christ, fils de David, fils d'Abraham. </span>
     """
     soup = BeautifulSoup(chapter.content, "html.parser")
     verse_dict: dict[VerseRef, str] = {}
@@ -1497,7 +1531,7 @@ def clean_content_html(raw_content: str) -> str:
     cleaned_html = sub(r"\s+([,;:.!?])", r"\1", cleaned_html)
     cleaned_html = sub(r"\s+'", "'", cleaned_html)
     cleaned_html = sub(r"'\s+", "'", cleaned_html)
-    cleaned_html = sub(r"\s*-\s*", "-", cleaned_html)
+    # cleaned_html = sub(r"\s*-\s*", "-", cleaned_html)
     cleaned_html = sub(r"\s{2,}", " ", cleaned_html).strip()
     return cleaned_html
 

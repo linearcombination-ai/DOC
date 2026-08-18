@@ -5,8 +5,10 @@ from doc.domain.parsing import (
     ensure_chapter_label,
     ensure_chapter_marker,
     maybe_localized_book_name,
+    split_chapter_into_verses_with_formatting,
 )
 from doc.domain import model, resource_lookup
+from doc.domain.model import USFMChapter
 
 
 def test_ensure_chapter_marker_unchanged_if_exists() -> None:
@@ -100,6 +102,145 @@ def test_fr_f10_book_name_lookup_prefs() -> None:
     localized_book_name = maybe_localized_book_name(usfm_metadata, "fr", "f10")
     assert localized_book_name != "Épître de saint jude"
     assert localized_book_name == expected
+
+
+
+# Sample content taken from fr f10 Matthew 1, which uses word-entry tags.
+FRENCH_WORD_ENTRY_HTML = '''
+<span class="verse">
+<sup class="versemarker">1</sup>
+<span class="word-entry"> Généalogie </span>
+<span class="word-entry">  </span>
+ de
+<span class="word-entry"> Jésus </span>
+-
+<span class="word-entry"> Christ </span>
+,
+<span class="word-entry"> fils </span>
+ de
+<span class="word-entry"> David </span>
+,
+<span class="word-entry"> fils </span>
+ d'
+<span class="word-entry"> Abraham </span>
+.
+
+</span>
+<span class="verse">
+<sup class="versemarker">2</sup>
+<span class="word-entry"> Abraham </span>
+
+<span class="word-entry"> engendra </span>
+
+<span class="word-entry"> Isaac </span>
+;
+</span>
+'''
+
+# Sample content in the shape produced for USFM without word-entry tags: a
+# footnote caller sup and a trailing sectionhead div follow the verse text.
+GALATIANS_HTML = '''
+<span class="verse">
+<sup class="versemarker"> 19 </sup>
+For through the law I died to the law, so that I might live for God.
+<sup id="footnote-caller-1" class="caller"><a href="#footnote-target-1">1</a></sup>
+<div class="sectionhead-5"></div>
+</span>
+<span class="verse">
+<sup class="versemarker">20</sup>
+I have been crucified with Christ and I no longer live.
+<sup id="footnote-caller-2" class="caller"><a href="#footnote-target-2">2</a></sup>
+<div class="sectionhead-5"></div>
+</span>
+'''
+
+
+def test_split_chapter_into_verses_with_formatting_keys() -> None:
+    chapter = USFMChapter(content=GALATIANS_HTML, verses=None)
+    verses = split_chapter_into_verses_with_formatting(chapter)
+    assert list(verses.keys()) == ["19", "20"]
+
+
+def test_split_chapter_into_verses_with_formatting_strips_verse_number_whitespace() -> (
+    None
+):
+    # The versemarker sup for verse 19 is written as "<sup ...> 19 </sup>".
+    chapter = USFMChapter(content=GALATIANS_HTML, verses=None)
+    verses = split_chapter_into_verses_with_formatting(chapter)
+    assert "19" in verses
+    assert " 19 " not in verses
+
+
+def test_split_chapter_into_verses_with_formatting_removes_versemarker_only() -> None:
+    chapter = USFMChapter(content=GALATIANS_HTML, verses=None)
+    verses = split_chapter_into_verses_with_formatting(chapter)
+    for verse in verses.values():
+        assert "versemarker" not in verse
+    # Other markup inside the verse span survives.
+    assert verses["19"] == (
+        '<span class="verse"> For through the law I died to the law, '
+        "so that I might live for God.\n"
+        '<sup class="caller" id="footnote-caller-1">'
+        '<a href="#footnote-target-1">1</a></sup>\n'
+        '<div class="sectionhead-5"></div>\n</span>'
+    )
+
+
+def test_split_chapter_into_verses_with_formatting_unwraps_word_entries() -> None:
+    chapter = USFMChapter(content=FRENCH_WORD_ENTRY_HTML, verses=None)
+    verses = split_chapter_into_verses_with_formatting(chapter)
+    assert list(verses.keys()) == ["1", "2"]
+    for verse in verses.values():
+        assert "word-entry" not in verse
+    # The wrapped text survives in place, with whitespace collapsed and
+    # whitespace before punctuation removed.
+    assert verses["1"] == (
+        '<span class="verse"> Généalogie de Jésus - Christ, fils de David, '
+        "fils d'Abraham. </span>"
+    )
+    assert verses["2"] == '<span class="verse"> Abraham engendra Isaac;\n</span>'
+
+
+def test_split_chapter_into_verses_with_formatting_preserves_hyphen_spacing() -> None:
+    """Spacing around a hyphen is no longer collapsed (see clean_content_html)."""
+    chapter = USFMChapter(content=FRENCH_WORD_ENTRY_HTML, verses=None)
+    verses = split_chapter_into_verses_with_formatting(chapter)
+    assert "Jésus - Christ" in verses["1"]
+    assert "Jésus-Christ" not in verses["1"]
+
+
+def test_split_chapter_into_verses_with_formatting_skips_verses_without_versemarker() -> (
+    None
+):
+    html_content = '''
+<span class="verse">
+No versemarker sup at all here.
+</span>
+<span class="verse">
+<sup class="versemarker"></sup>
+An empty versemarker sup here.
+</span>
+<span class="verse">
+<sup class="versemarker">3</sup>
+A well formed verse.
+</span>
+'''
+    chapter = USFMChapter(content=html_content, verses=None)
+    verses = split_chapter_into_verses_with_formatting(chapter)
+    assert list(verses.keys()) == ["3"]
+    assert verses["3"] == '<span class="verse"> A well formed verse.\n</span>'
+
+
+def test_split_chapter_into_verses_with_formatting_without_verse_spans() -> None:
+    chapter = USFMChapter(
+        content="<p>Chapter content with no verse spans.</p>", verses=None
+    )
+    assert split_chapter_into_verses_with_formatting(chapter) == {}
+
+
+def test_split_chapter_into_verses_with_formatting_empty_content() -> None:
+    chapter = USFMChapter(content="", verses=None)
+    assert split_chapter_into_verses_with_formatting(chapter) == {}
 
 
 if __name__ == "__main__":
