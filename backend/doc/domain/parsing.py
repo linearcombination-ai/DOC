@@ -1501,12 +1501,13 @@ def split_chapter_into_verses_with_formatting(
     ...
     ... <span class="word-entry"> frères </span>
     ... ;
+    ... </span>
     ... '''
     >>> from doc.domain.parsing import split_chapter_into_verses_with_formatting
     >>> chapter = USFMChapter(content=html_content, verses=None)
     >>> chapter.verses = split_chapter_into_verses_with_formatting(chapter)
     >>> print(chapter.verses["1"])
-    <span class="verse"> Généalogie de Jésus - Christ, fils de David, fils d'Abraham. </span>
+    <span class="verse"> Généalogie de Jésus-Christ, fils de David, fils d'Abraham. </span>
     """
     soup = BeautifulSoup(chapter.content, "html.parser")
     verse_dict: dict[VerseRef, str] = {}
@@ -1531,7 +1532,7 @@ def clean_content_html(raw_content: str) -> str:
     cleaned_html = sub(r"\s+([,;:.!?])", r"\1", cleaned_html)
     cleaned_html = sub(r"\s+'", "'", cleaned_html)
     cleaned_html = sub(r"'\s+", "'", cleaned_html)
-    # cleaned_html = sub(r"\s*-\s*", "-", cleaned_html)
+    cleaned_html = sub(r"\s*-\s*", "-", cleaned_html)
     cleaned_html = sub(r"\s{2,}", " ", cleaned_html).strip()
     return cleaned_html
 

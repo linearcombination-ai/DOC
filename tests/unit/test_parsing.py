@@ -195,18 +195,18 @@ def test_split_chapter_into_verses_with_formatting_unwraps_word_entries() -> Non
     # The wrapped text survives in place, with whitespace collapsed and
     # whitespace before punctuation removed.
     assert verses["1"] == (
-        '<span class="verse"> Généalogie de Jésus - Christ, fils de David, '
+        '<span class="verse"> Généalogie de Jésus-Christ, fils de David, '
         "fils d'Abraham. </span>"
     )
     assert verses["2"] == '<span class="verse"> Abraham engendra Isaac;\n</span>'
 
 
-def test_split_chapter_into_verses_with_formatting_preserves_hyphen_spacing() -> None:
-    """Spacing around a hyphen is no longer collapsed (see clean_content_html)."""
+def test_split_chapter_into_verses_with_formatting_collapses_hyphen_spacing() -> None:
+    """Spacing around a hyphen is intentionally collapsed (see clean_content_html)."""
     chapter = USFMChapter(content=FRENCH_WORD_ENTRY_HTML, verses=None)
     verses = split_chapter_into_verses_with_formatting(chapter)
-    assert "Jésus - Christ" in verses["1"]
-    assert "Jésus-Christ" not in verses["1"]
+    assert "Jésus-Christ" in verses["1"]
+    assert "Jésus - Christ" not in verses["1"]
 
 
 def test_split_chapter_into_verses_with_formatting_skips_verses_without_versemarker() -> (
