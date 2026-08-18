@@ -104,9 +104,8 @@ def test_fr_f10_book_name_lookup_prefs() -> None:
     assert localized_book_name == expected
 
 
-
 # Sample content taken from fr f10 Matthew 1, which uses word-entry tags.
-FRENCH_WORD_ENTRY_HTML = '''
+FRENCH_WORD_ENTRY_HTML = """
 <span class="verse">
 <sup class="versemarker">1</sup>
 <span class="word-entry"> Généalogie </span>
@@ -135,11 +134,11 @@ FRENCH_WORD_ENTRY_HTML = '''
 <span class="word-entry"> Isaac </span>
 ;
 </span>
-'''
+"""
 
 # Sample content in the shape produced for USFM without word-entry tags: a
 # footnote caller sup and a trailing sectionhead div follow the verse text.
-GALATIANS_HTML = '''
+GALATIANS_HTML = """
 <span class="verse">
 <sup class="versemarker"> 19 </sup>
 For through the law I died to the law, so that I might live for God.
@@ -152,7 +151,7 @@ I have been crucified with Christ and I no longer live.
 <sup id="footnote-caller-2" class="caller"><a href="#footnote-target-2">2</a></sup>
 <div class="sectionhead-5"></div>
 </span>
-'''
+"""
 
 
 def test_split_chapter_into_verses_with_formatting_keys() -> None:
@@ -212,7 +211,7 @@ def test_split_chapter_into_verses_with_formatting_collapses_hyphen_spacing() ->
 def test_split_chapter_into_verses_with_formatting_skips_verses_without_versemarker() -> (
     None
 ):
-    html_content = '''
+    html_content = """
 <span class="verse">
 No versemarker sup at all here.
 </span>
@@ -224,7 +223,7 @@ An empty versemarker sup here.
 <sup class="versemarker">3</sup>
 A well formed verse.
 </span>
-'''
+"""
     chapter = USFMChapter(content=html_content, verses=None)
     verses = split_chapter_into_verses_with_formatting(chapter)
     assert list(verses.keys()) == ["3"]

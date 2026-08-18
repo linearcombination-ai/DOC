@@ -1540,9 +1540,11 @@ def clean_content_html(raw_content: str) -> str:
 if __name__ == "__main__":
 
     # To run the doctests in this module, in the root of the project do:
-    # python backend/document/domain/resource_lookup.py
+    # PYTHONPATH=backend python backend/doc/domain/parsing.py
     # or
-    # python backend/document/domain/resource_lookup.py -v
+    # PYTHONPATH=backend python backend/doc/domain/parsing.py -v
+    # These doctests are not collected by pytest: pyproject.toml sets
+    # testpaths = ["tests"] with no doctest collection, so run them by hand.
     # See https://docs.python.org/3/library/doctest.html
     # for more details.
     import doctest
