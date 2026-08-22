@@ -143,7 +143,7 @@ def split_chapter_into_verses(chapter: USFMChapter) -> dict[str, str]:
             we.unwrap()
         # Get inner HTML of the verse span
         verse_text = "".join(str(child) for child in verse_span.contents).strip()
-        # verse_text = clean_verse_html(verse_text)
+        verse_text = clean_verse_html(verse_text)
         verse_dict[verse_number] = verse_text
     return verse_dict
 
@@ -154,12 +154,12 @@ def clean_verse_html(
     sectionhead5_element: str = '<div class="sectionhead-5"></div>',
 ) -> str:
     cleaned_html = raw_verse
+    cleaned_html = cleaned_html.replace(empty_paragraph, " ").replace(
+        sectionhead5_element, " "
+    )
     cleaned_html = sub(r"\s+([,;:.!?])", r"\1", cleaned_html)
     cleaned_html = sub(r"\s+'", "'", cleaned_html)
     cleaned_html = sub(r"'\s+", "'", cleaned_html)
     cleaned_html = sub(r"\s*-\s*", "-", cleaned_html)
     cleaned_html = sub(r"\s{2,}", " ", cleaned_html).strip()
-    cleaned_html = cleaned_html.replace(empty_paragraph, "").replace(
-        sectionhead5_element, ""
-    )
     return cleaned_html
