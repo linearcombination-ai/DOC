@@ -1,4 +1,4 @@
-from re import split, sub
+from re import sub
 from typing import Mapping
 
 from bs4 import BeautifulSoup, NavigableString

@@ -72,9 +72,7 @@ def test_split_chapter_into_verses_cleans_galatians_prose() -> None:
     assert verses["19"] == (
         "For through the law I died to the law, so that I might live for God."
     )
-    assert verses["20"] == (
-        "I have been crucified with Christ and I no longer live."
-    )
+    assert verses["20"] == ("I have been crucified with Christ and I no longer live.")
     assert "sectionhead-5" not in verses["19"]
     assert "sectionhead-5" not in verses["20"]
 
@@ -130,13 +128,10 @@ def test_split_chapter_into_verses_preserves_poetry_and_acrostic_heading() -> No
     verse = verses["9"]
     # Poetry line structure survives intact.
     assert '<div class="poetry-1">How can a young man keep his way pure?</div>' in verse
-    assert (
-        '<div class="poetry-2">By guarding it according to your word.</div>' in verse
-    )
+    assert '<div class="poetry-2">By guarding it according to your word.</div>' in verse
     assert '<div class="poetry-1">With my whole heart I seek you;</div>' in verse
     assert (
-        '<div class="poetry-2">let me not wander from your commandments!</div>'
-        in verse
+        '<div class="poetry-2">let me not wander from your commandments!</div>' in verse
     )
     # The acrostic heading content survives, and isn't merged into
     # neighboring poetry text.
