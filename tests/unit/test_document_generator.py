@@ -2,7 +2,7 @@ import re
 
 import pytest
 
-from doc.domain import document_generator, model
+from doc.domain import document_generator, model, resource_lookup
 
 
 def test_document_request_key_too_long_for_semantic_result() -> None:
@@ -141,14 +141,16 @@ def test_localize_non_usfm_book_names_looks_up_usfm_names_once_per_language(
     }
     call_count = 0
 
-    def fake_book_codes_for_lang_from_usfm_only(lang_code: str):
+    def fake_book_codes_for_lang_from_usfm_only(
+        lang_code: str,
+    ) -> list[tuple[str, str]]:
         nonlocal call_count
         call_count += 1
         assert lang_code == "pt-br"
         return list(localized_names_by_book_code.items())
 
     monkeypatch.setattr(
-        document_generator.resource_lookup,
+        resource_lookup,
         "book_codes_for_lang_from_usfm_only",
         fake_book_codes_for_lang_from_usfm_only,
     )
@@ -197,12 +199,14 @@ def test_localize_non_usfm_book_names_calls_usfm_lookup_once_per_distinct_langua
     }
     calls: list[str] = []
 
-    def fake_book_codes_for_lang_from_usfm_only(lang_code: str):
+    def fake_book_codes_for_lang_from_usfm_only(
+        lang_code: str,
+    ) -> list[tuple[str, str]]:
         calls.append(lang_code)
         return list(localized_names_by_lang[lang_code].items())
 
     monkeypatch.setattr(
-        document_generator.resource_lookup,
+        resource_lookup,
         "book_codes_for_lang_from_usfm_only",
         fake_book_codes_for_lang_from_usfm_only,
     )
