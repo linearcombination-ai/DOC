@@ -387,7 +387,6 @@ def generate_docx(
             row_cells = table.add_row().cells
             # Process HTML content in source_text and highlight keyword
             source_paragraph = row_cells[0].paragraphs[0]
-            source_paragraph.paragraph_format.line_spacing = 2.0  # Adjust line spacing
             if verse.source_has_preformatted_bolding:
                 add_preformatted_html_to_docx(verse.source_text, source_paragraph)
             elif len(word_entry.bolded_phrases) > 0:
@@ -398,9 +397,7 @@ def generate_docx(
                 add_highlighted_html_to_docx_for_words(
                     verse.source_text, source_paragraph, word_entry.words
                 )
-            # Add target_text with wider line spacing
             target_paragraph = row_cells[1].paragraphs[0]
-            target_paragraph.paragraph_format.line_spacing = 2.0  # Adjust line spacing
             add_plain_html_to_docx(verse.target_text, target_paragraph)
             # Vertically centered Unicode checkbox
             checkbox_cell = row_cells[2]
