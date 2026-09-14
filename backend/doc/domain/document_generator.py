@@ -145,6 +145,11 @@ def localize_non_usfm_book_names(
             usfm.national_book_name,
         )
 
+    # book_codes_for_lang_from_usfm_only(lang_code) re-reads and re-parses
+    # every USFM file for that language's Bible-text repo, so its result is
+    # cached per lang_code here rather than recomputed once per book below.
+    usfm_names_by_lang: dict[LangCode, Sequence[tuple[str, str]]] = {}
+
     def apply_replacement(
         text: str,
         pattern: re.Pattern[str],
@@ -160,9 +165,12 @@ def localize_non_usfm_book_names(
         key: Key = (book.lang_code, book.book_code)
         entry = replacement_map.get(key)
         if entry is None:
-            usfm_names = resource_lookup.book_codes_for_lang_from_usfm_only(
-                book.lang_code
-            )
+            usfm_names = usfm_names_by_lang.get(book.lang_code)
+            if usfm_names is None:
+                usfm_names = resource_lookup.book_codes_for_lang_from_usfm_only(
+                    book.lang_code
+                )
+                usfm_names_by_lang[book.lang_code] = usfm_names
             match = next(
                 (item for item in usfm_names if item[0] == book.book_code), None
             )
