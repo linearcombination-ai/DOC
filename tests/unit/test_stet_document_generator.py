@@ -4,7 +4,6 @@ from typing import Optional
 from docx import Document
 from docx.oxml.ns import qn
 from docx.text.paragraph import Paragraph
-
 from stet.domain.document_generator import generate_docx
 from stet.domain.model import VerseEntry, WordEntry
 
