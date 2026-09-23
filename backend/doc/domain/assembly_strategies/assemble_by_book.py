@@ -296,23 +296,54 @@ def assemble_content_by_verse_book_at_a_time(
                         show_bc_chapter_commentary,
                     )
                 )
-            else:
+            elif tn_book is not None or tnc_book is not None:
                 document_parts.extend(
-                    assemble_content_by_book(
-                        usfm_books,
-                        tn_books,
-                        tnc_books,
-                        tq_books,
-                        tw_books,
-                        bc_books,
-                        rg_books,
-                        assembly_layout_kind,
+                    assemble_tn_by_book(
+                        usfm_book,
+                        tn_book,
+                        tnc_book,
+                        tq_book,
+                        tw_book,
+                        usfm_book2,
+                        bc_book,
+                        rg_book,
                         use_section_visual_separator,
                         use_two_column_layout_for_tn_notes,
                         use_two_column_layout_for_tq_notes,
                         show_tn_book_intro,
                         show_bc_book_intro,
                         show_tn_chapter_intro,
+                    )
+                )
+            elif tq_book is not None:
+                document_parts.extend(
+                    assemble_tq_by_book(
+                        usfm_book,
+                        tn_book,
+                        tnc_book,
+                        tq_book,
+                        tw_book,
+                        usfm_book2,
+                        bc_book,
+                        rg_book,
+                        use_section_visual_separator,
+                        use_two_column_layout_for_tq_notes,
+                        show_bc_book_intro,
+                    )
+                )
+            elif tw_book is not None or bc_book is not None or rg_book is not None:
+                document_parts.extend(
+                    assemble_tw_by_book(
+                        usfm_book,
+                        tn_book,
+                        tnc_book,
+                        tq_book,
+                        tw_book,
+                        usfm_book2,
+                        bc_book,
+                        rg_book,
+                        use_section_visual_separator,
+                        show_bc_book_intro,
                     )
                 )
     return document_parts
