@@ -704,6 +704,11 @@ def assemble_content(
                     use_section_visual_separator=False,
                 )
             )
+            document_parts.append(
+                two_column_spanning_hr_trick(
+                    document_request.use_section_visual_separator
+                )
+            )
     return document_parts
 
 
