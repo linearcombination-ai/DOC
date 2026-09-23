@@ -687,6 +687,23 @@ def assemble_content(
             )
         t1 = time.time()
         logger.info("Time for adding TW content to document: %s", t1 - t0)
+    if not usfm_books and tw_books and not document_parts:
+        # TW was the only resource requested (no USFM or other book-level
+        # resources), so the per-book assembly strategies above never ran
+        # and the inline TW-definitions section above didn't apply either
+        # (link mode). Link out to each requested language's external TW
+        # resource page rather than leaving the document empty.
+        unique_tw_books = filter_unique_by_lang_code(tw_books)
+        for tw_book in unique_tw_books:
+            document_parts.append(
+                DocumentPart(
+                    content=settings.BIEL_TW_RESOURCE_URL_FMT_STR.format(
+                        tw_book.lang_code, tw_book.lang_name
+                    ),
+                    is_rtl=tw_book.lang_direction == LangDirEnum.RTL,
+                    use_section_visual_separator=False,
+                )
+            )
     return document_parts
 
 
