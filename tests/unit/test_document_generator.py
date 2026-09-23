@@ -1,5 +1,6 @@
 import re
 
+from doc.config import settings
 from doc.domain import document_generator, model
 
 
@@ -100,3 +101,146 @@ def test_document_request_key_too_long_for_semantic_result() -> None:
         show_rg_chapter_commentary=True,
     )
     assert re.search(r"[0-9]+_[0-9]+", key)
+
+
+def test_assemble_content_for_tw_only_request_links_to_external_tw_resource() -> None:
+    """
+    When TW is the only resource requested (no USFM, TN, TNC, TQ, BC, or RG
+    books), the per-book assembly strategies have nothing to iterate over
+    since TW is language-level, not book-level. Previously this meant the
+    resulting document was completely empty. Now assemble_content should
+    fall back to linking to each requested language's external TW resource
+    page instead of producing an empty document.
+    """
+    tw_book = model.TWBook(
+        lang_code="en",
+        lang_name="English",
+        resource_type_name="Translation Words",
+        lang_direction=model.LangDirEnum.LTR,
+    )
+    document_request = model.DocumentRequest(
+        assembly_strategy_kind=model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
+        resource_requests=[
+            model.ResourceRequest(lang_code="en", resource_type="tw", book_code="mat"),
+        ],
+    )
+
+    document_parts = document_generator.assemble_content(
+        "test-key",
+        document_request,
+        [],  # usfm_books
+        [],  # tn_books
+        [],  # tnc_books
+        [],  # tq_books
+        [tw_book],  # tw_books
+        [],  # bc_books
+        [],  # rg_books
+    )
+
+    assert document_parts
+    expected_link = settings.BIEL_TW_RESOURCE_URL_FMT_STR.format(
+        tw_book.lang_code, tw_book.lang_name
+    )
+    assert any(expected_link in part.content for part in document_parts)
+
+
+def test_assemble_content_for_tw_only_request_links_each_unique_language() -> None:
+    """
+    A TW-only request for multiple languages should produce one external
+    TW resource link per unique language requested.
+    """
+    tw_book_en = model.TWBook(
+        lang_code="en",
+        lang_name="English",
+        resource_type_name="Translation Words",
+        lang_direction=model.LangDirEnum.LTR,
+    )
+    tw_book_fr = model.TWBook(
+        lang_code="fr",
+        lang_name="French",
+        resource_type_name="Translation Words",
+        lang_direction=model.LangDirEnum.LTR,
+    )
+    document_request = model.DocumentRequest(
+        assembly_strategy_kind=model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
+        resource_requests=[
+            model.ResourceRequest(lang_code="en", resource_type="tw", book_code="mat"),
+            model.ResourceRequest(lang_code="fr", resource_type="tw", book_code="mat"),
+        ],
+    )
+
+    document_parts = document_generator.assemble_content(
+        "test-key",
+        document_request,
+        [],
+        [],
+        [],
+        [],
+        [tw_book_en, tw_book_fr],
+        [],
+        [],
+    )
+
+    content = "".join(part.content for part in document_parts)
+    assert (
+        settings.BIEL_TW_RESOURCE_URL_FMT_STR.format(
+            tw_book_en.lang_code, tw_book_en.lang_name
+        )
+        in content
+    )
+    assert (
+        settings.BIEL_TW_RESOURCE_URL_FMT_STR.format(
+            tw_book_fr.lang_code, tw_book_fr.lang_name
+        )
+        in content
+    )
+
+
+def test_assemble_content_for_usfm_and_tw_request_is_unaffected() -> None:
+    """
+    The TW-only fallback must not change behavior when USFM (or other
+    book-level resources) are requested alongside TW: the per-book
+    assembly strategy should run as before and no external TW link
+    fallback should be appended.
+    """
+    usfm_book = model.USFMBook(
+        lang_code="en",
+        lang_name="English",
+        localized_lang_name="English",
+        book_code="mat",
+        national_book_name="Matthew",
+        resource_type_name="Unlocked Literal Bible",
+        chapters={},
+        lang_direction=model.LangDirEnum.LTR,
+    )
+    tw_book = model.TWBook(
+        lang_code="en",
+        lang_name="English",
+        resource_type_name="Translation Words",
+        lang_direction=model.LangDirEnum.LTR,
+    )
+    document_request = model.DocumentRequest(
+        assembly_strategy_kind=model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
+        resource_requests=[
+            model.ResourceRequest(lang_code="en", resource_type="ulb", book_code="mat"),
+            model.ResourceRequest(lang_code="en", resource_type="tw", book_code="mat"),
+        ],
+    )
+
+    document_parts = document_generator.assemble_content(
+        "test-key",
+        document_request,
+        [usfm_book],
+        [],
+        [],
+        [],
+        [tw_book],
+        [],
+        [],
+    )
+
+    expected_link = settings.BIEL_TW_RESOURCE_URL_FMT_STR.format(
+        tw_book.lang_code, tw_book.lang_name
+    )
+    content = "".join(part.content for part in document_parts)
+    assert expected_link not in content
