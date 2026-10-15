@@ -3,7 +3,12 @@ from typing import Sequence, cast
 import celery.states
 from celery.result import AsyncResult
 from doc.config import settings
-from doc.domain import document_generator, model, resource_lookup
+from doc.domain import (
+    document_generator,
+    model,
+    resource_availability as resource_availability_,
+    resource_lookup,
+)
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import JSONResponse
 
@@ -114,6 +119,17 @@ async def resource_types(
     return cast(
         Sequence[tuple[str, str]], resource_lookup.resource_types(lang_code, book_codes)
     )
+
+
+@router.get("/resource_availability/{lang_code}")
+def resource_availability(lang_code: str) -> model.ResourceAvailability:
+    """
+    Return every (book, resource type) combination available for
+    lang_code. This is a plain def, rather than async def, so that
+    FastAPI runs it in its threadpool: provisioning a language's
+    resource assets can block for a while.
+    """
+    return resource_availability_.resource_availability(lang_code)
 
 
 @router.get("/book_codes_for_lang/{lang_code}")

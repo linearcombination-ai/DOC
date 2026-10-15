@@ -99,6 +99,50 @@ class ResourceRequest(BaseModel):
     book_code: str
 
 
+@final
+class ResourceTypeInfo(BaseModel):
+    """
+    Describes one resource type that is available for a language, as
+    reported by the resource availability endpoint.
+    """
+
+    code: str
+    name: str
+    # Coarse grouping used by clients to match equivalent resources across
+    # languages, e.g., ulb and reg are both "scripture". One of: scripture,
+    # notes, questions, commentary, words.
+    category: str
+    # "book" means the resource exists per book, "language" means the
+    # resource is language wide, e.g., Translation Words.
+    scope: str
+
+
+@final
+class BookAvailability(BaseModel):
+    """
+    A book that has at least one book scoped resource available, along
+    with the codes of the resource types available for it.
+    """
+
+    code: str
+    name: str
+    testament: str  # "OT" or "NT"
+    resources: Sequence[str]
+
+
+@final
+class ResourceAvailability(BaseModel):
+    """
+    All the (book, resource type) combinations available for a language.
+    """
+
+    lang_code: str
+    resource_types: Sequence[ResourceTypeInfo]
+    books: Sequence[BookAvailability]
+    # Codes of the language wide resource types, e.g., tw.
+    language_resources: Sequence[str]
+
+
 class PassageRequest(BaseModel):
     """
     This class is used to encode a request for a bible passage.
