@@ -72,7 +72,9 @@ def slug_group(values: Iterable[object], noun: str, max_len: int) -> str:
 
 def _json_default(value: object) -> JsonScalar:
     if isinstance(value, Enum):
-        return value.value
+        enum_value = value.value
+        if enum_value is None or isinstance(enum_value, (str, int, float, bool)):
+            return enum_value
     raise TypeError(f"Cannot canonicalize value of type {type(value).__name__}")
 
 

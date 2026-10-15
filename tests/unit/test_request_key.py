@@ -1,6 +1,7 @@
 import re
 from enum import Enum
 
+import pytest
 from doc.utils import request_key
 
 
@@ -52,3 +53,12 @@ def test_request_key_shape() -> None:
         request_key.resources_slug(["en"], ["ulb", "tn"], ["mat"]), {"x": 1}
     )
     assert re.fullmatch(r"en_ulb-tn_mat_[0-9a-f]{12}", key)
+
+
+class Pair(Enum):
+    ONE_TWO = (1, 2)
+
+
+def test_canonical_json_rejects_values_it_cannot_canonicalize() -> None:
+    with pytest.raises(TypeError):
+        request_key.canonical_json({"c": Pair.ONE_TWO})
