@@ -1,82 +1,46 @@
 <script lang="ts">
   import { goto } from '$app/navigation'
-  import { page, navigating } from '$app/stores'
-  import { langCodesStore } from '$lib/stores/LanguagesStore'
-  import { bookCountStore } from '$lib/stores/BooksStore'
-  import { resourceTypesStore, resourceTypesCountStore } from '$lib/stores/ResourceTypesStore'
-  import {
-    getResourceTypeLangCode,
-    resetStores,
-    langRegExp,
-    bookRegExp,
-    resourceTypeRegExp,
-    settingsRegExp
-  } from '$lib/utils'
+  import { page } from '$app/stores'
+  import { resetStores, langRegExp, resourcesRegExp, settingsRegExp } from '$lib/utils'
   import MobileBreadcrumb from '$lib/MobileBreadcrumb.svelte'
   import DesktopBreadcrumb from '$lib/DesktopBreadcrumb.svelte'
 
   function submitLanguages() {
     resetStores('notifications')
-    goto('/books')
+    goto('/resources')
   }
 
-  function submitBooks() {
-    resetStores('notifications')
-    goto('/resource_types')
-  }
-
-  function submitResourceTypes() {
+  function submitResources() {
     resetStores('notifications')
     goto('/settings')
   }
 
   // Turn off and on breadcrumb number circles
   let turnLangStepOn: boolean = false
-  let turnBookStepOn: boolean = false
-  let turnResourceTypeStepOn: boolean = false
+  let turnResourcesStepOn: boolean = false
   let turnSettingsStepOn: boolean = false
   // Title and label for breadcrumb for mobile (mobile = anything
   // under sm size according to our use of tailwindcss)
   let title: string = 'Languages'
-  let stepLabel: string = '1 of 4'
+  let stepLabel: string = '1 of 3'
   $: {
     if (langRegExp.test($page.url.pathname)) {
       turnLangStepOn = true
       title = 'Languages'
-      stepLabel = '1 of 4'
-    } else if (bookRegExp.test($page.url.pathname)) {
+      stepLabel = '1 of 3'
+    } else if (resourcesRegExp.test($page.url.pathname)) {
       turnLangStepOn = true
-      turnBookStepOn = true
-      turnResourceTypeStepOn = false
+      turnResourcesStepOn = true
       turnSettingsStepOn = false
-      title = 'Books'
-      stepLabel = '2 of 4'
-    } else if (resourceTypeRegExp.test($page.url.pathname)) {
-      turnLangStepOn = true
-      turnBookStepOn = true
-      turnResourceTypeStepOn = true
-      turnSettingsStepOn = false
-      title = 'Resource types'
-      stepLabel = '3 of 4'
+      title = 'Resources'
+      stepLabel = '2 of 3'
     } else if (settingsRegExp.test($page.url.pathname)) {
       turnLangStepOn = true
-      turnBookStepOn = true
-      turnResourceTypeStepOn = true
+      turnResourcesStepOn = true
       turnSettingsStepOn = true
       title = 'Review'
-      stepLabel = '4 of 4'
+      stepLabel = '3 of 3'
     }
-  }
-
-  let numLang0ResourceTypes = 0
-  let numLang1ResourceTypes = 0
-  $: {
-    numLang0ResourceTypes = $resourceTypesStore.filter(
-      (item) => $langCodesStore[0] !== getResourceTypeLangCode(item)
-    ).length
-    numLang1ResourceTypes = $resourceTypesStore.filter(
-      (item) => $langCodesStore[1] !== getResourceTypeLangCode(item)
-    ).length
   }
 </script>
 
@@ -87,37 +51,29 @@
     {title}
     {stepLabel}
     {turnLangStepOn}
-    {turnBookStepOn}
-    {turnResourceTypeStepOn}
+    {turnResourcesStepOn}
     {turnSettingsStepOn}
     {submitLanguages}
-    {submitBooks}
-    {submitResourceTypes}
-    {numLang0ResourceTypes}
-    {numLang1ResourceTypes}
+    {submitResources}
   />
   <!-- else -->
   <DesktopBreadcrumb
     {turnLangStepOn}
-    {turnBookStepOn}
-    {turnResourceTypeStepOn}
+    {turnResourcesStepOn}
     {turnSettingsStepOn}
     {submitLanguages}
-    {submitBooks}
-    {submitResourceTypes}
-    {numLang0ResourceTypes}
-    {numLang1ResourceTypes}
+    {submitResources}
   />
   <!-- end if -->
 </div>
 
 <style lang="postcss">
   * :global(.next-button) {
-    background: linear-gradient(180deg, #1876fd 0%, #015ad9 100%),
-      linear-gradient(0deg, #33445c, #33445c);
+    background:
+      linear-gradient(180deg, #1876fd 0%, #015ad9 100%), linear-gradient(0deg, #33445c, #33445c);
   }
   * :global(.next-button:hover) {
-    background: linear-gradient(180deg, #0765ec 0%, #0149c8 100%),
-      linear-gradient(0deg, #33445c, #33445c);
+    background:
+      linear-gradient(180deg, #0765ec 0%, #0149c8 100%), linear-gradient(0deg, #33445c, #33445c);
   }
 </style>

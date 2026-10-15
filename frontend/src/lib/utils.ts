@@ -11,13 +11,8 @@ import {
   langNamesStore,
   langCountStore
 } from '$lib/stores/LanguagesStore'
-import { otBookStore, ntBookStore, bookCountStore } from '$lib/stores/BooksStore'
-import {
-  lang0ResourceTypesStore,
-  lang1ResourceTypesStore,
-  resourceTypesCountStore,
-  twResourceRequestedStore
-} from '$lib/stores/ResourceTypesStore'
+import { availabilityStore, selectedResourcesStore } from '$lib/stores/ResourcesStore'
+import { twResourceRequestedStore } from '$lib/stores/ResourceTypesStore'
 import { documentReadyStore, errorStore } from '$lib/stores/NotificationStore'
 import {
   layoutForPrintStore,
@@ -31,11 +26,10 @@ import { PUBLIC_LANG_CODES_NAMES_URL, PUBLIC_TAILWIND_SM_MIN_WIDTH } from '$env/
 
 const languageBookOrder: string = <string>PUBLIC_LANGUAGE_BOOK_ORDER
 
-type StoreGroup = 'languages' | 'books' | 'resource_types' | 'settings' | 'notifications'
+type StoreGroup = 'languages' | 'resources' | 'settings' | 'notifications'
 
 export let langRegExp = new RegExp('.*languages.*')
-export let bookRegExp = new RegExp('.*books.*')
-export let resourceTypeRegExp = new RegExp('.*resource_types.*')
+export let resourcesRegExp = new RegExp('.*resources.*')
 export let settingsRegExp = new RegExp('.*settings.*')
 
 export function resetStores(storeGroup: StoreGroup) {
@@ -49,16 +43,9 @@ export function resetStores(storeGroup: StoreGroup) {
     langCountStore.set(0)
   }
 
-  if (storeGroup === 'books') {
-    otBookStore.set([])
-    ntBookStore.set([])
-    bookCountStore.set(0)
-  }
-
-  if (storeGroup === 'resource_types') {
-    lang0ResourceTypesStore.set([])
-    lang1ResourceTypesStore.set([])
-    resourceTypesCountStore.set(0)
+  if (storeGroup === 'resources') {
+    selectedResourcesStore.set(new Set<string>())
+    availabilityStore.set({})
   }
 
   if (storeGroup === 'settings') {

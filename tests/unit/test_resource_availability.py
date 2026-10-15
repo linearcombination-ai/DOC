@@ -4,7 +4,7 @@ build tiny fake resource repos on disk and don't touch the network.
 """
 
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Sequence, TypedDict
 
 import pytest
 from doc.config import settings
@@ -23,6 +23,12 @@ from fastapi.testclient import TestClient
 from pydantic import HttpUrl
 
 BASE_URL = "https://content.bibletranslationtools.org/WA-Catalog"
+
+
+class FakeEnvironment(TypedDict):
+    clones: int
+    fetches: int
+    empty: bool
 
 
 def url(name: str) -> HttpUrl:
@@ -150,13 +156,13 @@ def test_build_language_with_only_regular_scripture() -> None:
 
 
 @pytest.fixture
-def fake_environment(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
+def fake_environment(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> FakeEnvironment:
     """
     Language xx has whole language tn and tw and ulb for only gen, via a
     per book repo. Nothing touches the network or git.
     """
     ra.clear_availability_cache()
-    state: dict[str, Any] = {"clones": 0, "fetches": 0, "empty": False}
+    state: FakeEnvironment = {"clones": 0, "fetches": 0, "empty": False}
     language = Language(
         english_name="Xx", ietf_code="xx", national_name="Xx", direction=LangDirEnum.LTR
     )
@@ -195,7 +201,7 @@ def fake_environment(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[st
         ]
 
     def fake_clone(
-        repos: Sequence[tuple[HttpUrl, str]], *args: Any, **kwargs: Any
+        repos: Sequence[tuple[HttpUrl, str]], *args: object, **kwargs: object
     ) -> None:
         state["clones"] += 1
 
@@ -210,7 +216,7 @@ def fake_environment(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> dict[st
     return state
 
 
-def test_resource_availability_end_to_end(fake_environment: dict[str, Any]) -> None:
+def test_resource_availability_end_to_end(fake_environment: FakeEnvironment) -> None:
     availability = ra.resource_availability("xx", asset_caching_enabled=True)
     assert [t.code for t in availability.resource_types] == ["tn", "tw", "ulb"]
     assert books_of(availability, "tn") == ["gen", "mat"]
@@ -219,7 +225,7 @@ def test_resource_availability_end_to_end(fake_environment: dict[str, Any]) -> N
 
 
 def test_resource_availability_is_cached_per_language(
-    fake_environment: dict[str, Any],
+    fake_environment: FakeEnvironment,
 ) -> None:
     first = ra.resource_availability("xx", asset_caching_enabled=True)
     second = ra.resource_availability("xx", asset_caching_enabled=True)
@@ -228,7 +234,7 @@ def test_resource_availability_is_cached_per_language(
 
 
 def test_resource_availability_not_cached_when_asset_caching_disabled(
-    fake_environment: dict[str, Any],
+    fake_environment: FakeEnvironment,
 ) -> None:
     ra.resource_availability("xx", asset_caching_enabled=False)
     ra.resource_availability("xx", asset_caching_enabled=False)
@@ -236,7 +242,7 @@ def test_resource_availability_not_cached_when_asset_caching_disabled(
 
 
 def test_resource_availability_failures_are_not_cached(
-    fake_environment: dict[str, Any],
+    fake_environment: FakeEnvironment,
 ) -> None:
     fake_environment["empty"] = True  # data API down
     availability = ra.resource_availability("xx", asset_caching_enabled=True)
@@ -246,14 +252,14 @@ def test_resource_availability_failures_are_not_cached(
     assert availability.books  # recovered, wasn't stuck on the failure
 
 
-def test_unknown_language_is_empty(fake_environment: dict[str, Any]) -> None:
+def test_unknown_language_is_empty(fake_environment: FakeEnvironment) -> None:
     availability = ra.resource_availability("nope", asset_caching_enabled=True)
     assert availability.books == []
     assert availability.resource_types == []
     assert availability.language_resources == []
 
 
-def test_resource_availability_route(fake_environment: dict[str, Any]) -> None:
+def test_resource_availability_route(fake_environment: FakeEnvironment) -> None:
     with TestClient(app=app, base_url=settings.api_test_url()) as client:
         response = client.get("/resource_availability/xx")
     assert response.status_code == 200
