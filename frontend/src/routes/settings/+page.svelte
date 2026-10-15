@@ -27,13 +27,12 @@
   import { documentReadyStore, errorStore } from '$lib/stores/NotificationStore'
   import {
     resourceTypesStore,
-    resourceTypesCountStore,
     limitTwStore,
     twResourceRequestedStore,
     usfmAvailableStore
   } from '$lib/stores/ResourceTypesStore'
   import { langCodesStore, langCountStore } from '$lib/stores/LanguagesStore'
-  import { bookCountStore } from '$lib/stores/BooksStore'
+  import { resourcesCountStore } from '$lib/stores/ResourcesStore'
   import GenerateDocument from './GenerateDocument.svelte'
   import LogRocket from 'logrocket'
   import CheckIcon from '$lib/CheckIcon.svelte'
@@ -177,7 +176,7 @@
       <button on:click={() => (showWizardBasketModal = true)}>
         <div class="relative">
           <CheckIcon />
-          {#if $langCountStore > 0 || $bookCountStore > 0 || $resourceTypesCountStore > 0}
+          {#if $langCountStore > 0 || $resourcesCountStore > 0}
             <!-- badge -->
             <div
               class="bg-neutral-focus absolute -right-0.5 -top-0.5
@@ -185,9 +184,7 @@
                         rounded-full text-center text-[#33445C]"
               style="background: linear-gradient(180deg, #1876FD 0%, #015AD9 100%);"
             >
-              <span class="text-[8px] text-white"
-                >{$langCountStore + $bookCountStore + $resourceTypesCountStore}</span
-              >
+              <span class="text-[8px] text-white">{$langCountStore + $resourcesCountStore}</span>
             </div>
           {/if}
         </div>

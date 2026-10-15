@@ -1,10 +1,15 @@
-import { writable } from 'svelte/store'
-import type { Writable } from 'svelte/store'
+import { derived, writable } from 'svelte/store'
+import type { Readable, Writable } from 'svelte/store'
+import { chosenResourceTypesStore } from '$lib/stores/ResourcesStore'
 
-export let resourceTypesStore: Writable<Array<string>> = writable<Array<string>>([])
-export let lang0ResourceTypesStore: Writable<Array<string>> = writable<Array<string>>([])
-export let lang1ResourceTypesStore: Writable<Array<string>> = writable<Array<string>>([])
-export let resourceTypesCountStore: Writable<number> = writable<number>(0)
+// The resource types chosen, e.g., "en, ulb, Unlocked Literal Bible", one
+// for each language and type. Derived from what the user chose on the
+// resources page.
+export const resourceTypesStore: Readable<Array<string>> = chosenResourceTypesStore
+export const resourceTypesCountStore: Readable<number> = derived(
+  chosenResourceTypesStore,
+  (chosen) => chosen.length
+)
 export let usfmAvailableStore: Writable<boolean> = writable<boolean>(false)
 export let limitTwStore: Writable<boolean> = writable<boolean>(true)
 export let twResourceRequestedStore: Writable<boolean> = writable<boolean>(false)
