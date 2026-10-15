@@ -7,7 +7,7 @@ test('rmp galatians', async ({ page }) => {
   await page.getByPlaceholder('Search Heart Languages').fill('rmp')
   await page.getByText('Rempi').click()
   await page.getByRole('button', { name: 'Next' }).click()
-  await expect(page.getByRole('main')).toContainText('Galasians', { timeout: 120000 })
+  await expect(page.getByTestId('row-gal')).toContainText('Galasians', { timeout: 120000 })
   await page.getByTestId('cell-rmp-reg-tit').check()
   await page.getByRole('button', { name: 'Next' }).click()
   await page.getByText('Docx').click()
