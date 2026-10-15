@@ -2,6 +2,9 @@ from pathlib import Path
 from typing import Optional
 
 from docx import Document
+from docx.document import Document as DocxDocument
+from docx.table import _Cell, _Row
+from docx.text.paragraph import Paragraph
 from docx.oxml.ns import qn
 from passages.domain.document_generator import generate_docx
 from passages.domain.model import Passage
@@ -42,7 +45,7 @@ def _generate(
     tmp_path: Path,
     lang0: list[Passage],
     lang1: Optional[list[Passage]] = None,
-) -> Document:
+) -> DocxDocument:
     path = str(tmp_path / "out.docx")
     generate_docx(
         lang0,
@@ -56,22 +59,23 @@ def _generate(
     return Document(path)
 
 
-def _has(paragraph, tag: str) -> bool:
+def _has(paragraph: Paragraph, tag: str) -> bool:
     return paragraph._p.pPr is not None and paragraph._p.pPr.find(qn(tag)) is not None
 
 
-def _cant_split(row) -> bool:
+def _cant_split(row: _Row) -> bool:
     tr_pr = row._tr.find(qn("w:trPr"))
     return tr_pr is not None and tr_pr.find(qn("w:cantSplit")) is not None
 
 
-def _passage_paragraphs(cell, reference: str):
+def _passage_paragraphs(cell: _Cell, reference: str) -> list[Paragraph]:
     """Paragraphs from the reference line to the end of the cell"""
     texts = [p.text for p in cell.paragraphs]
-    return cell.paragraphs[texts.index(reference) :]
+    paragraphs: list[Paragraph] = cell.paragraphs
+    return paragraphs[texts.index(reference) :]
 
 
-def _assert_kept(cell, reference: str) -> None:
+def _assert_kept(cell: _Cell, reference: str) -> None:
     paragraphs = _passage_paragraphs(cell, reference)
     assert paragraphs[0].text == reference
     for p in paragraphs:
