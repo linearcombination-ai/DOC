@@ -6,7 +6,6 @@
     langCountStore,
     languagesClickedOrderStore
   } from '$lib/stores/LanguagesStore'
-  import { resourceTypesStore } from '$lib/stores/ResourceTypesStore'
   import { langRegExp, getCode, getName } from '$lib/utils'
   import GlobeIcon from '$lib/GlobeIcon.svelte'
   import EditIcon from '$lib/EditIcon.svelte'
@@ -18,11 +17,6 @@
     )
     $langCodesStore = $langCodesStore.filter((item) => item != getCode(langCodeAndName))
     $langCountStore = $langCodesStore.length
-    if ($resourceTypesStore.length > 0) {
-      $resourceTypesStore = $resourceTypesStore.filter((item) => {
-        return getCode(item) != getCode(langCodeAndName)
-      })
-    }
   }
 </script>
 

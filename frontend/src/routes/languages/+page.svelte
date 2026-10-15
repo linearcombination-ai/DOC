@@ -6,9 +6,6 @@
     langNamesStore,
     languagesClickedOrderStore
   } from '$lib/stores/LanguagesStore'
-  import { ntBookStore, otBookStore, bookCountStore } from '$lib/stores/BooksStore'
-  import { getResourceTypeLangCode } from '$lib/utils'
-  import { resourceTypesStore, resourceTypesCountStore } from '$lib/stores/ResourceTypesStore'
   import { assemblyStrategyKindStore } from '$lib/stores/SettingsStore'
   import Languages from '$lib/Languages.svelte'
   import WizardBreadcrumb from '$lib/WizardBreadcrumb.svelte'
@@ -30,21 +27,9 @@
   }
 
   $: {
-    $resourceTypesStore = $resourceTypesStore.filter((item) =>
-      $langCodesStore.includes(getResourceTypeLangCode(item))
-    )
-    $resourceTypesCountStore = $resourceTypesStore.length
-  }
-
-  $: {
     if ($langCountStore === 0) {
       $langCodesStore = []
       $langNamesStore = []
-      $resourceTypesStore = []
-      $resourceTypesCountStore = 0
-      $otBookStore = []
-      $ntBookStore = []
-      $bookCountStore = 0
       $assemblyStrategyKindStore = <string>PUBLIC_LANGUAGE_BOOK_ORDER
     }
   }

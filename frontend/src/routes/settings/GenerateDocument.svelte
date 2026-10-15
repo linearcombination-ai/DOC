@@ -3,12 +3,13 @@
   import DownloadButton from './DownloadButton.svelte'
   import { documentReadyStore, errorStore } from '$lib/stores/NotificationStore'
   import { langCodesStore, langCountStore } from '$lib/stores/LanguagesStore'
-  import { otBookStore, ntBookStore, bookCountStore } from '$lib/stores/BooksStore'
   import {
-    limitTwStore,
-    resourceTypesStore,
-    resourceTypesCountStore
-  } from '$lib/stores/ResourceTypesStore'
+    availabilityStore,
+    resourcesCountStore,
+    selectedResourcesStore
+  } from '$lib/stores/ResourcesStore'
+  import { resourceRequests as buildResourceRequests } from '$lib/resources'
+  import { limitTwStore } from '$lib/stores/ResourceTypesStore'
   import {
     layoutForPrintStore,
     assemblyStrategyKindStore,
@@ -31,7 +32,6 @@
     useTwoColumnLayoutForTqNotesStore
   } from '$lib/stores/SettingsStore'
   import { taskStateStore } from '$lib/stores/TaskStore'
-  import { getCode, getResourceTypeLangCode, getResourceTypeCode } from '$lib/utils'
   import LogRocket from 'logrocket'
   import TaskStatus from './TaskStatus.svelte'
   import ErrorAlertIcon from '$lib/ErrorAlertIcon.svelte'
@@ -60,21 +60,13 @@
     // Update some UI-related state
     generatingDocument = true
     $settingsUpdatedStore = false
-    let resourceRequests = []
-    let bookCodes = [...$otBookStore, ...$ntBookStore]
-    for (let langCode of $langCodesStore) {
-      for (let bookCode of bookCodes) {
-        for (let resourceType of $resourceTypesStore) {
-          if (getResourceTypeLangCode(resourceType) === langCode) {
-            resourceRequests.push({
-              lang_code: langCode,
-              resource_type: getResourceTypeCode(resourceType),
-              book_code: getCode(bookCode)
-            })
-          }
-        }
-      }
-    }
+    // One resource request for each resource the user chose, in language, book
+    // and resource type order.
+    let resourceRequests = buildResourceRequests(
+      $selectedResourcesStore,
+      $langCodesStore,
+      $availabilityStore
+    )
     // Create the JSON structure to POST.
     let documentRequest = {
       email_address: $emailStore,
@@ -220,7 +212,7 @@
       </div>
     </div>
   {:else if (!generatingDocument && !$documentReadyStore) || $settingsUpdatedStore}
-    {#if ($langCountStore > 0 || $langCountStore <= 2) && $assemblyStrategyKindStore && $bookCountStore > 0 && $resourceTypesCountStore > 0}
+    {#if ($langCountStore > 0 || $langCountStore <= 2) && $assemblyStrategyKindStore && $resourcesCountStore > 0}
       <div class="pb-4">
         <button
           class="blue-gradient w-1/2 rounded-md p-4 text-center"
@@ -309,9 +301,9 @@
         role="link"
         aria-disabled="true"
         tabindex="-1"
-        class="mt-2 block cursor-not-allowed
-           text-sm text-[#B3B9C2] underline
-           pointer-events-none"
+        class="pointer-events-none mt-2 block
+           cursor-not-allowed text-sm text-[#B3B9C2]
+           underline"
       >
         Download
         <span class="text-[#B3B9C2]"> (right-click → Save link as…) </span>
