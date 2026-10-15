@@ -14,225 +14,72 @@
     langNamesStore,
     langCountStore
   } from '$lib/stores/LanguagesStore'
-  import { ntBookStore, otBookStore, bookCountStore } from '$lib/stores/BooksStore'
-  import { resourceTypesStore, resourceTypesCountStore } from '$lib/stores/ResourceTypesStore'
+  import { availabilityStore, selectedResourcesStore } from '$lib/stores/ResourcesStore'
   import ProgressIndicator from '$lib/ProgressIndicator.svelte'
-  import otBooks from '$lib/ot-books'
-  import ntBooks from '$lib/nt-books'
-  import { booksMap } from '$lib/bible-books'
   import { routeToPage, getLangCodesNames } from '$lib/utils'
-  import { PUBLIC_LANG_CODES_NAMES_URL, PUBLIC_SHARED_RESOURCE_TYPES_URL } from '$env/static/public'
-  import { env } from '$env/dynamic/public'
-  import { getCode, getName } from '$lib/utils'
+  import { fetchResourceAvailability } from '$lib/resources-api'
+  import { LANGUAGE_WIDE, setCells } from '$lib/resources'
+  import type { Cell } from '$lib/resources'
 
   export let data: PageData
 
-
-  async function getResourceTypesAndNames(
-    langCode: string,
-    bookCodeAndNames: Array<[string, string]>,
-    apiRootUrl = <string>env.PUBLIC_BACKEND_API_URL,
-    sharedResourceTypesUrl = <string>PUBLIC_SHARED_RESOURCE_TYPES_URL
-  ): Promise<Array<[string, string, string]>> {
-    // Form the URL to ultimately invoke
-    // resource_lookup.resource_types.
-    let book_codes = bookCodeAndNames.map((bookCodeAndName) => bookCodeAndName[0]).join(',')
-    const url_ = `${apiRootUrl}${sharedResourceTypesUrl}${langCode}/${book_codes}`
-    const url = new URL(url_)
-    const response = await fetch(url)
-    const resourceTypesAndNames: Array<[string, string]> = await response.json()
-    if (!response.ok) {
-      console.log(`Error: ${response.statusText}`)
-      throw new Error(response.statusText)
-    }
-
-    // Associate the langCode to each resource type code and name pair
-    return resourceTypesAndNames.map((element) => [langCode, element[0], element[1]])
-  }
-
-  let langCodeNameAndTypes: Array<[string, string, boolean]> = []
-  let filteredLangCodeNameAndTypes: Array<[string, string, boolean]> = []
-  let filteredResourceTypesAndNames: Array<[string, string, string]> = []
   let message: string = ''
   let errorMessage: string = ''
 
+  // Choose the language and the resource (of a book, or of all the books
+  // the language has the resource for) that BIEL asked for. Then go to the
+  // review step, or, if nothing that was asked for is available, to the
+  // resources step so that the user can choose.
+  async function transfer(langCode: string, resource: string, bookCode?: string) {
+    const langCodeNameAndTypes = await getLangCodesNames()
+    const language = langCodeNameAndTypes.find(([code]) => code === langCode)
+    if (!language) {
+      message = `Unfortunately, you've requested a language code, ${langCode}, which is not available.`
+      return
+    }
+    const [code, name] = language
+    $languagesClickedOrderStore = [`${code}, ${name}`]
+    $langCodesStore = [code]
+    $langNamesStore = [name]
+    $langCountStore = 1
+    const availability = await fetchResourceAvailability(code)
+    $availabilityStore = { ...$availabilityStore, [code]: availability }
+    const cells: Array<Cell> = availability.books
+      .filter(
+        (book) =>
+          book.resources.includes(resource) && (bookCode === undefined || book.code === bookCode)
+      )
+      .map((book) => ({ lang: code, type: resource, book: book.code }))
+    if (availability.language_resources.includes(resource)) {
+      cells.push({ lang: code, type: resource, book: LANGUAGE_WIDE })
+    }
+    $selectedResourcesStore = setCells(new Set<string>(), cells, true)
+    routeToPage($selectedResourcesStore.size > 0 ? '/settings' : '/resources')
+  }
+
   const components = data.repo?.split('_') || []
-  let langCode: string
-  let bookCode: string
-  let resource: string
   if (components.length === 4) {
     // e.g., repo_url=https%3A%2F%2Fcontent.bibletranslationtools.org%2Fbahasatech.indotengah%2Fbne_gal_text_reg&book_name=Galatians
-    langCode = components[0]
-    bookCode = components[1]
-    resource = components[3]
+    const [langCode, bookCode, , resource] = components
     console.log(
       `Transferred values from BIEL, langCode: ${langCode}, bookCode: ${bookCode}, resource: ${resource}`
     )
     message = `You've requested the following values, langCode: ${langCode}, bookCode: ${bookCode}, resource: ${resource}`
-    getLangCodesNames()
-      .then((langCodeNameAndTypes_) => {
-        langCodeNameAndTypes = langCodeNameAndTypes_
-
-        filteredLangCodeNameAndTypes = langCodeNameAndTypes_.filter(
-          (element: [string, string, boolean]) => {
-            return element[0] === langCode
-          }
-        )
-        console.log(`filteredLangCodeNameAndTypes: ${filteredLangCodeNameAndTypes}`)
-        if (filteredLangCodeNameAndTypes.length > 0) {
-          $langCodesStore.push(filteredLangCodeNameAndTypes[0][0])
-          $langNamesStore.push(filteredLangCodeNameAndTypes[0][1])
-          $languagesClickedOrderStore.push(
-            `${filteredLangCodeNameAndTypes[0][0]}, ${filteredLangCodeNameAndTypes[0][1]}`
-          )
-          $langCountStore = 1
-          // console.log(`$langCodesStore: ${$langCodesStore}`)
-          // console.log(`$gatewayCodeAndNamesStore: ${$gatewayCodeAndNamesStore}`)
-          // console.log(`$heartCodeAndNamesStore: ${$heartCodeAndNamesStore}`)
-
-          if (otBooks.includes(bookCode)) {
-            $otBookStore.push(`${bookCode}, ${booksMap[bookCode]}`)
-            // console.log(`$otBookStore: ${otBookStore}`)
-            $bookCountStore = 1
-          } else {
-            $ntBookStore.push(`${bookCode}, ${booksMap[bookCode]}`)
-            // console.log(`$ntBookStore: ${$ntBookStore}`)
-            $bookCountStore = 1
-          }
-          let otBookCodes_: Array<[string, string]> = $otBookStore.map((item) => [
-            getCode(item),
-            getName(item)
-          ])
-          let ntBookCodes_: Array<[string, string]> = $ntBookStore.map((item) => [
-            getCode(item),
-            getName(item)
-          ])
-          if ($langCodesStore[0]) {
-            getResourceTypesAndNames($langCodesStore[0], [...otBookCodes_, ...ntBookCodes_])
-              .then((resourceTypesAndNames) => {
-                // Filter down to the resource type provided by the user
-                filteredResourceTypesAndNames = resourceTypesAndNames.filter(
-                  (element: [string, string, string]) => {
-                    return element[0] === langCode && element[1] === resource
-                  }
-                )
-                console.log(`filteredResourceTypesAndNames: ${filteredResourceTypesAndNames}`)
-                if (filteredResourceTypesAndNames.length > 0) {
-                  $resourceTypesStore.push(
-                    `${filteredResourceTypesAndNames[0][0]}, ${filteredResourceTypesAndNames[0][1]}, ${filteredResourceTypesAndNames[0][2]}`
-                  )
-                  console.log(`$resourceTypesStore: ${$resourceTypesStore}`)
-                  $resourceTypesCountStore = 1
-                } else {
-                  console.log('filteredResourceTypesAndNames was empty')
-                }
-                routeToPage('/settings')
-              })
-              .catch((err) => console.error(err))
-          }
-        } else {
-          message = `Unfortunately, you've requested a language code, ${langCode}, which is not available.`
-          console.log('filteredLangCodeNameAndTypes was empty')
-        }
-      })
-      .catch((err) => console.log(err))
+    transfer(langCode, resource, bookCode).catch((err) => console.error(err))
   } else if (components.length === 2) {
     // e.g., repo_url=https:%2F%2Fcontent.bibletranslationtools.org%2FWycliffeAssociates%2Fen_ulb
-    langCode = components[0]
-    resource = components[1]
+    const [langCode, resource] = components
     console.log(
       `Transferred values from BIEL, langCode: ${langCode}, all books, resource: ${resource}`
     )
     message = `You've requested the following values, langCode: ${langCode}, all books, resource: ${resource}`
-    getLangCodesNames()
-      .then((langCodeNameAndTypes_) => {
-        // Save result for later use
-        langCodeNameAndTypes = langCodeNameAndTypes_
-        filteredLangCodeNameAndTypes = langCodeNameAndTypes_.filter(
-          (element: [string, string, boolean]) => {
-            return element[0] === langCode
-          }
-        )
-        console.log(`filteredLangCodeNameAndTypes: ${filteredLangCodeNameAndTypes}`)
-        if (filteredLangCodeNameAndTypes.length > 0) {
-          $langCodesStore.push(filteredLangCodeNameAndTypes[0][0])
-          $langNamesStore.push(filteredLangCodeNameAndTypes[0][1])
-          $languagesClickedOrderStore.push(
-            `${filteredLangCodeNameAndTypes[0][0]}, ${filteredLangCodeNameAndTypes[0][1]}`
-          )
-          $langCountStore = 1
-          // Add all Old Testament books to ot book store
-          for (var bookCode of otBooks) {
-            $otBookStore.push(`${bookCode}, ${booksMap[bookCode]}`)
-            // console.log(`$otBookStore: ${otBookStore}`)
-          }
-          // Add all New Testament books to nt book store
-          for (var bookCode of ntBooks) {
-            $ntBookStore.push(`${bookCode}, ${booksMap[bookCode]}`)
-            // console.log(`$ntBookStore: ${$ntBookStore}`)
-          }
-          $bookCountStore = otBooks.length + ntBooks.length
-          let otBookCodes_: Array<[string, string]> = $otBookStore.map((item) => [
-            getCode(item),
-            getName(item)
-          ])
-          let ntBookCodes_: Array<[string, string]> = $ntBookStore.map((item) => [
-            getCode(item),
-            getName(item)
-          ])
-          if ($langCodesStore[0]) {
-            // We use "all" as a sentinal to tell the backend
-            // resource_types endpoint to use all OT and NT books. We
-            // do this so that we don't have to actually pass a comma delimited
-            // list of all OT and NT books since that makes the URL
-            // really long. Such a long URL was working but is stylistically
-            // not preferred and it /could/, for some browsers, potentially
-            // cause an issue.
-            getResourceTypesAndNames($langCodesStore[0], [['all', 'all']]).then(
-              (resourceTypesAndNames) => {
-                // Filter down to the resource type provided by the user
-                filteredResourceTypesAndNames = resourceTypesAndNames.filter(
-                  (element: [string, string, string]) => {
-                    return element[0] === langCode && element[1] === resource
-                  }
-                )
-                console.log(`filteredResourceTypesAndNames: ${filteredResourceTypesAndNames}`)
-                if (filteredResourceTypesAndNames.length > 0) {
-                  $resourceTypesStore.push(
-                    `${filteredResourceTypesAndNames[0][0]}, ${filteredResourceTypesAndNames[0][1]}, ${filteredResourceTypesAndNames[0][2]}`
-                  )
-                  console.log(`$resourceTypesStore: ${$resourceTypesStore}`)
-                  $resourceTypesCountStore = 1
-                } else {
-                  console.log('filteredResourceTypesAndNames was empty')
-                }
-                routeToPage('/settings')
-                // NOTE This case is for the whole bible, e.g., en_ulb. But
-                // we could conceivably redirect the user to the books route
-                // to choose their books since we don't typically want to produce an
-                // entire bible due to poor performance on a document that huge.
-                // routeToPage('/books')
-              }
-            )
-          }
-        }
-      })
-      .catch((err) => console.log(err))
+    transfer(langCode, resource).catch((err) => console.error(err))
   } else {
     errorMessage =
       "We're sorry the information transferred from bibleineverylanguage.org is not available in this system. Please contact support."
     console.log(`repo url: ${data.repo}`)
     console.log(`components of transfer url: ${components}`)
   }
-
-  $: console.log(`$langCodesStore: ${$langCodesStore}`)
-  $: console.log(`$langNamesStore: ${$langNamesStore}`)
-  $: console.log(`$langCountStore: ${$langCountStore}`)
-  $: console.log(`$resourceTypesStore: ${$resourceTypesStore}`)
-  $: console.log(`$resourceTypesCountStore: ${$resourceTypesCountStore}`)
-  $: console.log(`$otBookStore: ${$otBookStore}`)
-  $: console.log(`$ntBookStore: ${$ntBookStore}`)
-  $: console.log(`$bookCountStore: ${$bookCountStore}`)
 </script>
 
 <div class="ml-8 mt-8 text-[#33445C]">

@@ -218,6 +218,14 @@ def locate_acquire_and_build_resource_objects(
         )
         if resource_lookup_dto:
             resource_lookup_dtos.append(resource_lookup_dto)
+        else:
+            logger.warning(
+                "No resource found for the request, it won't be in the document: "
+                "lang_code: %s, resource_type: %s, book_code: %s",
+                resource_request.lang_code,
+                resource_request.resource_type,
+                resource_request.book_code,
+            )
     found_resource_lookup_dtos = [
         resource_lookup_dto
         for resource_lookup_dto in resource_lookup_dtos
