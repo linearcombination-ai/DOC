@@ -24,6 +24,7 @@ from doc.utils.file_utils import docx_filepath, file_needs_update
 from doc.utils.text_utils import maybe_correct_book_name
 from docx import Document
 from docx.oxml import parse_xml
+from docx.oxml.ns import qn
 from docx.shared import Length, Mm, Pt, RGBColor
 from docx.table import _Cell, _Row
 from html4docx import HtmlToDocx  # type: ignore
@@ -307,6 +308,7 @@ def generate_docx(
         # Apply explicit column widths to cells in each row to prevent Word layout collapse
         for i, w in enumerate(col_widths):
             row.cells[i].width = w
+        passage_paragraph_ranges: list[tuple[Cell, int]] = []
         cell = row.cells[col_index["lang0"]]
         run = cell.add_paragraph().add_run(p0.localized_reference)
         run.style = (
@@ -314,6 +316,8 @@ def generate_docx(
             if p0.is_available
             else unavailable_reference_style_name
         )
+        # Index of the reference line paragraph, the last one in the cell so far
+        passage_paragraph_ranges.append((cell, len(cell.paragraphs) - 1))
         if p0.is_available:
             html_to_docx.add_html_to_document(p0.passage_text, cell)
         if has_lang1 and p1 is not None:
@@ -324,12 +328,14 @@ def generate_docx(
                 if p1.is_available
                 else unavailable_reference_style_name
             )
+            passage_paragraph_ranges.append((cell, len(cell.paragraphs) - 1))
             if p1.is_available:
                 html_to_docx.add_html_to_document(p1.passage_text, cell)
         if show_notes_column:
             cell = row.cells[col_index["notes"]]
             cell.text = ""
             add_vertical_line(cell)
+        keep_passage_on_one_page(row, passage_paragraph_ranges)
     doc = add_footer(doc)
     doc = add_header(doc, lang0_name, lang1_name, header_text="Passages")
     doc.save(docx_filepath)
@@ -337,6 +343,33 @@ def generate_docx(
 
 # Define the WordprocessingML namespace
 WORD_NAMESPACE = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+
+
+def keep_passage_on_one_page(
+    row: Row, passage_paragraph_ranges: Sequence[tuple[Cell, int]]
+) -> None:
+    """
+    Ask Word to keep a passage (one table row) on a single page. A page
+    break may still fall inside a passage that is taller than a page.
+
+    Each (cell, reference_index) pair gives the index of the reference
+    line paragraph in the cell; the passage's content paragraphs follow
+    it. Paragraphs before reference_index, e.g., the cell's initial empty
+    one, are left alone.
+    """
+    for cell, reference_index in passage_paragraph_ranges:
+        paragraphs = cell.paragraphs[reference_index:]
+        for paragraph in paragraphs:
+            paragraph.paragraph_format.keep_together = True
+        # Keep every paragraph with the one after it, except the last
+        for paragraph in paragraphs[:-1]:
+            paragraph.paragraph_format.keep_with_next = True
+    tr_pr = row._tr.find(qn("w:trPr"))
+    if tr_pr is None:
+        tr_pr = parse_xml(f'<w:trPr xmlns:w="{WORD_NAMESPACE}"/>')
+        row._tr.insert(0, tr_pr)
+    if tr_pr.find(qn("w:cantSplit")) is None:
+        tr_pr.append(parse_xml(f'<w:cantSplit xmlns:w="{WORD_NAMESPACE}"/>'))
 
 
 def add_vertical_line(cell: Cell) -> None:
