@@ -16,7 +16,7 @@ import hashlib
 import json
 import re
 from enum import Enum
-from typing import Any, Iterable, Sequence
+from typing import Iterable, Mapping, Sequence, TypeAlias
 
 # Bump this to invalidate every previously cached document, e.g., after a
 # change to templates or rendering that the request itself doesn't capture.
@@ -31,6 +31,14 @@ HASH_HEX_LENGTH: int = 12
 MAX_LANGS_SLUG_LEN: int = 20
 MAX_TYPES_SLUG_LEN: int = 20
 MAX_BOOKS_SLUG_LEN: int = 30
+
+JsonScalar: TypeAlias = str | int | float | bool | None
+
+# What may appear in the payload that is hashed: JSON values, plus enums
+# which are canonicalized as their values.
+CanonicalValue: TypeAlias = (
+    JsonScalar | Enum | Sequence["CanonicalValue"] | Mapping[str, "CanonicalValue"]
+)
 
 _NON_SLUG_CHARS = re.compile(r"[^a-z0-9]+")
 
@@ -62,13 +70,13 @@ def slug_group(values: Iterable[object], noun: str, max_len: int) -> str:
     return f"{len(unique)}{noun}"
 
 
-def _json_default(value: Any) -> Any:
+def _json_default(value: object) -> JsonScalar:
     if isinstance(value, Enum):
         return value.value
     raise TypeError(f"Cannot canonicalize value of type {type(value).__name__}")
 
 
-def canonical_json(payload: Any) -> str:
+def canonical_json(payload: CanonicalValue) -> str:
     """
     Serialize payload to a string that is identical for equal payloads:
     sorted object keys, no insignificant whitespace, enums as their
@@ -84,7 +92,7 @@ def canonical_json(payload: Any) -> str:
 
 
 def short_hash(
-    payload: Any,
+    payload: CanonicalValue,
     version: int = KEY_SCHEMA_VERSION,
     length: int = HASH_HEX_LENGTH,
 ) -> str:
@@ -97,7 +105,7 @@ def short_hash(
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:length]
 
 
-def request_key(slug: str, payload: Any) -> str:
+def request_key(slug: str, payload: CanonicalValue) -> str:
     """Return the key: the resources slug followed by the request hash."""
     return f"{slug}_{short_hash(payload)}"
 

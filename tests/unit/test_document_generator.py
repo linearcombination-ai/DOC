@@ -1,5 +1,5 @@
 import re
-from typing import Any
+from typing import Mapping
 
 from doc.domain import document_generator, model
 from doc.domain.bible_books import BOOK_NAMES
@@ -8,27 +8,25 @@ KEY_PATTERN = re.compile(r"^[a-z0-9_-]+_[0-9a-f]{12}$")
 
 
 def document_request(
-    components: list[tuple[str, str, str]] | None = None, **overrides: Any
+    components: list[tuple[str, str, str]] | None = None,
+    overrides: Mapping[str, object] | None = None,
 ) -> model.DocumentRequest:
     components = components or [
         ("en", "ulb", "mat"),
         ("en", "tn", "mat"),
         ("en", "tw", "mat"),
     ]
-    kwargs: dict[str, Any] = {
-        "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
-        "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
-        **overrides,
-    }
-    return model.DocumentRequest(
+    request = model.DocumentRequest(
+        assembly_strategy_kind=model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
+        assembly_layout_kind=model.AssemblyLayoutEnum.ONE_COLUMN,
         resource_requests=[
             model.ResourceRequest(
                 lang_code=lang_code, resource_type=resource_type, book_code=book_code
             )
             for lang_code, resource_type, book_code in components
         ],
-        **kwargs,
     )
+    return request.model_copy(update=dict(overrides or {}))
 
 
 def test_every_document_request_field_is_classified() -> None:
@@ -56,7 +54,7 @@ def test_document_request_key_is_deterministic() -> None:
 
 def test_document_request_key_differs_for_each_hashed_setting() -> None:
     base_key = document_generator.document_request_key(document_request())
-    variations: dict[str, Any] = {
+    variations: dict[str, object] = {
         "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_CHAPTER,
         "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN_COMPACT,
         "layout_for_print": True,
@@ -77,7 +75,7 @@ def test_document_request_key_differs_for_each_hashed_setting() -> None:
     keys = {base_key}
     for field, value in variations.items():
         key = document_generator.document_request_key(
-            document_request(**{field: value})
+            document_request(overrides={field: value})
         )
         # Same resources, so same slug, but a different hash.
         assert key.rsplit("_", 1)[0] == base_key.rsplit("_", 1)[0], field
@@ -95,7 +93,9 @@ def test_document_request_key_ignores_delivery_settings() -> None:
         {"document_request_source": model.DocumentRequestSourceEnum.UI},
     ):
         assert (
-            document_generator.document_request_key(document_request(**overrides))
+            document_generator.document_request_key(
+                document_request(overrides=overrides)
+            )
             == base_key
         ), overrides
 
@@ -103,13 +103,15 @@ def test_document_request_key_ignores_delivery_settings() -> None:
 def test_document_request_key_limit_words_only_matters_with_tw() -> None:
     without_tw = [("en", "ulb", "mat"), ("en", "tn", "mat")]
     assert document_generator.document_request_key(
-        document_request(without_tw, limit_words=True)
+        document_request(without_tw, {"limit_words": True})
     ) == document_generator.document_request_key(
-        document_request(without_tw, limit_words=False)
+        document_request(without_tw, {"limit_words": False})
     )
     assert document_generator.document_request_key(
-        document_request(limit_words=True)
-    ) != document_generator.document_request_key(document_request(limit_words=False))
+        document_request(overrides={"limit_words": True})
+    ) != document_generator.document_request_key(
+        document_request(overrides={"limit_words": False})
+    )
 
 
 def test_document_request_key_depends_on_resources_and_their_order() -> None:
