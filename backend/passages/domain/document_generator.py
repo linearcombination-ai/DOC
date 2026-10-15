@@ -1,5 +1,4 @@
 import json
-import time
 from typing import TYPE_CHECKING, Mapping, Optional, Sequence
 
 from celery import current_task
@@ -21,6 +20,12 @@ from doc.domain.resource_lookup import (
 )
 from doc.utils.docx_util import ensure_reference_styles
 from doc.utils.file_utils import docx_filepath, file_needs_update
+from doc.utils.request_key import (
+    MAX_BOOKS_SLUG_LEN,
+    request_key,
+    slug_group,
+    slugify,
+)
 from doc.utils.text_utils import maybe_correct_book_name
 from docx import Document
 from docx.oxml import parse_xml
@@ -359,49 +364,42 @@ def add_vertical_line(cell: Cell) -> None:
 def document_request_key(
     lang0_code: str,
     lang1_code: Optional[str],
-    passage_reference_dtos: list[BibleReferenceWithAvailability],
-    max_filename_len: int = 240,
-    underscore: str = "_",
-    hyphen: str = "-",
+    passage_reference_dtos: Sequence[BibleReferenceWithAvailability],
+    lang0_name: str = "",
+    lang1_name: Optional[str] = None,
 ) -> str:
     """
     Create and return the document_request_key. The
-    document_request_key uniquely identifies a document request.
+    document_request_key uniquely identifies a document request and is
+    used as the cache key and as the file name (with prefix and suffix
+    added).
 
-    If the document request key is max_filename_len or more characters
-    in length, then switch to using a shorter string that is based on the
-    current time. The reason for this is that the document request key is
-    used as the file name (with suffix appended) and each OS has a limit
-    to how long a file name may be. max_filename_len should make room for
-    the file suffix, e.g., ".docx", to be appended.
-
-    It is really useful to have filenames with semantic meaning and so
-    those are preferred when possible, i.e., when the file name is not
-    too long.
+    The key is a readable slug of the languages and books requested
+    followed by a short hash of the complete request: language codes and
+    names and every passage reference in order, including end chapter
+    and verse and availability. The slug is for people, the hash is what
+    makes the key unique and the same for identical requests, regardless
+    of how many passages are requested.
     """
-
-    translation_table = str.maketrans(":;,-", "____")
-    passages_key = underscore.join(
-        [
-            f"{passage_reference.reference.book_code}_{passage_reference.reference.start_chapter}_{passage_reference.reference.start_chapter_verse_ref.translate(translation_table)}"
-            for passage_reference in passage_reference_dtos
-        ]
+    lang_slug = "-".join(
+        slugify(code) for code in (lang0_code, lang1_code) if code is not None
     )
-    document_request_key_ = (
-        f"{lang0_code}_{lang1_code}_{passages_key}_passages"
-        if lang1_code
-        else f"{lang0_code}_{passages_key}_passages"
+    books_slug = slug_group(
+        (dto.reference.book_code for dto in passage_reference_dtos),
+        "books",
+        MAX_BOOKS_SLUG_LEN,
     )
-    if len(document_request_key_) >= max_filename_len:
-        # Likely the generated filename was too long for the OS where this is
-        # running. In that case, use the current time as a document_request_key
-        # value as doing so results in an acceptably short length.
-        timestamp_components = str(time.time()).split(".")
-        return f"{timestamp_components[0]}_{timestamp_components[1]}"
-    else:
-        # Use the semantic filename which declaratively describes the
-        # document request components.
-        return document_request_key_
+    slug = f"{lang_slug}_{books_slug}_{len(passage_reference_dtos)}passages"
+    return request_key(
+        slug,
+        {
+            "lang0_code": lang0_code,
+            "lang0_name": lang0_name,
+            "lang1_code": lang1_code,
+            "lang1_name": lang1_name,
+            "passages": [dto.model_dump(mode="json") for dto in passage_reference_dtos],
+        },
+    )
 
 
 @worker.app.task
@@ -427,7 +425,11 @@ def generate_passages_docx_document(
     #     email_address,
     # )
     document_request_key_ = document_request_key(
-        lang0_code, lang1_code, passage_reference_dtos
+        lang0_code,
+        lang1_code,
+        passage_reference_dtos,
+        lang0_name,
+        lang1_name,
     )
     docx_filepath_ = f"{docx_filepath(document_request_key_, docx_filepath_prefix)}"
     logger.debug("docx_filepath_: %s", docx_filepath_)

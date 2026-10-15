@@ -74,9 +74,13 @@ test.skip('lang then book by verse', async ({ page }) => {
   await expect(page1.locator('body')).toContainText(
     '1The book of the genealogy of Jesus Christ, son of David, son of Abraham.'
   )
-  await page1.goto(
-    'http://localhost:8089/en-tn-mat_en-tw-mat_en-ulb-mat_lvo_1c_chapter_clf_lwt_ssf_1ctn_1ctq.html#en-canaan'
-  )
+  // The generated file name is the document request key: a slug of the
+  // resources requested followed by a short hash of the whole request.
+  // Don't hard code it, read it from the page that was opened.
+  const htmlUrl = new URL(page1.url())
+  expect(htmlUrl.pathname).toMatch(/^\/en_[a-z-]+_mat_[0-9a-f]{12}\.html$/)
+  htmlUrl.hash = 'en-canaan'
+  await page1.goto(htmlUrl.toString())
 })
 
 // skipping because, for now, TS has requested by verse interleaving
