@@ -170,3 +170,30 @@ def test_tall_passage_in_either_language_leaves_row_splittable(
     lang1 = [_passage("Gen 1:1 fr", _poetry(400))]
     doc = _generate(tmp_path, lang0, lang1)
     assert not _cant_split(doc.tables[0].rows[0])
+
+
+def _prose(n_chars: int) -> str:
+    return f'<span class="verse"><sup class="versemarker">1</sup>{"word " * (n_chars // 5)}</span>'
+
+
+def test_passage_filling_most_of_a_page_stays_cant_split(tmp_path: Path) -> None:
+    """A passage that fits on a page by itself, e.g., a page-sized one
+    following another passage, must be kept whole so that it moves to the
+    next page instead of being split across the page break."""
+    previous = _passage("Genesis 2:4-25", _prose(2000))
+    # About nine tenths of a page by the estimate
+    fits = _passage("Genesis 3:1-24", _prose(3500))
+    doc = _generate(tmp_path, [previous, fits])
+    for row in doc.tables[0].rows:
+        assert _cant_split(row)
+
+
+def test_page_filling_passage_in_two_language_row_stays_cant_split(
+    tmp_path: Path,
+) -> None:
+    """Half-width columns wrap more, so the same page fraction holds less text"""
+    lang0 = [_passage("Genesis 2:4-25", _prose(1000)), _passage("Gen 3", _prose(1700))]
+    lang1 = [_passage("Ukubala 2:4-25", _prose(1000)), _passage("Uku 3", _prose(1700))]
+    doc = _generate(tmp_path, lang0, lang1)
+    for row in doc.tables[0].rows:
+        assert _cant_split(row)

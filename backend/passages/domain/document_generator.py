@@ -350,23 +350,29 @@ def generate_docx(
 WORD_NAMESPACE = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 
 
-# Rough text metrics for deciding whether a passage fits on one page.
-# They deliberately overestimate so that a borderline passage is treated
-# as too tall rather than too short.
+# Text metrics for deciding whether a passage fits on one page, based on
+# the default template: 11pt Calibri, 1.15 line spacing, 10pt after each
+# paragraph, 5.4pt cell margins either side. Calibri averages about
+# 0.47em per character in running text.
 ESTIMATED_FONT_SIZE = Pt(11)
-ESTIMATED_CHAR_WIDTH = ESTIMATED_FONT_SIZE * 0.5
+ESTIMATED_CHAR_WIDTH = ESTIMATED_FONT_SIZE * 0.47
 ESTIMATED_LINE_HEIGHT = ESTIMATED_FONT_SIZE * 1.4
 ESTIMATED_PARAGRAPH_SPACING = Pt(10)
-ESTIMATED_CELL_PADDING = Pt(12)
-# Fraction of the page a passage may fill and still be kept whole
-PAGE_FILL_LIMIT = 0.85
+ESTIMATED_CELL_PADDING = Pt(11)
+# Characters lost per line because words are not split at the cell edge
+ESTIMATED_WRAP_WASTE_CHARS = 3
+# Fraction of the page a passage may fill and still be kept whole. A
+# little under 1 since the estimate is not exact.
+PAGE_FILL_LIMIT = 0.95
 
 
 def estimate_cell_height(cell: Cell, paragraphs: Sequence[Paragraph]) -> Length:
     """Roughly estimate the height of the given paragraphs laid out in cell."""
     width = cell.width if cell.width is not None else Pt(200)
     chars_per_line = max(
-        1, int((width - ESTIMATED_CELL_PADDING) / ESTIMATED_CHAR_WIDTH)
+        1,
+        int((width - ESTIMATED_CELL_PADDING) / ESTIMATED_CHAR_WIDTH)
+        - ESTIMATED_WRAP_WASTE_CHARS,
     )
     height = 0.0
     for paragraph in paragraphs:
