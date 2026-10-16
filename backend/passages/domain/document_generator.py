@@ -411,7 +411,8 @@ def keep_passage_on_one_page(
         row_height = max(row_height, estimate_cell_height(cell, paragraphs))
     if row_height > page_content_height * PAGE_FILL_LIMIT:
         # No page break before the very first row, which is already at the top
-        if row._tr.getprevious() is not None:
+        previous = row._tr.getprevious()
+        if previous is not None and previous.tag == qn("w:tr"):
             for cell, _ in passage_paragraph_ranges:
                 cell.paragraphs[0].paragraph_format.page_break_before = True
         return
