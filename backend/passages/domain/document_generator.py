@@ -361,9 +361,8 @@ ESTIMATED_PARAGRAPH_SPACING = Pt(10)
 ESTIMATED_CELL_PADDING = Pt(11)
 # Characters lost per line because words are not split at the cell edge
 ESTIMATED_WRAP_WASTE_CHARS = 3
-# Fraction of the page a passage may fill and still be kept whole. A
-# little under 1 since the estimate is not exact.
-PAGE_FILL_LIMIT = 0.95
+# Fraction of the page a passage may fill and still be kept whole
+PAGE_FILL_LIMIT = 1.0
 
 
 def estimate_cell_height(cell: Cell, paragraphs: Sequence[Paragraph]) -> Length:
@@ -398,7 +397,8 @@ def keep_passage_on_one_page(
     A row that cannot split is clipped at the bottom of the page by Word
     when it is taller than a page, which cuts off the end of the passage.
     So the row is only marked cantSplit when it is estimated to fit on a
-    page; a taller passage is left free to flow onto the next page.
+    page. A taller passage is left free to split, but it starts on a
+    fresh page, since starting mid-page would only force a split sooner.
     """
     row_height = 0
     for cell, reference_index in passage_paragraph_ranges:
@@ -410,6 +410,10 @@ def keep_passage_on_one_page(
             paragraph.paragraph_format.keep_with_next = True
         row_height = max(row_height, estimate_cell_height(cell, paragraphs))
     if row_height > page_content_height * PAGE_FILL_LIMIT:
+        # No page break before the very first row, which is already at the top
+        if row._tr.getprevious() is not None:
+            for cell, _ in passage_paragraph_ranges:
+                cell.paragraphs[0].paragraph_format.page_break_before = True
         return
     tr_pr = row._tr.find(qn("w:trPr"))
     if tr_pr is None:

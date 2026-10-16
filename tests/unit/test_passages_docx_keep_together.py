@@ -181,8 +181,8 @@ def test_passage_filling_most_of_a_page_stays_cant_split(tmp_path: Path) -> None
     following another passage, must be kept whole so that it moves to the
     next page instead of being split across the page break."""
     previous = _passage("Genesis 2:4-25", _prose(2000))
-    # About nine tenths of a page by the estimate
-    fits = _passage("Genesis 3:1-24", _prose(3500))
+    # Just under a page by the estimate
+    fits = _passage("Genesis 3:1-24", _prose(3800))
     doc = _generate(tmp_path, [previous, fits])
     for row in doc.tables[0].rows:
         assert _cant_split(row)
@@ -192,8 +192,51 @@ def test_page_filling_passage_in_two_language_row_stays_cant_split(
     tmp_path: Path,
 ) -> None:
     """Half-width columns wrap more, so the same page fraction holds less text"""
-    lang0 = [_passage("Genesis 2:4-25", _prose(1000)), _passage("Gen 3", _prose(1700))]
-    lang1 = [_passage("Ukubala 2:4-25", _prose(1000)), _passage("Uku 3", _prose(1700))]
+    lang0 = [_passage("Genesis 2:4-25", _prose(1000)), _passage("Gen 3", _prose(1850))]
+    lang1 = [_passage("Ukubala 2:4-25", _prose(1000)), _passage("Uku 3", _prose(1850))]
     doc = _generate(tmp_path, lang0, lang1)
     for row in doc.tables[0].rows:
         assert _cant_split(row)
+
+
+def _page_break_before(cell: _Cell) -> bool:
+    return _has(cell.paragraphs[0], "w:pageBreakBefore")
+
+
+def test_over_a_page_passage_after_short_one_starts_on_fresh_page(
+    tmp_path: Path,
+) -> None:
+    short = _passage("Ukufuma 12:21-42", _prose(800))
+    long = _passage("Ukufuma 14:1-31", _prose(8000))
+    doc = _generate(tmp_path, [short, long])
+    first, second = doc.tables[0].rows
+    assert _cant_split(first)
+    assert not _page_break_before(first.cells[0])
+    assert not _cant_split(second)
+    assert _page_break_before(second.cells[0])
+    _assert_kept(second.cells[0], "Ukufuma 14:1-31")
+
+
+def test_over_a_page_passage_in_either_language_breaks_before_both_cells(
+    tmp_path: Path,
+) -> None:
+    lang0 = [_passage("A", _prose(300)), _passage("B", _prose(300))]
+    lang1 = [_passage("A fr", _prose(300)), _passage("B fr", _poetry(400))]
+    doc = _generate(tmp_path, lang0, lang1)
+    second = doc.tables[0].rows[1]
+    assert not _cant_split(second)
+    assert _page_break_before(second.cells[0])
+    assert _page_break_before(second.cells[1])
+
+
+def test_over_a_page_first_passage_has_no_page_break_before(tmp_path: Path) -> None:
+    doc = _generate(tmp_path, [_passage("Exodus 14:1-31", _prose(8000))])
+    row = doc.tables[0].rows[0]
+    assert not _cant_split(row)
+    assert not _page_break_before(row.cells[0])
+
+
+def test_short_passages_have_no_page_break_before(tmp_path: Path) -> None:
+    doc = _generate(tmp_path, [_passage("A", _verse(1)), _passage("B", _verse(1))])
+    for row in doc.tables[0].rows:
+        assert not _page_break_before(row.cells[0])
