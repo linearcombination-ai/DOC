@@ -140,15 +140,33 @@ def test_unavailable_passage_reference_only(tmp_path: Path) -> None:
     assert not _has(paragraphs[0], "w:keepNext")
 
 
-def test_passage_longer_than_a_page_does_not_error(tmp_path: Path) -> None:
-    """A passage taller than a page still gets the properties; Word will
-    split it where it must. Generation must succeed."""
+def test_passage_longer_than_a_page_is_not_cant_split(tmp_path: Path) -> None:
+    """A cantSplit row taller than a page is clipped by Word, cutting off
+    the end of the passage. A passage taller than a page must therefore
+    stay splittable, while a short one next to it is still kept whole."""
     long_passage = _passage("Exodus 14:1-31", _poetry(400))
     short_passage = _passage("Gen 1:1", _verse(1))
     doc = _generate(tmp_path, [long_passage, short_passage])
     rows = doc.tables[0].rows
     assert len(rows) == 2
+    assert not _cant_split(rows[0])
+    assert _cant_split(rows[1])
     for row, ref in zip(rows, ["Exodus 14:1-31", "Gen 1:1"]):
-        assert _cant_split(row)
         _assert_kept(row.cells[0], ref)
     assert len(_passage_paragraphs(rows[0].cells[0], "Exodus 14:1-31")) > 400
+
+
+def test_long_single_paragraph_passage_is_not_cant_split(tmp_path: Path) -> None:
+    """Prose is one paragraph, so tallness comes from line wrapping"""
+    html = "".join(_verse(n) for n in range(1, 400))
+    doc = _generate(tmp_path, [_passage("Exodus 32:1-35", html)])
+    assert not _cant_split(doc.tables[0].rows[0])
+
+
+def test_tall_passage_in_either_language_leaves_row_splittable(
+    tmp_path: Path,
+) -> None:
+    lang0 = [_passage("Gen 1:1", _verse(1))]
+    lang1 = [_passage("Gen 1:1 fr", _poetry(400))]
+    doc = _generate(tmp_path, lang0, lang1)
+    assert not _cant_split(doc.tables[0].rows[0])

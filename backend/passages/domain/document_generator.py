@@ -27,6 +27,7 @@ from docx.oxml import parse_xml
 from docx.oxml.ns import qn
 from docx.shared import Length, Mm, Pt, RGBColor
 from docx.table import _Cell, _Row
+from docx.text.paragraph import Paragraph
 from html4docx import HtmlToDocx  # type: ignore
 from passages.domain.model import (
     BibleReferenceWithAvailability,
@@ -335,7 +336,11 @@ def generate_docx(
             cell = row.cells[col_index["notes"]]
             cell.text = ""
             add_vertical_line(cell)
-        keep_passage_on_one_page(row, passage_paragraph_ranges)
+        keep_passage_on_one_page(
+            row,
+            passage_paragraph_ranges,
+            page_content_height=a4_height - 2 * document_margin_width,
+        )
     doc = add_footer(doc)
     doc = add_header(doc, lang0_name, lang1_name, header_text="Passages")
     doc.save(docx_filepath)
@@ -345,8 +350,35 @@ def generate_docx(
 WORD_NAMESPACE = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 
 
+# Rough text metrics for deciding whether a passage fits on one page.
+# They deliberately overestimate so that a borderline passage is treated
+# as too tall rather than too short.
+ESTIMATED_FONT_SIZE = Pt(11)
+ESTIMATED_CHAR_WIDTH = ESTIMATED_FONT_SIZE * 0.5
+ESTIMATED_LINE_HEIGHT = ESTIMATED_FONT_SIZE * 1.4
+ESTIMATED_PARAGRAPH_SPACING = Pt(10)
+ESTIMATED_CELL_PADDING = Pt(12)
+# Fraction of the page a passage may fill and still be kept whole
+PAGE_FILL_LIMIT = 0.85
+
+
+def estimate_cell_height(cell: Cell, paragraphs: Sequence[Paragraph]) -> Length:
+    """Roughly estimate the height of the given paragraphs laid out in cell."""
+    width = cell.width if cell.width is not None else Pt(200)
+    chars_per_line = max(
+        1, int((width - ESTIMATED_CELL_PADDING) / ESTIMATED_CHAR_WIDTH)
+    )
+    height = 0
+    for paragraph in paragraphs:
+        lines = max(1, -(-len(paragraph.text) // chars_per_line))
+        height += lines * ESTIMATED_LINE_HEIGHT + ESTIMATED_PARAGRAPH_SPACING
+    return Length(int(height))
+
+
 def keep_passage_on_one_page(
-    row: Row, passage_paragraph_ranges: Sequence[tuple[Cell, int]]
+    row: Row,
+    passage_paragraph_ranges: Sequence[tuple[Cell, int]],
+    page_content_height: Length,
 ) -> None:
     """
     Ask Word to keep a passage (one table row) on a single page. A page
@@ -356,7 +388,13 @@ def keep_passage_on_one_page(
     line paragraph in the cell; the passage's content paragraphs follow
     it. Paragraphs before reference_index, e.g., the cell's initial empty
     one, are left alone.
+
+    A row that cannot split is clipped at the bottom of the page by Word
+    when it is taller than a page, which cuts off the end of the passage.
+    So the row is only marked cantSplit when it is estimated to fit on a
+    page; a taller passage is left free to flow onto the next page.
     """
+    row_height = 0
     for cell, reference_index in passage_paragraph_ranges:
         paragraphs = cell.paragraphs[reference_index:]
         for paragraph in paragraphs:
@@ -364,6 +402,9 @@ def keep_passage_on_one_page(
         # Keep every paragraph with the one after it, except the last
         for paragraph in paragraphs[:-1]:
             paragraph.paragraph_format.keep_with_next = True
+        row_height = max(row_height, estimate_cell_height(cell, paragraphs))
+    if row_height > page_content_height * PAGE_FILL_LIMIT:
+        return
     tr_pr = row._tr.find(qn("w:trPr"))
     if tr_pr is None:
         tr_pr = parse_xml(f'<w:trPr xmlns:w="{WORD_NAMESPACE}"/>')
