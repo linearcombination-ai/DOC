@@ -339,7 +339,7 @@ def generate_docx(
         keep_passage_on_one_page(
             row,
             passage_paragraph_ranges,
-            page_content_height=a4_height - 2 * document_margin_width,
+            page_content_height=Length(a4_height - 2 * document_margin_width),
         )
     doc = add_footer(doc)
     doc = add_header(doc, lang0_name, lang1_name, header_text="Passages")
@@ -368,7 +368,7 @@ def estimate_cell_height(cell: Cell, paragraphs: Sequence[Paragraph]) -> Length:
     chars_per_line = max(
         1, int((width - ESTIMATED_CELL_PADDING) / ESTIMATED_CHAR_WIDTH)
     )
-    height = 0
+    height = 0.0
     for paragraph in paragraphs:
         lines = max(1, -(-len(paragraph.text) // chars_per_line))
         height += lines * ESTIMATED_LINE_HEIGHT + ESTIMATED_PARAGRAPH_SPACING
