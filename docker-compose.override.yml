@@ -6,3 +6,7 @@ services:
   fileserver:
     volumes:
       - ./docker_document_output:/srv/content
+
+  worker:
+    volumes:
+      - ./docker_document_output:/app/document_output
