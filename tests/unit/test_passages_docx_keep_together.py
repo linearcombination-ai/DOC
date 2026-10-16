@@ -240,3 +240,27 @@ def test_short_passages_have_no_page_break_before(tmp_path: Path) -> None:
     doc = _generate(tmp_path, [_passage("A", _verse(1)), _passage("B", _verse(1))])
     for row in doc.tables[0].rows:
         assert not _page_break_before(row.cells[0])
+
+
+def test_passage_not_fitting_after_near_full_page_passage_starts_fresh_page(
+    tmp_path: Path,
+) -> None:
+    """Near-full page, then a roughly-a-page passage, then a more-than-a-page
+    one: neither may start mid-page after the first. The first two fit on a
+    page so cantSplit moves them whole; the third is splittable but forces a
+    page break before itself."""
+    near_full = _passage("Ukufuma 12:21-42", _prose(3800))
+    about_a_page = _passage("Ukufuma 14:1-31", _prose(3800))
+    more_than_a_page = _passage("Ukufuma 20:1-30", _prose(8000))
+    doc = _generate(tmp_path, [near_full, about_a_page, more_than_a_page])
+    first, second, third = doc.tables[0].rows
+    assert _cant_split(first) and _cant_split(second)
+    assert not _page_break_before(first.cells[0])
+    assert not _cant_split(third)
+    assert _page_break_before(third.cells[0])
+    # Nothing glues one passage to the next
+    for row, ref in zip(
+        (first, second, third),
+        ("Ukufuma 12:21-42", "Ukufuma 14:1-31", "Ukufuma 20:1-30"),
+    ):
+        _assert_kept(row.cells[0], ref)
