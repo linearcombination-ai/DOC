@@ -24,8 +24,10 @@ from doc.utils.file_utils import docx_filepath, file_needs_update
 from doc.utils.text_utils import maybe_correct_book_name
 from docx import Document
 from docx.oxml import parse_xml
+from docx.oxml.ns import qn
 from docx.shared import Length, Mm, Pt, RGBColor
 from docx.table import _Cell, _Row
+from docx.text.paragraph import Paragraph
 from html4docx import HtmlToDocx  # type: ignore
 from passages.domain.model import (
     BibleReferenceWithAvailability,
@@ -307,6 +309,7 @@ def generate_docx(
         # Apply explicit column widths to cells in each row to prevent Word layout collapse
         for i, w in enumerate(col_widths):
             row.cells[i].width = w
+        passage_paragraph_ranges: list[tuple[Cell, int]] = []
         cell = row.cells[col_index["lang0"]]
         run = cell.add_paragraph().add_run(p0.localized_reference)
         run.style = (
@@ -314,6 +317,8 @@ def generate_docx(
             if p0.is_available
             else unavailable_reference_style_name
         )
+        # Index of the reference line paragraph, the last one in the cell so far
+        passage_paragraph_ranges.append((cell, len(cell.paragraphs) - 1))
         if p0.is_available:
             html_to_docx.add_html_to_document(p0.passage_text, cell)
         if has_lang1 and p1 is not None:
@@ -324,12 +329,18 @@ def generate_docx(
                 if p1.is_available
                 else unavailable_reference_style_name
             )
+            passage_paragraph_ranges.append((cell, len(cell.paragraphs) - 1))
             if p1.is_available:
                 html_to_docx.add_html_to_document(p1.passage_text, cell)
         if show_notes_column:
             cell = row.cells[col_index["notes"]]
             cell.text = ""
             add_vertical_line(cell)
+        keep_passage_on_one_page(
+            row,
+            passage_paragraph_ranges,
+            page_content_height=Length(a4_height - 2 * document_margin_width),
+        )
     doc = add_footer(doc)
     doc = add_header(doc, lang0_name, lang1_name, header_text="Passages")
     doc.save(docx_filepath)
@@ -337,6 +348,86 @@ def generate_docx(
 
 # Define the WordprocessingML namespace
 WORD_NAMESPACE = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+
+
+# Text metrics for deciding whether a passage fits on one page, based on
+# the default template: 11pt Calibri, 1.15 line spacing, 10pt after each
+# paragraph, 5.4pt cell margins either side. Calibri averages about
+# 0.47em per character in running text.
+ESTIMATED_FONT_SIZE = Pt(11)
+ESTIMATED_CHAR_WIDTH = ESTIMATED_FONT_SIZE * 0.47
+ESTIMATED_LINE_HEIGHT = ESTIMATED_FONT_SIZE * 1.4
+ESTIMATED_PARAGRAPH_SPACING = Pt(10)
+ESTIMATED_CELL_PADDING = Pt(11)
+# Characters lost per line because words are not split at the cell edge
+ESTIMATED_WRAP_WASTE_CHARS = 3
+# Fraction of the page a passage may fill and still be kept whole. The
+# estimate is rough: it counts paragraph text only, so it can miss list
+# or table content and wide scripts, and it ignores header and footer
+# space. The margin below 1 guards against underestimating a passage that
+# really exceeds a page, which Word would clip if it were cantSplit. A
+# passage over the limit still starts on a fresh page, so the margin does
+# not cause extra mid-passage splits.
+PAGE_FILL_LIMIT = 0.9
+
+
+def estimate_cell_height(cell: Cell, paragraphs: Sequence[Paragraph]) -> Length:
+    """Roughly estimate the height of the given paragraphs laid out in cell."""
+    width = cell.width if cell.width is not None else Pt(200)
+    chars_per_line = max(
+        1,
+        int((width - ESTIMATED_CELL_PADDING) / ESTIMATED_CHAR_WIDTH)
+        - ESTIMATED_WRAP_WASTE_CHARS,
+    )
+    height = 0.0
+    for paragraph in paragraphs:
+        lines = max(1, -(-len(paragraph.text) // chars_per_line))
+        height += lines * ESTIMATED_LINE_HEIGHT + ESTIMATED_PARAGRAPH_SPACING
+    return Length(int(height))
+
+
+def keep_passage_on_one_page(
+    row: Row,
+    passage_paragraph_ranges: Sequence[tuple[Cell, int]],
+    page_content_height: Length,
+) -> None:
+    """
+    Ask Word to keep a passage (one table row) on a single page. A page
+    break may still fall inside a passage that is taller than a page.
+
+    Each (cell, reference_index) pair gives the index of the reference
+    line paragraph in the cell; the passage's content paragraphs follow
+    it. Paragraphs before reference_index, e.g., the cell's initial empty
+    one, are left alone.
+
+    A row that cannot split is clipped at the bottom of the page by Word
+    when it is taller than a page, which cuts off the end of the passage.
+    So the row is only marked cantSplit when it is estimated to fit on a
+    page. A taller passage is left free to split, but it starts on a
+    fresh page, since starting mid-page would only force a split sooner.
+    """
+    row_height = 0
+    for cell, reference_index in passage_paragraph_ranges:
+        paragraphs = cell.paragraphs[reference_index:]
+        for paragraph in paragraphs:
+            paragraph.paragraph_format.keep_together = True
+        # Keep every paragraph with the one after it, except the last
+        for paragraph in paragraphs[:-1]:
+            paragraph.paragraph_format.keep_with_next = True
+        row_height = max(row_height, estimate_cell_height(cell, paragraphs))
+    if row_height > page_content_height * PAGE_FILL_LIMIT:
+        # No page break before the very first row, which is already at the top
+        previous = row._tr.getprevious()
+        if previous is not None and previous.tag == qn("w:tr"):
+            for cell, _ in passage_paragraph_ranges:
+                cell.paragraphs[0].paragraph_format.page_break_before = True
+        return
+    tr_pr = row._tr.find(qn("w:trPr"))
+    if tr_pr is None:
+        tr_pr = parse_xml(f'<w:trPr xmlns:w="{WORD_NAMESPACE}"/>')
+        row._tr.insert(0, tr_pr)
+    if tr_pr.find(qn("w:cantSplit")) is None:
+        tr_pr.append(parse_xml(f'<w:cantSplit xmlns:w="{WORD_NAMESPACE}"/>'))
 
 
 def add_vertical_line(cell: Cell) -> None:
