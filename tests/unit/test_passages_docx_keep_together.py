@@ -181,8 +181,8 @@ def test_passage_filling_most_of_a_page_stays_cant_split(tmp_path: Path) -> None
     following another passage, must be kept whole so that it moves to the
     next page instead of being split across the page break."""
     previous = _passage("Genesis 2:4-25", _prose(2000))
-    # Just under a page by the estimate
-    fits = _passage("Genesis 3:1-24", _prose(3800))
+    # Close to the fill limit by the estimate
+    fits = _passage("Genesis 3:1-24", _prose(3500))
     doc = _generate(tmp_path, [previous, fits])
     for row in doc.tables[0].rows:
         assert _cant_split(row)
@@ -192,8 +192,8 @@ def test_page_filling_passage_in_two_language_row_stays_cant_split(
     tmp_path: Path,
 ) -> None:
     """Half-width columns wrap more, so the same page fraction holds less text"""
-    lang0 = [_passage("Genesis 2:4-25", _prose(1000)), _passage("Gen 3", _prose(1850))]
-    lang1 = [_passage("Ukubala 2:4-25", _prose(1000)), _passage("Uku 3", _prose(1850))]
+    lang0 = [_passage("Genesis 2:4-25", _prose(1000)), _passage("Gen 3", _prose(1600))]
+    lang1 = [_passage("Ukubala 2:4-25", _prose(1000)), _passage("Uku 3", _prose(1600))]
     doc = _generate(tmp_path, lang0, lang1)
     for row in doc.tables[0].rows:
         assert _cant_split(row)
@@ -249,8 +249,8 @@ def test_passage_not_fitting_after_near_full_page_passage_starts_fresh_page(
     one: neither may start mid-page after the first. The first two fit on a
     page so cantSplit moves them whole; the third is splittable but forces a
     page break before itself."""
-    near_full = _passage("Ukufuma 12:21-42", _prose(3800))
-    about_a_page = _passage("Ukufuma 14:1-31", _prose(3800))
+    near_full = _passage("Ukufuma 12:21-42", _prose(3500))
+    about_a_page = _passage("Ukufuma 14:1-31", _prose(3500))
     more_than_a_page = _passage("Ukufuma 20:1-30", _prose(8000))
     doc = _generate(tmp_path, [near_full, about_a_page, more_than_a_page])
     first, second, third = doc.tables[0].rows
@@ -264,3 +264,16 @@ def test_passage_not_fitting_after_near_full_page_passage_starts_fresh_page(
         ("Ukufuma 12:21-42", "Ukufuma 14:1-31", "Ukufuma 20:1-30"),
     ):
         _assert_kept(row.cells[0], ref)
+
+
+def test_passage_just_over_the_fill_limit_starts_fresh_page(tmp_path: Path) -> None:
+    """Between the fill limit and a full page the estimate is not trusted
+    to be safe for cantSplit, so the row stays splittable but starts on a
+    fresh page, where it fits if it really fits."""
+    near_full = _passage("Ukufuma 12:21-42", _prose(3500))
+    gap = _passage("Ukufuma 14:1-31", _prose(3700))
+    doc = _generate(tmp_path, [near_full, gap])
+    first, second = doc.tables[0].rows
+    assert _cant_split(first)
+    assert not _cant_split(second)
+    assert _page_break_before(second.cells[0])

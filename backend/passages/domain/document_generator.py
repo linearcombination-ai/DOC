@@ -361,8 +361,14 @@ ESTIMATED_PARAGRAPH_SPACING = Pt(10)
 ESTIMATED_CELL_PADDING = Pt(11)
 # Characters lost per line because words are not split at the cell edge
 ESTIMATED_WRAP_WASTE_CHARS = 3
-# Fraction of the page a passage may fill and still be kept whole
-PAGE_FILL_LIMIT = 1.0
+# Fraction of the page a passage may fill and still be kept whole. The
+# estimate is rough: it counts paragraph text only, so it can miss list
+# or table content and wide scripts, and it ignores header and footer
+# space. The margin below 1 guards against underestimating a passage that
+# really exceeds a page, which Word would clip if it were cantSplit. A
+# passage over the limit still starts on a fresh page, so the margin does
+# not cause extra mid-passage splits.
+PAGE_FILL_LIMIT = 0.9
 
 
 def estimate_cell_height(cell: Cell, paragraphs: Sequence[Paragraph]) -> Length:
