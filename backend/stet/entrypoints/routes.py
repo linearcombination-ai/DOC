@@ -1,12 +1,12 @@
 from os import scandir
-from typing import Sequence
+from typing import Annotated, Sequence
 
 import celery.states
 from celery.result import AsyncResult
 from doc.config import settings
 from stet.domain import resource_lookup
 from docx import Document
-from fastapi import APIRouter, Request, HTTPException, status
+from fastapi import APIRouter, Depends, Request, HTTPException, status
 from fastapi.responses import JSONResponse
 from stet.domain import document_generator, model
 
@@ -14,12 +14,25 @@ router = APIRouter()
 
 logger = settings.logger(__name__)
 
-PRODUCTION_LANG_CODES: tuple[str, ...] = ("en", "es-419", "pt-br")
+_PRODUCTION_LANG_CODES: tuple[str, ...] = ("en", "es-419", "pt-br")
+
+
+# Providers take no arguments so they add nothing to the HTTP contract.
+def get_production_lang_codes() -> tuple[str, ...]:
+    return _PRODUCTION_LANG_CODES
+
+
+def get_stet_dir() -> str:
+    return settings.STET_DIR
 
 
 @router.get("/stet/source_languages")
 async def source_lang_codes_and_names(
     request: Request,
+    stet_dir: Annotated[str, Depends(get_stet_dir)],
+    production_lang_codes: Annotated[
+        tuple[str, ...], Depends(get_production_lang_codes)
+    ],
 ) -> Sequence[tuple[str, str, bool]]:
     """
     Return list of all available language code, name tuples for which
@@ -27,7 +40,6 @@ async def source_lang_codes_and_names(
     request comes from production server in which case limit the
     languages according to special rules.
     """
-    stet_dir = settings.STET_DIR
     logger.debug("headers: %s", dict(request.headers))
     is_production = request.headers.get("x-is-production") == "true"
     logger.debug("is_production: %s", is_production)
@@ -54,7 +66,7 @@ async def source_lang_codes_and_names(
     for lang_code_and_name in resource_lookup.lang_codes_and_names_having_usfm():
         if is_production:
             if (
-                lang_code_and_name[0] in PRODUCTION_LANG_CODES
+                lang_code_and_name[0] in production_lang_codes
                 and lang_code_and_name[0] in ietf_codes_for_docs_with_fourth_column
             ):
                 languages.append(lang_code_and_name)
