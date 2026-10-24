@@ -14,12 +14,12 @@ router = APIRouter()
 
 logger = settings.logger(__name__)
 
+PRODUCTION_LANG_CODES: tuple[str, ...] = ("en", "es-419", "pt-br")
+
 
 @router.get("/stet/source_languages")
 async def source_lang_codes_and_names(
     request: Request,
-    stet_dir: str = settings.STET_DIR,
-    production_lang_codes: Sequence[str] = ["en", "es-419", "pt-br"],
 ) -> Sequence[tuple[str, str, bool]]:
     """
     Return list of all available language code, name tuples for which
@@ -27,6 +27,7 @@ async def source_lang_codes_and_names(
     request comes from production server in which case limit the
     languages according to special rules.
     """
+    stet_dir = settings.STET_DIR
     logger.debug("headers: %s", dict(request.headers))
     is_production = request.headers.get("x-is-production") == "true"
     logger.debug("is_production: %s", is_production)
@@ -53,7 +54,7 @@ async def source_lang_codes_and_names(
     for lang_code_and_name in resource_lookup.lang_codes_and_names_having_usfm():
         if is_production:
             if (
-                lang_code_and_name[0] in production_lang_codes
+                lang_code_and_name[0] in PRODUCTION_LANG_CODES
                 and lang_code_and_name[0] in ietf_codes_for_docs_with_fourth_column
             ):
                 languages.append(lang_code_and_name)
