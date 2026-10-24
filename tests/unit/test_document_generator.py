@@ -1,6 +1,7 @@
 import re
-from typing import Mapping
+from typing import Annotated, Mapping
 
+import pytest
 from doc.domain import document_generator, model
 from doc.domain.bible_books import BOOK_NAMES
 
@@ -29,15 +30,34 @@ def document_request(
     return request.model_copy(update=dict(overrides or {}))
 
 
-def test_every_document_request_field_is_classified() -> None:
+def test_every_document_request_field_carries_exactly_one_marker() -> None:
     """
     A new DocumentRequest field must be deliberately classified as
     hashed into the document request key or ignored by it.
     """
-    hashed = document_generator.HASHED_DOCUMENT_REQUEST_FIELDS
-    ignored = document_generator.IGNORED_DOCUMENT_REQUEST_FIELDS
-    assert not hashed & ignored
-    assert hashed | ignored == set(model.DocumentRequest.model_fields)
+    for name, field in model.DocumentRequest.model_fields.items():
+        markers = [
+            marker
+            for marker in field.metadata
+            if isinstance(marker, (model.Hashed, model.Ignored))
+        ]
+        assert len(markers) == 1, name
+    hashed = model.DocumentRequest.hashed_fields()
+    assert hashed <= set(model.DocumentRequest.model_fields)
+    assert len(hashed) == 14
+
+
+def test_unclassified_field_is_rejected_when_the_model_is_defined() -> None:
+    with pytest.raises(TypeError, match="unclassified"):
+
+        class Unclassified(model.CacheKeyedModel):
+            marked: Annotated[int, model.Hashed()]
+            unclassified: int
+
+    with pytest.raises(TypeError, match="both"):
+
+        class Doubly(model.CacheKeyedModel):
+            both: Annotated[int, model.Hashed(), model.Ignored()]
 
 
 def test_document_request_key_slug_encodes_resources_not_settings() -> None:
@@ -70,7 +90,7 @@ def test_document_request_key_differs_for_each_hashed_setting() -> None:
         "show_bc_chapter_commentary": False,
     }
     assert set(variations) == set(
-        document_generator.HASHED_DOCUMENT_REQUEST_FIELDS - {"resource_requests"}
+        model.DocumentRequest.hashed_fields() - {"resource_requests"}
     )
     keys = {base_key}
     for field, value in variations.items():
@@ -168,3 +188,43 @@ def test_document_request_key_is_filename_safe_for_odd_lang_codes() -> None:
     )
     assert KEY_PATTERN.match(key)
     assert "/" not in key and ".." not in key
+
+
+def test_document_request_key_golden_values() -> None:
+    """
+    Pin exact keys: changing which fields are hashed, their names, or
+    how they are serialized changes every key (and so every cached file
+    name), so that must be a deliberate decision.
+    """
+
+    def resource_request(
+        lang_code: str, resource_type: str, book_code: str
+    ) -> model.ResourceRequest:
+        return model.ResourceRequest(
+            lang_code=lang_code, resource_type=resource_type, book_code=book_code
+        )
+
+    assert (
+        document_generator.document_request_key(
+            model.DocumentRequest(
+                assembly_strategy_kind=model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
+                resource_requests=[resource_request("en", "ulb", "mat")],
+            )
+        )
+        == "en_ulb_mat_ef785355556b"
+    )
+    assert (
+        document_generator.document_request_key(
+            model.DocumentRequest(
+                assembly_strategy_kind=model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
+                assembly_layout_kind=model.AssemblyLayoutEnum.ONE_COLUMN,
+                document_request_source=model.DocumentRequestSourceEnum.UI,
+                resource_requests=[
+                    resource_request("en", "ulb", "mat"),
+                    resource_request("en", "tw", "mat"),
+                ],
+                limit_words=False,
+            )
+        )
+        == "en_ulb-tw_mat_256948005c96"
+    )

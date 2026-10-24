@@ -7,7 +7,7 @@ validation and JSON serialization.
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import NamedTuple, Optional, Sequence, TypedDict, final
+from typing import Annotated, NamedTuple, Optional, Sequence, TypedDict, final
 
 from doc.config import settings
 from doc.domain.bible_books import BOOK_NAMES
@@ -125,15 +125,65 @@ class DocumentRequestSourceEnum(str, Enum):
     BIEL_UI = "biel_ui"
 
 
+class Hashed:
+    """
+    Marks a request field that affects the content or formatting of the
+    generated files and so is hashed into the document request key.
+    """
+
+
+class Ignored:
+    """
+    Marks a request field that does not change the generated files: it
+    only selects which of the files get produced or delivered, or only
+    influences another field that is itself hashed, and so is not part
+    of the document request key.
+    """
+
+
+class CacheKeyedModel(BaseModel):
+    """
+    A request model whose every field must be deliberately classified,
+    using Annotated[..., Hashed()] or Annotated[..., Ignored()], as
+    either part of the cache key or not. A subclass with an unclassified
+    field fails at import so that a new field can't be added without
+    deciding whether it affects the generated document and therefore the
+    cache key.
+    """
+
+    @classmethod
+    def __pydantic_init_subclass__(cls, **kwargs: object) -> None:
+        super().__pydantic_init_subclass__(**kwargs)
+        unclassified = [
+            name
+            for name, field in cls.model_fields.items()
+            if sum(isinstance(marker, (Hashed, Ignored)) for marker in field.metadata)
+            != 1
+        ]
+        if unclassified:
+            raise TypeError(
+                f"{cls.__name__} fields must carry exactly one of Hashed() or "
+                f"Ignored(): {unclassified}"
+            )
+
+    @classmethod
+    def hashed_fields(cls) -> frozenset[str]:
+        return frozenset(
+            name
+            for name, field in cls.model_fields.items()
+            if any(isinstance(marker, Hashed) for marker in field.metadata)
+        )
+
+
 @final
-class DocumentRequest(BaseModel):
+class DocumentRequest(CacheKeyedModel):
     """
     This class reifies a document generation request from a client of
     the API.
     """
 
-    email_address: Optional[EmailStr] = None
-    assembly_strategy_kind: AssemblyStrategyEnum
+    email_address: Annotated[Optional[EmailStr], Ignored()] = None
+    assembly_strategy_kind: Annotated[AssemblyStrategyEnum, Hashed()]
     # NOTE For testing we want to exercise various layouts, thus we
     # make this attribute Optional so that we can specify it in unit
     # tests if desired. But the normal case is to set
@@ -146,29 +196,31 @@ class DocumentRequest(BaseModel):
     # The system knows which make sense and which do not given your
     # document request and if you choose one that does not make sense
     # then you'll get an exception on purpose.
-    assembly_layout_kind: Optional[AssemblyLayoutEnum] = AssemblyLayoutEnum.ONE_COLUMN
+    assembly_layout_kind: Annotated[Optional[AssemblyLayoutEnum], Hashed()] = (
+        AssemblyLayoutEnum.ONE_COLUMN
+    )
     # The user can choose whether the result should be formatted to
     # print. When the user selects yes/True to format for print
     # then we'll choose a compact layout that makes sense for their
     # document request.
-    layout_for_print: bool = False
-    resource_requests: Sequence[ResourceRequest]
+    layout_for_print: Annotated[bool, Hashed()] = False
+    resource_requests: Annotated[Sequence[ResourceRequest], Hashed()]
     # Indicate whether PDF should be generated.
-    generate_pdf: bool = True
+    generate_pdf: Annotated[bool, Ignored()] = True
     # Indicate whether ePub should be generated.
-    generate_epub: bool = False
+    generate_epub: Annotated[bool, Ignored()] = False
     # Indicate whether Docx should be generated.
-    generate_docx: bool = False
+    generate_docx: Annotated[bool, Ignored()] = False
     # Indicate whether translation words, TW, should be limited to
     # only those that appear in the USFM requested (True), or, include all
     # the TW words available for the language requested (False).
-    limit_words: bool = True
+    limit_words: Annotated[bool, Hashed()] = True
     # Indicate whether to use chapter labels at all. False means only use
     # chapter number at start of chapter. True means use chapter label plus
     # chapter number, e.g., Chapter 1. Note that if localize_chapter_labels
     # is True, then the chapter label will be localized to the language(s)
     # requested.
-    use_chapter_labels: bool = False
+    use_chapter_labels: Annotated[bool, Hashed()] = False
     # We have two PDF processors that we can use: Weasyprint and Princexml.
     # Weasyprint is an open source project and produces decent PDFs, but is
     # slow and doesn't always obey the HTML and CSS formatting exactly,
@@ -181,23 +233,25 @@ class DocumentRequest(BaseModel):
     # page of the generated PDF. The logo isn't too obtrusive. One may
     # choose to use Princexml rather than Weasyprint by setting use_prince
     # to True.
-    use_prince: bool = False
+    use_prince: Annotated[bool, Hashed()] = False
     # Some languages, e.g., Khmer, don't layout well in 2 column
-    use_two_column_layout_for_tn_notes: bool = False
+    use_two_column_layout_for_tn_notes: Annotated[bool, Hashed()] = False
     # Some languages, e.g., Khmer, don't layout well in 2 column
-    use_two_column_layout_for_tq_notes: bool = False
+    use_two_column_layout_for_tq_notes: Annotated[bool, Hashed()] = False
     # Indicate whether to show visual separator between sections, e.g., hr element
-    use_section_visual_separator: bool = False
-    show_tn_book_intro: bool = True
-    show_bc_book_intro: bool = True
-    show_tn_chapter_intro: bool = True
-    show_bc_chapter_commentary: bool = True
+    use_section_visual_separator: Annotated[bool, Hashed()] = False
+    show_tn_book_intro: Annotated[bool, Hashed()] = True
+    show_bc_book_intro: Annotated[bool, Hashed()] = True
+    show_tn_chapter_intro: Annotated[bool, Hashed()] = True
+    show_bc_chapter_commentary: Annotated[bool, Hashed()] = True
     # Indicate where the document request originated from. We default to
     # TEST so that tests don't have to specify and every other client, e.g.,
     # UI, should specify in order for
     # document_generator.select_assembly_layout_kind to produce
     # expected results.
-    document_request_source: DocumentRequestSourceEnum = DocumentRequestSourceEnum.TEST
+    document_request_source: Annotated[DocumentRequestSourceEnum, Ignored()] = (
+        DocumentRequestSourceEnum.TEST
+    )
 
     @model_validator(mode="after")
     def ensure_valid_document_request(self) -> "DocumentRequest":
