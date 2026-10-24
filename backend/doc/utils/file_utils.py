@@ -4,14 +4,11 @@ import codecs
 import json
 import os
 import shutil
-import urllib
 import zipfile
-from contextlib import closing
 from datetime import datetime, timedelta
 from os.path import join
 from pathlib import Path
 from typing import Any, Optional
-from urllib.request import urlopen
 
 import yaml
 from doc.config import settings
@@ -34,16 +31,6 @@ def delete_tree(dir: str) -> None:
             dir,
         )
         logger.exception("Caught exception: ")
-
-
-def download_file(url: str, outfile: str, user_agent: str = USER_AGENT) -> None:
-    """Downloads a file from url and saves it to outfile."""
-    # Host requires at least the User-Agent header.
-    headers: dict[str, str] = {"User-Agent": user_agent}
-    req = urllib.request.Request(url, None, headers)
-    with closing(urlopen(req)) as request:
-        with open(outfile, "wb") as fp:
-            shutil.copyfileobj(request, fp)
 
 
 def unzip(source_file: str, destination_dir: str) -> None:

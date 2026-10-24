@@ -647,9 +647,7 @@ def transform_ta_wiki_rc_links(
 
 # TODO zh gen, e.g., 1:20 you end up with things like:（参：）. We
 # should probably remove the whole parenthesized expression.
-def transform_ta_star_rc_links(
-    source: str, ta_star_rc_link_re: re.Pattern[str] = TA_STAR_RC_LINK_RE
-) -> str:
+def transform_ta_star_rc_links(source: str) -> str:
     """
     Transform the translation academy rc wikilink into source anchor link
     pointing to a destination anchor link for the translation academy
@@ -723,7 +721,6 @@ def transform_tn_prefixed_markdown_links(
     working_dir: str = settings.RESOURCE_ASSETS_DIR,
     tn: str = "tn",
     fmt_str: str = TRANSLATION_NOTE_ANCHOR_LINK_FMT_STR,
-    tn_markdown_scripture_link_re: re.Pattern[str] = TN_MARKDOWN_SCRIPTURE_LINK_RE,
 ) -> str:
     """
     Transform the translation note rc link into a link pointing to

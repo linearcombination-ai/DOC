@@ -27,7 +27,7 @@ import requests
 from bs4 import BeautifulSoup
 from doc.config import settings
 from doc.utils.text_utils import demote_headings_by_one
-from doc.domain.bible_books import BOOK_ID_MAP, BOOK_NAMES
+from doc.domain.bible_books import BOOK_NAMES
 from doc.domain.model import (
     BC_RESOURCE_TYPE,
     EN_TN_CONDENSED_RESOURCE_TYPE,
@@ -469,15 +469,6 @@ def ensure_chapter_marker(
         )
     # Otherwise, insert at the beginning
     return f"\\c {chapter_num}\n" + chapter_usfm_text
-
-
-def remove_unwanted_elements(
-    content: str,
-    sectionhead5_re: Pattern[str] = SECTIONHEAD5_RE,
-    empty_paragraph_re: Pattern[str] = EMPTY_P_RE,
-) -> str:
-    result = sectionhead5_re.sub(" ", content)
-    return empty_paragraph_re.sub("", result)
 
 
 def usfm_book_content(
@@ -1051,7 +1042,6 @@ def bc_chapters(
     book_code: str,
     resource_requests: Sequence[ResourceRequest],
     chapter_dirs_glob_fmt_str: str = "{}/*{}/*[0-9]*.md",
-    url_fmt_str: str = BC_ARTICLE_URL_FMT_STR,
 ) -> dict[int, BCChapter]:
     chapter_dirs = sorted(
         glob(chapter_dirs_glob_fmt_str.format(resource_dir, book_code))
@@ -1142,7 +1132,6 @@ def books(
     tw_resource_type: str = TW_RESOURCE_TYPE,
     bc_resource_type: str = BC_RESOURCE_TYPE,
     docx_file_path: str = "en_rg_nt_survey.docx",
-    book_id_map: dict[str, int] = BOOK_ID_MAP,
 ) -> tuple[
     Sequence[USFMBook],
     Sequence[TNBook],

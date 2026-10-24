@@ -21,7 +21,7 @@ from doc.utils.text_utils import demote_headings_by_one
 from docx.document import Document as DocxDocument
 from docx.enum.section import WD_SECTION
 from docx.enum.text import WD_BREAK
-from docx.oxml import parse_xml, OxmlElement
+from docx.oxml import parse_xml
 from docx.oxml.ns import qn
 
 logger = settings.logger(__name__)
@@ -75,25 +75,6 @@ OXML_LANGUAGE_LIST_LOWERCASE: list[str] = [
 OXML_LANGUAGE_LIST_LOWERCASE_SPLIT: list[str] = [
     language for language in OXML_LANGUAGE_LIST_LOWERCASE if "-" in language
 ]
-
-
-def tn_book_intro(
-    tn_book: Optional[TNBook],
-    show_tn_book_intro: bool = settings.SHOW_TN_BOOK_INTRO,
-) -> str:
-    content = ""
-    if show_tn_book_intro and tn_book and tn_book.book_intro:
-        content = tn_book.book_intro
-    return content
-
-
-def bc_book_intro(
-    bc_book: Optional[BCBook],
-) -> str:
-    content = ""
-    if bc_book and bc_book.book_intro:
-        content = bc_book.book_intro
-    return content
 
 
 def chapter_commentary(
@@ -213,63 +194,6 @@ def add_full_width_hr(doc: DocxDocument) -> None:
     """
     drawing = parse_xml(hr_xml)
     run._r.append(drawing)
-
-
-def set_docx_language(
-    doc: DocxDocument,
-    lang_code: str,
-    oxml_language_list_lowercase: list[str] = OXML_LANGUAGE_LIST_LOWERCASE,
-    oxml_language_list_lowercase_split: list[str] = OXML_LANGUAGE_LIST_LOWERCASE_SPLIT,
-) -> None:
-    """Set the Language for spell check"""
-    if doc.paragraphs:
-        p = doc.paragraphs[-1]
-        # Set the language for this paragraph for the sake of the Word
-        # spellchecker.
-        p_run = p.add_run()
-        # if is_rtl:
-        #     p_run.font.rtl = True
-        p_rpr = p_run.element.get_or_add_rPr()
-        p_run_lang = OxmlElement("w:lang")
-        oxml_language_list_lowercase_split_values = [
-            language.lower().split("-")[0]
-            for language in oxml_language_list_lowercase_split
-        ]
-        # The code below works well for spell checking, but there is some
-        # action required by the user to configure Word. The user must add
-        # the languages that their document uses under File > Options > Language
-        # then use the 'Add additional editing languages' and then enable
-        # the languages (it will say 'Not enabled'), then restart Word.
-        if lang_code in oxml_language_list_lowercase:
-            # Set language for spell and grammar check for this run.
-            p_run_lang.set(qn("w:val"), lang_code)
-            p_run_lang.set(qn("w:eastAsia"), lang_code)
-            # bidi is short for bidirectionality text
-            p_run_lang.set(qn("w:bidi"), lang_code)
-            # # Set font for this run.
-            # p_run.font.name = "Noto Sans Regular"
-            # r = p_run._element
-            # r.rPr.rFonts.set(qn("w:eastAsia"), "Noto Sans Regular")
-        elif lang_code in oxml_language_list_lowercase_split_values:
-            # Set language for spell and grammar check for this run.
-            updated_lang_code = "{}-{}".format(lang_code, lang_code.upper())
-            p_run_lang.set(qn("w:val"), updated_lang_code)
-            p_run_lang.set(qn("w:eastAsia"), updated_lang_code)
-            # bidi is short for bidirectionality text
-            p_run_lang.set(qn("w:bidi"), updated_lang_code)
-            # # Set font for this run.
-            # p_run.font.name = "Noto Sans Regular"
-            # r = p_run._element
-            # r.rPr.rFonts.set(qn("w:eastAsia"), "Noto Sans Regular")
-        else:
-            # Set language for spell and grammar check for this run.
-            # Just set to English since language isn't a language that
-            # Word supports (need to research what Word fully supports in
-            # more depth to be sure).
-            p_run_lang.set(qn("w:val"), "en-US")
-            p_run_lang.set(qn("w:eastAsia"), "en-US")
-            p_run_lang.set(qn("w:bidi"), "en-US")
-        p_rpr.append(p_run_lang)
 
 
 def add_one_column_section(doc: DocxDocument) -> None:
@@ -810,7 +734,6 @@ def get_non_usfm_resources_chapter(
     use_two_column_layout_for_tn_notes: bool,
     use_two_column_layout_for_tq_notes: bool,
     use_section_visual_separator: bool,
-    resource_type_name_fmt_str: str = settings.RESOURCE_TYPE_NAME_FMT_STR,
 ) -> list[DocumentPart]:
     document_parts: list[DocumentPart] = []
     document_parts.extend(
@@ -940,25 +863,10 @@ def tnc_chapter_intro(
     return "".join(content)
 
 
-def tnc_book_intro(
-    tnc_book: Optional[TNCBook],
-    use_section_visual_separator: bool,
-    hr: str = settings.HR,
-    show_tn_book_intro: bool = settings.SHOW_TN_BOOK_INTRO,
-) -> str:
-    content = []
-    if show_tn_book_intro and tnc_book and tnc_book.book_intro:
-        content.append(tnc_book.book_intro)
-        if use_section_visual_separator:
-            content.append(hr)
-    return "".join(content)
-
-
 def tnc_chapter_verses(
     tnc_book: Optional[TNCBook],
     chapter_num: int,
     use_two_column_layout_for_tn_notes: bool,
-    hr: str = settings.HR,
 ) -> str:
     """
     Return the HTML for verses that are in the chapter with

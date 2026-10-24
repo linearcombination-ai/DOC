@@ -1,4 +1,4 @@
-from typing import Mapping, Optional, Sequence
+from typing import Optional, Sequence
 
 from doc.config import settings
 from doc.domain.assembly_strategies.assembly_strategy_utils import (
@@ -12,7 +12,6 @@ from doc.domain.assembly_strategies.assembly_strategy_utils import (
     get_non_usfm_resources_verse,
     order_usfm_resources,
 )
-from doc.domain.bible_books import BOOK_ID_MAP, BOOK_NAMES
 from doc.domain.model import (
     AssemblyLayoutEnum,
     BCBook,
@@ -42,8 +41,6 @@ def assemble_content_by_book(
     show_tn_book_intro: bool,
     show_bc_book_intro: bool,
     show_tn_chapter_intro: bool,
-    book_names: Mapping[str, str] = BOOK_NAMES,
-    book_id_map: dict[str, int] = BOOK_ID_MAP,
 ) -> list[DocumentPart]:
     document_parts: list[DocumentPart] = []
     lang_codes = collect_unique_lang_codes(
@@ -190,8 +187,6 @@ def assemble_content_by_verse_book_at_a_time(
     show_bc_book_intro: bool,
     show_tn_chapter_intro: bool,
     show_bc_chapter_commentary: bool,
-    book_names: Mapping[str, str] = BOOK_NAMES,
-    book_id_map: dict[str, int] = BOOK_ID_MAP,
 ) -> list[DocumentPart]:
     document_parts: list[DocumentPart] = []
     lang_codes = collect_unique_lang_codes(
@@ -393,7 +388,6 @@ def assemble_usfm_by_verse_book_at_a_time(
     show_bc_book_intro: bool,
     show_tn_chapter_intro: bool,
     show_bc_chapter_commentary: bool,
-    fmt_str: str = settings.RESOURCE_TYPE_NAME_FMT_STR,
 ) -> list[DocumentPart]:
     is_rtl = usfm_book.lang_direction == LangDirEnum.RTL if usfm_book else False
     document_parts: list[DocumentPart] = []
