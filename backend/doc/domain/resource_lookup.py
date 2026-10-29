@@ -314,7 +314,6 @@ def get_resource_types(
     bc_book_asset_pattern: str = r"^\d{2,}-[0-9a-z]{3}$",
     usfm_resource_types: Sequence[str] = settings.USFM_RESOURCE_TYPES,
     docx_file_path: str = "en_rg_nt_survey.docx",
-    en_rg: str = settings.EN_RG_DIR,
     resource_type_codes_and_names: Mapping[
         str, str
     ] = settings.RESOURCE_TYPE_CODES_AND_NAMES,
@@ -369,7 +368,6 @@ def filter_excluded_resource_types(
 def resource_types(
     lang_code: str,
     book_codes_str: str,
-    resource_assets_dir: str = settings.RESOURCE_ASSETS_DIR,
     book_names: Mapping[str, str] = BOOK_NAMES,
     download_assets: bool = settings.DOWNLOAD_ASSETS,
 ) -> Sequence[tuple[str, str]]:
@@ -418,8 +416,6 @@ def resource_types(
 # so we don't currently have the system configured to use this.
 def batch_download_repos(
     repos: list[tuple[HttpUrl, str]],
-    asset_caching_enabled: bool = settings.ASSET_CACHING_ENABLED,
-    asset_caching_period: int = settings.ASSET_CACHING_PERIOD,
     base_url: HttpUrl = HttpUrl("https://content.bibletranslationtools.org/"),
     base_url_replacement: HttpUrl = HttpUrl(
         "https://content.bibletranslationtools.org/api/v1/repos/"
@@ -603,7 +599,6 @@ def batch_clone_git_repos(
 def usfm_resource_types_and_book_tuples(
     lang_code: str,
     book_codes_str: str,
-    resource_assets_dir: str = settings.RESOURCE_ASSETS_DIR,
     usfm_resource_types: Sequence[str] = settings.USFM_RESOURCE_TYPES,
 ) -> Sequence[tuple[str, str]]:
     """

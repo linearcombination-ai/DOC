@@ -24,7 +24,7 @@ from doc.domain.assembly_strategies.assembly_strategy_utils import (
     tq_verses_parts,
 )
 from doc.utils.text_utils import demote_headings_by_one
-from doc.domain.bible_books import BOOK_CHAPTERS, BOOK_ID_MAP, BOOK_NAMES
+from doc.domain.bible_books import BOOK_CHAPTERS
 from doc.domain.model import (
     AssemblyLayoutEnum,
     BCBook,
@@ -54,8 +54,6 @@ def assemble_content_by_chapter(
     show_tn_book_intro: bool,
     show_bc_book_intro: bool,
     show_tn_chapter_intro: bool,
-    book_names: Mapping[str, str] = BOOK_NAMES,
-    book_id_map: dict[str, int] = BOOK_ID_MAP,
     book_chapters: Mapping[str, int] = BOOK_CHAPTERS,
 ) -> list[DocumentPart]:
     document_parts: list[DocumentPart] = []
@@ -172,8 +170,6 @@ def assemble_content_by_verse_chapter_at_a_time(
     show_bc_book_intro: bool,
     show_tn_chapter_intro: bool,
     show_bc_chapter_commentary: bool,
-    book_names: Mapping[str, str] = BOOK_NAMES,
-    book_id_map: dict[str, int] = BOOK_ID_MAP,
     book_chapters: Mapping[str, int] = BOOK_CHAPTERS,
 ) -> list[DocumentPart]:
     document_parts: list[DocumentPart] = []
@@ -261,7 +257,6 @@ def assemble_usfm_by_chapter(
     show_tn_book_intro: bool,
     show_bc_book_intro: bool,
     show_tn_chapter_intro: bool,
-    book_chapters: Mapping[str, int] = BOOK_CHAPTERS,
     fmt_str: str = settings.BOOK_NAME_FMT_STR,
 ) -> list[DocumentPart]:
     is_rtl = usfm_books[0].lang_direction == LangDirEnum.RTL if usfm_books else False
@@ -397,7 +392,6 @@ def assemble_usfm_by_verse_chapter_at_a_time(
     show_bc_book_intro: bool,
     show_tn_chapter_intro: bool,
     show_bc_chapter_commentary: bool,
-    book_chapters: Mapping[str, int] = BOOK_CHAPTERS,
     fmt_str: str = settings.RESOURCE_TYPE_NAME_FMT_STR,
 ) -> list[DocumentPart]:
     is_rtl = usfm_books[0].lang_direction == LangDirEnum.RTL if usfm_books else False
@@ -666,7 +660,6 @@ def assemble_tn_by_chapter(
     show_tn_book_intro: bool,
     show_bc_book_intro: bool,
     show_tn_chapter_intro: bool,
-    book_chapters: Mapping[str, int] = BOOK_CHAPTERS,
     # fmt_str: str = settings.LEFT_ALIGNED_HEADER_FMT_STR,
 ) -> list[DocumentPart]:
     tn_is_rtl = tn_books[0].lang_direction == LangDirEnum.RTL if tn_books else False
@@ -757,7 +750,6 @@ def assemble_tq_by_chapter(
     show_tn_book_intro: bool,
     show_bc_book_intro: bool,
     show_tn_chapter_intro: bool,
-    book_chapters: Mapping[str, int] = BOOK_CHAPTERS,
 ) -> list[DocumentPart]:
     is_rtl = tq_books[0].lang_direction == LangDirEnum.RTL if tq_books else False
     document_parts: list[DocumentPart] = []

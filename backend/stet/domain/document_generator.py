@@ -57,8 +57,6 @@ def generate_docx_document(
     use_increased_line_spacing: bool,
     document_request_key_: str,
     docx_filepath_: str,
-    working_dir: str = settings.WORKING_DIR,
-    output_dir: str = settings.DOCUMENT_OUTPUT_DIR,
     usfm_resource_types: Sequence[str] = settings.USFM_RESOURCE_TYPES,
     resource_type_codes_and_names: Mapping[
         str, str

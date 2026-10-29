@@ -241,7 +241,6 @@ def get_selected_name_content_pairs_for_book(
     usfm_books: Optional[Sequence[USFMBook]],
     limit_words: bool,
     resource_requests: Sequence[ResourceRequest],
-    usfm_resource_types: Sequence[str] = settings.USFM_RESOURCE_TYPES,
 ) -> list[TWNameContentPair]:
     selected_name_content_pairs = []
     if usfm_books and limit_words:

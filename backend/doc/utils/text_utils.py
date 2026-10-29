@@ -104,7 +104,6 @@ def chapter_label_numeric_part(s: str) -> int:
 def maybe_correct_book_name(
     lang_code: str,
     book_name: str,
-    book_name_correction_table: dict[tuple[str, str], str] = BOOK_NAME_CORRECTION_TABLE,
 ) -> str:
     """
     Translate incorrect or undesirable book names to a preferred form.

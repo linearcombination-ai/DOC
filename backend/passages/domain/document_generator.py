@@ -174,10 +174,6 @@ def generate_docx_document(
     bible_references_with_availability: list[BibleReferenceWithAvailability],
     document_request_key_: str,
     docx_filepath_: str,
-    working_dir: str = settings.WORKING_DIR,
-    output_dir: str = settings.DOCUMENT_OUTPUT_DIR,
-    usfm_resource_types: Sequence[str] = settings.USFM_RESOURCE_TYPES,
-    book_index: dict[str, int] = BOOK_INDEX,
 ) -> str:
     """Generate the content for the Passages document"""
     bible_references_with_availability_lang0: list[BibleReferenceWithAvailability] = [
@@ -413,7 +409,6 @@ def generate_passages_docx_document(
     passage_reference_dtos_json: str,
     email_address: str,
     docx_filepath_prefix: str = "passages_",
-    book_names: dict[str, str] = BOOK_NAMES,
 ) -> Json[str]:
     passage_reference_dtos_list = json.loads(passage_reference_dtos_json)
     passage_reference_dtos = [

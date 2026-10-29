@@ -7,7 +7,7 @@ import re
 import subprocess
 import time
 from datetime import datetime
-from os.path import exists, join
+from os.path import exists
 from typing import Final, Mapping, Optional, Sequence, TypeAlias, cast
 
 from celery import current_task
@@ -264,7 +264,6 @@ def locate_acquire_and_build_resource_objects(
 @worker.app.task
 def generate_document(
     document_request_json: str,
-    output_dir: str = settings.DOCUMENT_OUTPUT_DIR,
 ) -> str:
     """
     This is the main entry point for this module for non-docx generation.
@@ -350,7 +349,6 @@ def generate_document(
 @worker.app.task
 def generate_docx_document(
     document_request_json: str,
-    output_dir: str = settings.DOCUMENT_OUTPUT_DIR,
 ) -> str:
     """
     This is the alternative entry point for Docx document creation only.
@@ -840,24 +838,14 @@ def convert_html_to_docx(
     logger.info("Time for converting HTML to Docx: %s", t1 - t0)
 
 
-def cover_filepath(
-    document_request_key: str, output_dir: str = settings.DOCUMENT_OUTPUT_DIR
-) -> str:
-    """Given document_request_key, return the HTML cover output file path."""
-    return join(output_dir, f"{document_request_key}_cover.html")
-
-
 def select_assembly_layout_kind(
     document_request: DocumentRequest,
-    usfm_resource_types: Sequence[str] = settings.USFM_RESOURCE_TYPES,
     by_book_order: AssemblyStrategyEnum = AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
     by_verse_book_at_a_time_order: AssemblyStrategyEnum = AssemblyStrategyEnum.INTERLEAVE_BY_VERSE_BOOK_AT_A_TIME,
     by_chapter_order: AssemblyStrategyEnum = AssemblyStrategyEnum.INTERLEAVE_BY_CHAPTER,
     by_verse_order: AssemblyStrategyEnum = AssemblyStrategyEnum.INTERLEAVE_BY_VERSE,
     stet_strategy: AssemblyStrategyEnum = AssemblyStrategyEnum.STET_STRATEGY,
     one_column_compact: AssemblyLayoutEnum = AssemblyLayoutEnum.ONE_COLUMN_COMPACT,
-    sl_sr: AssemblyLayoutEnum = AssemblyLayoutEnum.TWO_COLUMN_SCRIPTURE_LEFT_SCRIPTURE_RIGHT,
-    sl_sr_compact: AssemblyLayoutEnum = AssemblyLayoutEnum.TWO_COLUMN_SCRIPTURE_LEFT_SCRIPTURE_RIGHT_COMPACT,
     one_column: AssemblyLayoutEnum = AssemblyLayoutEnum.ONE_COLUMN,
     stet_layout: AssemblyLayoutEnum = AssemblyLayoutEnum.STET_LAYOUT,
 ) -> AssemblyLayoutEnum:
