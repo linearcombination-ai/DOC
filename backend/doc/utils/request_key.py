@@ -16,7 +16,20 @@ import hashlib
 import json
 import re
 from enum import Enum
-from typing import Iterable, Mapping, Sequence, TypeAlias
+from typing import (
+    Annotated,
+    Iterable,
+    Mapping,
+    Sequence,
+    TypeAlias,
+    get_args,
+    get_origin,
+    get_type_hints,
+)
+
+from doc.domain.model import AffectsOutput, DocumentRequest
+from doc.utils.tw_utils import contains_tw
+from pydantic import BaseModel
 
 # Bump this to invalidate every previously cached document, e.g., after a
 # change to templates or rendering that the request itself doesn't capture.
@@ -124,4 +137,67 @@ def resources_slug(
             slug_group(resource_types, "types", MAX_TYPES_SLUG_LEN),
             slug_group(book_codes, "books", MAX_BOOKS_SLUG_LEN),
         ]
+    )
+
+
+def field_markers(model_type: type[BaseModel]) -> Mapping[str, tuple[object, ...]]:
+    """
+    Return, for each field of model_type, the Annotated metadata
+    attached to its type, e.g., the AffectsOutput() or DeliveryOnly()
+    marker.
+    """
+    hints = get_type_hints(model_type, include_extras=True)
+    return {
+        name: get_args(hints[name])[1:] if get_origin(hints[name]) is Annotated else ()
+        for name in model_type.model_fields
+    }
+
+
+def document_request_key(document_request: DocumentRequest) -> str:
+    """
+    Create and return the document_request_key. The
+    document_request_key uniquely identifies a document request and is
+    used as the cache key and as the file name (with suffix appended).
+
+    The key is a readable slug of the resources requested (languages,
+    resource types, and books) followed by a short hash of the request:
+    the resource requests in order plus every field marked
+    AffectsOutput. The slug is for people, the hash is what makes the
+    key unique and the same for identical requests, regardless of how
+    many resources are requested. Fields marked DeliveryOnly are left
+    out so that, e.g., asking for a different file format or entering an
+    email address reuses the same cached document.
+
+    document_request.assembly_layout_kind must already have been
+    resolved, see initialize_document_request_and_key.
+    """
+    resource_requests = document_request.resource_requests
+    slug = resources_slug(
+        [resource_request.lang_code for resource_request in resource_requests],
+        [resource_request.resource_type for resource_request in resource_requests],
+        [resource_request.book_code for resource_request in resource_requests],
+    )
+    settings_ = {
+        name: getattr(document_request, name)
+        for name, markers in field_markers(DocumentRequest).items()
+        if any(isinstance(marker, AffectsOutput) for marker in markers)
+        and name != "resource_requests"
+    }
+    # limit_words only has an effect when TW content is requested, so
+    # don't let it split the cache for requests that have none.
+    if not any(contains_tw(resource_request) for resource_request in resource_requests):
+        settings_["limit_words"] = None
+    return request_key(
+        slug,
+        {
+            "resources": [
+                [
+                    resource_request.lang_code,
+                    resource_request.resource_type,
+                    resource_request.book_code,
+                ]
+                for resource_request in resource_requests
+            ],
+            "settings": settings_,
+        },
     )

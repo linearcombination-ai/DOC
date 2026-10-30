@@ -89,3 +89,8 @@ def test_key_is_short_and_stable_for_a_very_long_passage_list() -> None:
     assert KEY_PATTERN.match(long_key)
     assert len(long_key) < 100
     assert long_key == key(passages)
+
+
+def test_key_golden_value() -> None:
+    """Pin an exact key so that changing the hashed payload is deliberate."""
+    assert key([passage()]) == "en_mat_1passages_b3cd5734a8fa"

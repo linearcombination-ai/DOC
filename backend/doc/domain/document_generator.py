@@ -8,7 +8,7 @@ import subprocess
 import time
 from datetime import datetime
 from os.path import exists, join
-from typing import Final, Mapping, Optional, Sequence, TypeAlias, cast
+from typing import Mapping, Optional, Sequence, TypeAlias, cast
 
 from celery import current_task
 from doc.config import settings
@@ -65,10 +65,9 @@ from doc.utils.file_utils import (
     pdf_filepath,
     write_file,
 )
-from doc.utils.request_key import request_key, resources_slug
+from doc.utils.request_key import document_request_key
 from doc.utils.template_env import env
 from doc.utils.tw_utils import (
-    contains_tw,
     filter_unique_by_lang_code,
     translation_words_section_for_book,
 )
@@ -400,92 +399,6 @@ def generate_docx_document(
     else:
         logger.info("Cache hit for %s", docx_filepath_)
     return document_request_key_
-
-
-# Every DocumentRequest field must appear in exactly one of the following
-# two sets (a unit test enforces this) so that a new setting can't be added
-# without deciding whether it affects the generated document and therefore
-# the cache key.
-#
-# Fields that are hashed into the document request key because they affect
-# the content or formatting of the generated files.
-HASHED_DOCUMENT_REQUEST_FIELDS: Final[frozenset[str]] = frozenset(
-    {
-        "resource_requests",
-        "assembly_strategy_kind",
-        "assembly_layout_kind",
-        "layout_for_print",
-        "limit_words",
-        "use_chapter_labels",
-        "use_prince",
-        "use_two_column_layout_for_tn_notes",
-        "use_two_column_layout_for_tq_notes",
-        "use_section_visual_separator",
-        "show_tn_book_intro",
-        "show_bc_book_intro",
-        "show_tn_chapter_intro",
-        "show_bc_chapter_commentary",
-    }
-)
-# Fields that are not hashed because they don't change the generated
-# files: they only select which of the files get produced or delivered,
-# or, in the case of document_request_source, only influence the resolved
-# assembly_layout_kind which is itself hashed.
-IGNORED_DOCUMENT_REQUEST_FIELDS: Final[frozenset[str]] = frozenset(
-    {
-        "email_address",
-        "generate_pdf",
-        "generate_epub",
-        "generate_docx",
-        "document_request_source",
-    }
-)
-
-
-def document_request_key(document_request: DocumentRequest) -> str:
-    """
-    Create and return the document_request_key. The
-    document_request_key uniquely identifies a document request and is
-    used as the cache key and as the file name (with suffix appended).
-
-    The key is a readable slug of the resources requested (languages,
-    resource types, and books) followed by a short hash of the request:
-    the resource requests in order plus every setting that affects the
-    generated document (see HASHED_DOCUMENT_REQUEST_FIELDS). The slug is
-    for people, the hash is what makes the key unique and the same for
-    identical requests, regardless of how many resources are requested.
-
-    document_request.assembly_layout_kind must already have been
-    resolved, see initialize_document_request_and_key.
-    """
-    resource_requests = document_request.resource_requests
-    slug = resources_slug(
-        [resource_request.lang_code for resource_request in resource_requests],
-        [resource_request.resource_type for resource_request in resource_requests],
-        [resource_request.book_code for resource_request in resource_requests],
-    )
-    settings_ = {
-        field: getattr(document_request, field)
-        for field in sorted(HASHED_DOCUMENT_REQUEST_FIELDS - {"resource_requests"})
-    }
-    # limit_words only has an effect when TW content is requested, so
-    # don't let it split the cache for requests that have none.
-    if not any(contains_tw(resource_request) for resource_request in resource_requests):
-        settings_["limit_words"] = None
-    return request_key(
-        slug,
-        {
-            "resources": [
-                [
-                    resource_request.lang_code,
-                    resource_request.resource_type,
-                    resource_request.book_code,
-                ]
-                for resource_request in resource_requests
-            ],
-            "settings": settings_,
-        },
-    )
 
 
 def instantiated_html_header_template(
