@@ -8,7 +8,7 @@ import subprocess
 import time
 from datetime import datetime
 from os.path import exists, join
-from typing import Final, Mapping, Optional, Sequence, TypeAlias, cast
+from typing import Mapping, Optional, Sequence, TypeAlias, cast
 
 from celery import current_task
 from doc.config import settings
@@ -45,7 +45,6 @@ from doc.domain.model import (
     DocumentRequestSourceEnum,
     LangDirEnum,
     ResourceLookupDto,
-    ResourceRequest,
     TNBook,
     TNCBook,
     TQBook,
@@ -66,6 +65,7 @@ from doc.utils.file_utils import (
     pdf_filepath,
     write_file,
 )
+from doc.utils.request_key import request_key, resources_slug
 from doc.utils.template_env import env
 from doc.utils.tw_utils import (
     contains_tw,
@@ -103,20 +103,7 @@ def initialize_document_request_and_key(
     )
     # Generate the document request key that identifies this and
     # identical document requests.
-    document_request_key_ = document_request_key(
-        document_request.resource_requests,
-        document_request.assembly_strategy_kind,
-        document_request.assembly_layout_kind,
-        document_request.limit_words,
-        document_request.use_chapter_labels,
-        document_request.use_section_visual_separator,
-        document_request.use_two_column_layout_for_tn_notes,
-        document_request.use_two_column_layout_for_tq_notes,
-        document_request.show_tn_book_intro,
-        document_request.show_tn_chapter_intro,
-        document_request.show_bc_book_intro,
-        document_request.show_bc_chapter_commentary,
-    )
+    document_request_key_ = document_request_key(document_request)
     return document_request, document_request_key_
 
 
@@ -415,64 +402,50 @@ def generate_docx_document(
     return document_request_key_
 
 
-def document_request_key(
-    resource_requests: Sequence[ResourceRequest],
-    assembly_strategy_kind: AssemblyStrategyEnum,
-    assembly_layout_kind: AssemblyLayoutEnum,
-    limit_words: bool,
-    use_chapter_labels: bool,
-    use_section_visual_separator: bool,
-    use_two_column_layout_for_tn_notes: bool,
-    use_two_column_layout_for_tq_notes: bool,
-    show_tn_book_intro: bool,
-    show_bc_book_intro: bool,
-    show_tn_chapter_intro: bool,
-    show_bc_chapter_commentary: bool,
-    max_filename_len: int = 240,
-    underscore: str = "_",
-    hyphen: str = "-",
-) -> str:
+def document_request_key(document_request: DocumentRequest) -> str:
     """
     Create and return the document_request_key. The
-    document_request_key uniquely identifies a document request.
+    document_request_key uniquely identifies a document request and is
+    used as the cache key and as the file name (with suffix appended).
 
-    If the document request key is max_filename_len or more characters
-    in length, then switch to using a shorter string that is based on the
-    current time. The reason for this is that the document request key is
-    used as the file name (with suffix appended) and each OS has a limit
-    to how long a file name may be. max_filename_len should make room for
-    the file suffix, e.g., ".html", to be appended.
+    The key is a readable slug of the resources requested (languages,
+    resource types, and books) followed by a short hash of the request:
+    the resource requests in order plus every setting that affects the
+    generated document (see DocumentRequest.hashed_fields). The slug is
+    for people, the hash is what makes the key unique and the same for
+    identical requests, regardless of how many resources are requested.
 
-    It is really useful to have filenames with semantic meaning and so
-    those are preferred when possible, i.e., when the file name is not
-    too long.
+    document_request.assembly_layout_kind must already have been
+    resolved, see initialize_document_request_and_key.
     """
-    resource_request_keys = underscore.join(
-        [
-            hyphen.join(
+    resource_requests = document_request.resource_requests
+    slug = resources_slug(
+        [resource_request.lang_code for resource_request in resource_requests],
+        [resource_request.resource_type for resource_request in resource_requests],
+        [resource_request.book_code for resource_request in resource_requests],
+    )
+    settings_ = {
+        field: getattr(document_request, field)
+        for field in sorted(DocumentRequest.hashed_fields() - {"resource_requests"})
+    }
+    # limit_words only has an effect when TW content is requested, so
+    # don't let it split the cache for requests that have none.
+    if not any(contains_tw(resource_request) for resource_request in resource_requests):
+        settings_["limit_words"] = None
+    return request_key(
+        slug,
+        {
+            "resources": [
                 [
                     resource_request.lang_code,
                     resource_request.resource_type,
                     resource_request.book_code,
                 ]
-            )
-            for resource_request in resource_requests
-        ]
+                for resource_request in resource_requests
+            ],
+            "settings": settings_,
+        },
     )
-    if any(contains_tw(resource_request) for resource_request in resource_requests):
-        document_request_key = f'{resource_request_keys}_{assembly_strategy_kind.value}_{assembly_layout_kind.value}_{"clt" if use_chapter_labels else "clf"}_{"lwt" if limit_words else "lwf"}_{"sst" if use_section_visual_separator else "ssf"}_{"2ctn" if use_two_column_layout_for_tn_notes else "1ctn"}_{"2ctq" if use_two_column_layout_for_tq_notes else "1ctq"}_{"tnbt" if show_tn_book_intro else "tnbf"}_{"bcbt" if show_bc_book_intro else "bcbf"}_{"tnct" if show_tn_chapter_intro else "tncf"}_{"bcct" if show_bc_chapter_commentary else "bccf"}'
-    else:
-        document_request_key = f'{resource_request_keys}_{assembly_strategy_kind.value}_{assembly_layout_kind.value}_{"clt" if use_chapter_labels else "clf"}_{"sst" if use_section_visual_separator else "ssf"}_{"2ctn" if use_two_column_layout_for_tn_notes else "1ctn"}_{"2ctq" if use_two_column_layout_for_tq_notes else "1ctq"}_{"tnbt" if show_tn_book_intro else "tnbf"}_{"bcbt" if show_bc_book_intro else "bcbf"}_{"tnct" if show_tn_chapter_intro else "tncf"}_{"bcct" if show_bc_chapter_commentary else "bccf"}'
-    if len(document_request_key) >= max_filename_len:
-        # The generated filename could be too long for the OS where this is
-        # running. Therefore, use the current time as a document_request_key
-        # so that filename is not too long.
-        timestamp_components = str(time.time()).split(".")
-        return f"{timestamp_components[0]}_{timestamp_components[1]}"
-    else:
-        # Use the semantic filename which declaratively describes the
-        # document request components.
-        return document_request_key
 
 
 def instantiated_html_header_template(
