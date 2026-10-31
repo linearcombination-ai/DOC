@@ -2,6 +2,10 @@ from itertools import zip_longest
 from typing import Mapping, Sequence
 
 from doc.config import settings
+from doc.domain.constants import (
+    BOOK_NAME_FMT_STR,
+    RESOURCE_TYPE_NAME_FMT_STR,
+)
 from doc.domain.assembly_strategies.assembly_strategy_utils import (
     chapter_commentary,
     chapter_commentary_parts,
@@ -262,7 +266,7 @@ def assemble_usfm_by_chapter(
     show_bc_book_intro: bool,
     show_tn_chapter_intro: bool,
     book_chapters: Mapping[str, int] = BOOK_CHAPTERS,
-    fmt_str: str = settings.BOOK_NAME_FMT_STR,
+    fmt_str: str = BOOK_NAME_FMT_STR,
 ) -> list[DocumentPart]:
     is_rtl = usfm_books[0].lang_direction == LangDirEnum.RTL if usfm_books else False
     document_parts: list[DocumentPart] = []
@@ -398,7 +402,7 @@ def assemble_usfm_by_verse_chapter_at_a_time(
     show_tn_chapter_intro: bool,
     show_bc_chapter_commentary: bool,
     book_chapters: Mapping[str, int] = BOOK_CHAPTERS,
-    fmt_str: str = settings.RESOURCE_TYPE_NAME_FMT_STR,
+    fmt_str: str = RESOURCE_TYPE_NAME_FMT_STR,
 ) -> list[DocumentPart]:
     is_rtl = usfm_books[0].lang_direction == LangDirEnum.RTL if usfm_books else False
     document_parts: list[DocumentPart] = []

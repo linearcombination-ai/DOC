@@ -4,6 +4,11 @@ from typing import TYPE_CHECKING, Mapping, Optional, Sequence
 
 from celery import current_task
 from doc.config import settings
+from doc.domain.constants import (
+    PREFERRED_RESOURCES,
+    RESOURCE_TYPE_CODES_AND_NAMES,
+    USFM_RESOURCE_TYPES,
+)
 from doc.domain import worker
 from doc.domain.bible_books import BOOK_NAMES
 from doc.domain.email_utils import send_email_with_attachment, should_send_email
@@ -75,7 +80,7 @@ def get_passages(
     usfm_books: list[USFMBook],
     resource_type_codes_and_names: Mapping[
         str, str
-    ] = settings.RESOURCE_TYPE_CODES_AND_NAMES,
+    ] = RESOURCE_TYPE_CODES_AND_NAMES,
 ) -> list[Passage]:
     passages: list[Passage] = []
     if not usfm_resource_type:
@@ -106,8 +111,8 @@ def get_passages(
 def get_usfm_books_and_usfm_resource_type(
     bible_references_with_availability: list[BibleReferenceWithAvailability],
     lang_code: str,
-    usfm_resource_types: Sequence[str] = settings.USFM_RESOURCE_TYPES,
-    preferred_resources: Mapping[str, str] = settings.PREFERRED_RESOURCES,
+    usfm_resource_types: Sequence[str] = USFM_RESOURCE_TYPES,
+    preferred_resources: Mapping[str, str] = PREFERRED_RESOURCES,
 ) -> tuple[list[USFMBook], str]:
     # Invariant: book codes are only those that were available from USFM resources
     book_codes = list(
@@ -178,7 +183,7 @@ def generate_docx_document(
     docx_filepath_: str,
     working_dir: str = settings.WORKING_DIR,
     output_dir: str = settings.DOCUMENT_OUTPUT_DIR,
-    usfm_resource_types: Sequence[str] = settings.USFM_RESOURCE_TYPES,
+    usfm_resource_types: Sequence[str] = USFM_RESOURCE_TYPES,
     book_index: dict[str, int] = BOOK_INDEX,
 ) -> str:
     """Generate the content for the Passages document"""

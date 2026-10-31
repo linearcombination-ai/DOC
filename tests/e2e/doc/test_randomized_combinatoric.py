@@ -20,6 +20,7 @@ using the 'randomized' pytest marker.
 import pytest
 import random
 from doc.config import settings
+from doc.domain.constants import USFM_RESOURCE_TYPES
 from doc.domain import exceptions
 from doc.entrypoints.app import app
 from fastapi.testclient import TestClient
@@ -81,7 +82,7 @@ def test_random_non_english_document_request(
         response = client.post("/documents", json=data.dict())
         assert response.status_code == 200
         if any(
-            resource_request.resource_type in settings.USFM_RESOURCE_TYPES
+            resource_request.resource_type in USFM_RESOURCE_TYPES
             for resource_request in resource_requests
         ):
             check_finished_document_with_verses_success(response)
@@ -160,7 +161,7 @@ def test_random_english_and_non_english_combo_document_request(
         response = client.post("/documents", json=data)
         assert response.status_code == 200
         if any(
-            resource_request.resource_type in settings.USFM_RESOURCE_TYPES
+            resource_request.resource_type in USFM_RESOURCE_TYPES
             for resource_request in random_english_and_non_english_document_request.resource_requests
         ):
             check_finished_document_with_verses_success(response)
@@ -184,7 +185,7 @@ def test_random_two_non_english_languages_combo_document_request(
         response = client.post("/documents", json=data)
         assert response.status_code == 200
         if any(
-            resource_request.resource_type in settings.USFM_RESOURCE_TYPES
+            resource_request.resource_type in USFM_RESOURCE_TYPES
             for resource_request in random_two_non_english_languages_document_request.resource_requests
         ):
             check_finished_document_with_verses_success(response)
@@ -234,7 +235,7 @@ def test_all_non_english_document_request(non_english_lang_code: str) -> None:
             response = client.post("/documents", json=data.dict())
             assert response.status_code == 200
             if any(
-                resource_request.resource_type in settings.USFM_RESOURCE_TYPES
+                resource_request.resource_type in USFM_RESOURCE_TYPES
                 for resource_request in resource_requests
             ):
                 check_finished_document_with_verses_success(response)

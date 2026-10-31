@@ -1,6 +1,7 @@
 from typing import Sequence
 
 from doc.config import settings
+from doc.domain.constants import GATEWAY_LANGUAGES
 from doc.domain.resource_lookup import fetch_source_data, fetch_non_primary_source_data
 from doc.utils.list_utils import unique_tuples
 
@@ -17,7 +18,7 @@ logger = settings.logger(__name__)
 
 def lang_codes_and_names_having_usfm(
     lang_code_filter_list: frozenset[str] = LANG_CODES_WITH_NO_NT_USFM,
-    gateway_languages: frozenset[str] = settings.GATEWAY_LANGUAGES,
+    gateway_languages: frozenset[str] = GATEWAY_LANGUAGES,
 ) -> Sequence[tuple[str, str, bool]]:
     """
     >>> from doc.domain import resource_lookup

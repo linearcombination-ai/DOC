@@ -7,6 +7,7 @@ from typing import Any, Optional, Sequence
 import pydantic
 import pytest
 from doc.config import settings
+from doc.domain.constants import USFM_RESOURCE_TYPES
 from doc.domain import bible_books, exceptions, model, resource_lookup
 
 logger = settings.logger(__name__)
@@ -467,9 +468,9 @@ def random_two_non_english_languages_document_request(
         if (
             resource_type_and_name2[1] in [r1[1] for r1 in resource_types_and_names]
             or (
-                resource_type_and_name2[1] in settings.USFM_RESOURCE_TYPES
+                resource_type_and_name2[1] in USFM_RESOURCE_TYPES
                 and any(
-                    r[1] in settings.USFM_RESOURCE_TYPES
+                    r[1] in USFM_RESOURCE_TYPES
                     for r in resource_types_and_names
                 )
             )

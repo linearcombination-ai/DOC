@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import NamedTuple, Optional, Sequence, TypedDict, final
 
-from doc.config import settings
+from doc.domain.constants import USFM_RESOURCE_TYPES
 from doc.domain.bible_books import BOOK_NAMES
 from doc.utils.number_utils import is_even
 from pydantic import BaseModel, EmailStr, HttpUrl
@@ -204,7 +204,7 @@ class DocumentRequest(BaseModel):
         """
         See ValueError messages below for the rules we are enforcing.
         """
-        usfm_resource_types = settings.USFM_RESOURCE_TYPES
+        usfm_resource_types = USFM_RESOURCE_TYPES
         non_usfm_resource_types = [
             EN_TN_CONDENSED_RESOURCE_TYPE,
             TN_RESOURCE_TYPE,

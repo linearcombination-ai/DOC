@@ -11,6 +11,16 @@ from pathlib import Path
 from typing import Mapping, Optional, Sequence
 
 from doc.config import settings
+from doc.domain.constants import (
+    BIEL_TW_RESOURCE_URL_FMT_STR,
+    RESOURCE_TYPE_NAME_FMT_STR,
+    TRANSLATION_WORD_VERSE_REF_ITEM_FMT_STR,
+    TRANSLATION_WORD_VERSE_SECTION_HEADER_STR,
+    TW_RESOURCE_URL_FMT_STR,
+    UNORDERED_LIST_BEGIN_STR,
+    UNORDERED_LIST_END_STR,
+    USFM_RESOURCE_TYPES,
+)
 from doc.domain import resource_lookup, bible_books
 from doc.domain.model import (
     DocumentPart,
@@ -181,9 +191,9 @@ def translation_words_content(
     content: str,
     use_section_visual_separator: bool,
     link_rather_than_include_tw_definitions: bool = settings.LINK_RATHER_THAN_INCLUDE_TW_DEFINITIONS,
-    resource_type_name_fmt_str: str = settings.RESOURCE_TYPE_NAME_FMT_STR,
-    biel_tw_resource_path_fmt_str: str = settings.BIEL_TW_RESOURCE_URL_FMT_STR,
-    tw_resource_path_fmt_str: str = settings.TW_RESOURCE_URL_FMT_STR,
+    resource_type_name_fmt_str: str = RESOURCE_TYPE_NAME_FMT_STR,
+    biel_tw_resource_path_fmt_str: str = BIEL_TW_RESOURCE_URL_FMT_STR,
+    tw_resource_path_fmt_str: str = TW_RESOURCE_URL_FMT_STR,
     div_open: str = "<div>",
     div_close: str = "</div>",
 ) -> list[DocumentPart]:
@@ -241,7 +251,7 @@ def get_selected_name_content_pairs_for_book(
     usfm_books: Optional[Sequence[USFMBook]],
     limit_words: bool,
     resource_requests: Sequence[ResourceRequest],
-    usfm_resource_types: Sequence[str] = settings.USFM_RESOURCE_TYPES,
+    usfm_resource_types: Sequence[str] = USFM_RESOURCE_TYPES,
 ) -> list[TWNameContentPair]:
     selected_name_content_pairs = []
     if usfm_books and limit_words:
@@ -368,7 +378,7 @@ def modify_content_for_anchors(
 
 def fetch_usfm_books(
     resource_requests: Sequence[ResourceRequest],
-    usfm_resource_types: Sequence[str] = settings.USFM_RESOURCE_TYPES,
+    usfm_resource_types: Sequence[str] = USFM_RESOURCE_TYPES,
 ) -> list[USFMBook]:
     from doc.domain.parsing import usfm_book_content
 
@@ -438,10 +448,10 @@ def fetch_usfm_book(
 
 def uses_section(
     uses: Sequence[TWUse],
-    translation_word_verse_section_header_str: str = settings.TRANSLATION_WORD_VERSE_SECTION_HEADER_STR,
-    unordered_list_begin_str: str = settings.UNORDERED_LIST_BEGIN_STR,
-    translation_word_verse_ref_item_fmt_str: str = settings.TRANSLATION_WORD_VERSE_REF_ITEM_FMT_STR,
-    unordered_list_end_str: str = settings.UNORDERED_LIST_END_STR,
+    translation_word_verse_section_header_str: str = TRANSLATION_WORD_VERSE_SECTION_HEADER_STR,
+    unordered_list_begin_str: str = UNORDERED_LIST_BEGIN_STR,
+    translation_word_verse_ref_item_fmt_str: str = TRANSLATION_WORD_VERSE_REF_ITEM_FMT_STR,
+    unordered_list_end_str: str = UNORDERED_LIST_END_STR,
     book_numbers: Mapping[str, str] = bible_books.BOOK_NUMBERS,
     book_names: Mapping[str, str] = bible_books.BOOK_NAMES,
     num_zeros: int = 3,

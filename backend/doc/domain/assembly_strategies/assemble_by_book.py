@@ -1,6 +1,7 @@
 from typing import Mapping, Optional, Sequence
 
 from doc.config import settings
+from doc.domain.constants import RESOURCE_TYPE_NAME_FMT_STR
 from doc.domain.assembly_strategies.assembly_strategy_utils import (
     collect_unique_book_codes,
     collect_unique_lang_codes,
@@ -304,7 +305,7 @@ def assemble_usfm_by_book(
     show_tn_book_intro: bool,
     show_bc_book_intro: bool,
     show_tn_chapter_intro: bool,
-    resource_type_name_fmt_str: str = settings.RESOURCE_TYPE_NAME_FMT_STR,
+    resource_type_name_fmt_str: str = RESOURCE_TYPE_NAME_FMT_STR,
 ) -> list[DocumentPart]:
     is_rtl = usfm_book.lang_direction == LangDirEnum.RTL if usfm_book else False
     document_parts: list[DocumentPart] = []
@@ -393,7 +394,7 @@ def assemble_usfm_by_verse_book_at_a_time(
     show_bc_book_intro: bool,
     show_tn_chapter_intro: bool,
     show_bc_chapter_commentary: bool,
-    fmt_str: str = settings.RESOURCE_TYPE_NAME_FMT_STR,
+    fmt_str: str = RESOURCE_TYPE_NAME_FMT_STR,
 ) -> list[DocumentPart]:
     is_rtl = usfm_book.lang_direction == LangDirEnum.RTL if usfm_book else False
     document_parts: list[DocumentPart] = []

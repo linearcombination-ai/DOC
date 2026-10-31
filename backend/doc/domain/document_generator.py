@@ -12,6 +12,7 @@ from typing import Final, Mapping, Optional, Sequence, TypeAlias, cast
 
 from celery import current_task
 from doc.config import settings
+from doc.domain.constants import USFM_RESOURCE_TYPES
 from doc.domain import parsing, resource_lookup, worker
 from doc.domain.assembly_strategies.assemble_by_book import (
     assemble_content_by_book,
@@ -849,7 +850,7 @@ def cover_filepath(
 
 def select_assembly_layout_kind(
     document_request: DocumentRequest,
-    usfm_resource_types: Sequence[str] = settings.USFM_RESOURCE_TYPES,
+    usfm_resource_types: Sequence[str] = USFM_RESOURCE_TYPES,
     by_book_order: AssemblyStrategyEnum = AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
     by_verse_book_at_a_time_order: AssemblyStrategyEnum = AssemblyStrategyEnum.INTERLEAVE_BY_VERSE_BOOK_AT_A_TIME,
     by_chapter_order: AssemblyStrategyEnum = AssemblyStrategyEnum.INTERLEAVE_BY_CHAPTER,

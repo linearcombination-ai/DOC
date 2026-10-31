@@ -26,6 +26,7 @@ import mistune
 import requests
 from bs4 import BeautifulSoup
 from doc.config import settings
+from doc.domain.constants import USFM_RESOURCE_TYPES
 from doc.utils.text_utils import demote_headings_by_one
 from doc.domain.bible_books import BOOK_ID_MAP, BOOK_NAMES
 from doc.domain.model import (
@@ -569,7 +570,7 @@ def get_localized_book_name(
     frontmatter: str,
     resource_dir: str,
     resource_lookup_dto: ResourceLookupDto,
-    usfm_resource_types: Sequence[str] = settings.USFM_RESOURCE_TYPES,
+    usfm_resource_types: Sequence[str] = USFM_RESOURCE_TYPES,
 ) -> str:
     localized_book_name = maybe_localized_book_name(
         frontmatter,
@@ -1135,7 +1136,7 @@ def books(
     layout_for_print: bool,
     use_chapter_labels: bool,
     generate_docx: bool,
-    usfm_resource_types: Sequence[str] = settings.USFM_RESOURCE_TYPES,
+    usfm_resource_types: Sequence[str] = USFM_RESOURCE_TYPES,
     tn_resource_type: str = TN_RESOURCE_TYPE,
     en_tn_condensed_resource_type: str = EN_TN_CONDENSED_RESOURCE_TYPE,
     tq_resource_type: str = TQ_RESOURCE_TYPE,
