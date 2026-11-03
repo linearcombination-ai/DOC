@@ -94,3 +94,12 @@ def test_key_is_short_and_stable_for_a_very_long_passage_list() -> None:
 def test_key_golden_value() -> None:
     """Pin an exact key so that changing the hashed payload is deliberate."""
     assert key([passage()]) == "en_mat_1passages_b3cd5734a8fa"
+
+
+def test_very_long_language_codes_keep_the_file_name_short() -> None:
+    long_code = "x" * 1000
+    long_key = key([passage()], lang0_code=long_code, lang1_code=long_code + "y")
+    assert KEY_PATTERN.match(long_key)
+    assert len(long_key) < 100
+    assert long_key.startswith("2langs_")
+    assert long_key != key([passage()], lang0_code=long_code)

@@ -44,7 +44,7 @@ def test_every_document_request_field_carries_exactly_one_marker() -> None:
         assert len(markers) == 1, name
     hashed = model.DocumentRequest.hashed_fields()
     assert hashed <= set(model.DocumentRequest.model_fields)
-    assert len(hashed) == 14
+    assert len(hashed) == 15
 
 
 def test_unclassified_field_is_rejected_when_the_model_is_defined() -> None:
@@ -88,6 +88,7 @@ def test_document_request_key_differs_for_each_hashed_setting() -> None:
         "show_bc_book_intro": False,
         "show_tn_chapter_intro": False,
         "show_bc_chapter_commentary": False,
+        "generate_docx": True,
     }
     assert set(variations) == set(
         model.DocumentRequest.hashed_fields() - {"resource_requests"}
@@ -109,7 +110,6 @@ def test_document_request_key_ignores_delivery_settings() -> None:
         {"email_address": "someone@example.com"},
         {"generate_pdf": False},
         {"generate_epub": True},
-        {"generate_docx": True},
         {"document_request_source": model.DocumentRequestSourceEnum.UI},
     ):
         assert (
@@ -211,7 +211,7 @@ def test_document_request_key_golden_values() -> None:
                 resource_requests=[resource_request("en", "ulb", "mat")],
             )
         )
-        == "en_ulb_mat_ef785355556b"
+        == "en_ulb_mat_70c7420bb621"
     )
     assert (
         document_generator.document_request_key(
@@ -226,5 +226,12 @@ def test_document_request_key_golden_values() -> None:
                 limit_words=False,
             )
         )
-        == "en_ulb-tw_mat_256948005c96"
+        == "en_ulb-tw_mat_50944a0aa352"
     )
+
+
+def test_generate_docx_is_part_of_the_key() -> None:
+    """A docx request renders unstyled HTML so it must not share a cache key."""
+    assert document_generator.document_request_key(
+        document_request(overrides={"generate_docx": True})
+    ) != document_generator.document_request_key(document_request())

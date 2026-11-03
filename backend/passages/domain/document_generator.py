@@ -22,9 +22,9 @@ from doc.utils.docx_util import ensure_reference_styles
 from doc.utils.file_utils import docx_filepath, file_needs_update
 from doc.utils.request_key import (
     MAX_BOOKS_SLUG_LEN,
+    MAX_LANGS_SLUG_LEN,
     request_key,
     slug_group,
-    slugify,
 )
 from doc.utils.text_utils import maybe_correct_book_name
 from docx import Document
@@ -468,8 +468,10 @@ def document_request_key(
     makes the key unique and the same for identical requests, regardless
     of how many passages are requested.
     """
-    lang_slug = "-".join(
-        slugify(code) for code in (lang0_code, lang1_code) if code is not None
+    lang_slug = slug_group(
+        (code for code in (lang0_code, lang1_code) if code is not None),
+        "langs",
+        MAX_LANGS_SLUG_LEN,
     )
     books_slug = slug_group(
         (dto.reference.book_code for dto in passage_reference_dtos),

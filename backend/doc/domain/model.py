@@ -210,7 +210,7 @@ class DocumentRequest(CacheKeyedModel):
     # Indicate whether ePub should be generated.
     generate_epub: Annotated[bool, Ignored()] = False
     # Indicate whether Docx should be generated.
-    generate_docx: Annotated[bool, Ignored()] = False
+    generate_docx: Annotated[bool, Hashed()] = False
     # Indicate whether translation words, TW, should be limited to
     # only those that appear in the USFM requested (True), or, include all
     # the TW words available for the language requested (False).

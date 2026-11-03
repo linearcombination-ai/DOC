@@ -19,6 +19,11 @@ from doc.domain.resource_lookup import (
     resource_types,
 )
 from doc.utils.file_utils import docx_filepath, file_needs_update
+from doc.utils.request_key import (
+    MAX_LANGS_SLUG_LEN,
+    request_key,
+    slug_group,
+)
 from doc.utils.text_utils import maybe_correct_book_name
 from docx import Document
 from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
@@ -448,6 +453,26 @@ def generate_docx(
     doc.save(docx_filepath)
 
 
+def stet_request_key(
+    lang0_code: str, lang1_code: str, use_increased_line_spacing: bool
+) -> str:
+    """
+    Return the key used as the cache key and (with prefix and suffix
+    added) the file name. The slug is filename safe whatever the language
+    codes contain; the hash covers the codes and the line spacing choice
+    so distinct requests get distinct keys.
+    """
+    slug = f"{slug_group([lang0_code, lang1_code], 'langs', MAX_LANGS_SLUG_LEN)}_stet"
+    return request_key(
+        slug,
+        {
+            "lang0_code": lang0_code,
+            "lang1_code": lang1_code,
+            "use_increased_line_spacing": use_increased_line_spacing,
+        },
+    )
+
+
 @worker.app.task
 def generate_stet_docx_document(
     lang0_code: str,
@@ -462,8 +487,8 @@ def generate_stet_docx_document(
         email_address,
         use_increased_line_spacing,
     )
-    document_request_key_ = (
-        f"{lang0_code}_{lang1_code}_{'2l' if use_increased_line_spacing else '1l'}_stet"
+    document_request_key_ = stet_request_key(
+        lang0_code, lang1_code, use_increased_line_spacing
     )
     docx_filepath_ = docx_filepath(document_request_key_)
     if file_needs_update(docx_filepath_):
