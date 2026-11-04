@@ -802,7 +802,7 @@ def get_book_codes_for_lang(
         repos_to_clone_ = [
             (url, path)
             for url, path, resource_type in repo_clone_list
-            if "en_rg" not in path
+            if "rg" != resource_type
         ]
         if download_assets:
             batch_download_repos(repos_to_clone_)

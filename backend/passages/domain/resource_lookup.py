@@ -1,5 +1,5 @@
 from passages.reviewers_guide.model import BibleReference
-from doc.config import settings
+from passages.domain.survey_files import EN_RG_DIR, SURVEY_FILES
 from passages.reviewers_guide.parser import get_rg_books
 from os.path import exists, isdir, join
 from doc.domain.resource_lookup import book_codes_for_lang_from_usfm_only
@@ -17,10 +17,10 @@ from doc.domain.model import (
 def nt_survey_rg_passages(
     lang_code: str = "en",
     lang_name: str = "English",
-    docx_file_path: str = "en_rg_nt_survey.docx",
+    docx_file_path: str = SURVEY_FILES["nt"],
     resource_type_name: str = "NT Survey Reviewers' Guide",
     lang_direction: LangDirEnum = LangDirEnum.LTR,
-    resource_dir: str = settings.EN_RG_DIR,
+    resource_dir: str = EN_RG_DIR,
 ) -> list[BibleReference]:
     """
     Returns the list of all NT RG passages from the docx_file_path, but with
@@ -46,7 +46,7 @@ def nt_survey_rg_passages(
     bible_references = [
         pt.bible_reference for chapter in rg_book_chapters for pt in chapter.content
     ]
-    # Localize the book names since they are provided in English from en_rg_nt_survey.docx
+    # Localize the book names since they are provided in English from the survey .docx
     book_name_map = {
         book_code_and_name[0]: book_code_and_name[1]
         for book_code_and_name in book_codes_for_lang_from_usfm_only(lang_code)
@@ -63,10 +63,10 @@ def nt_survey_rg_passages(
 def ot_survey_rg1_passages(
     lang_code: str = "en",
     lang_name: str = "English",
-    docx_file_path: str = "en_ot_survey_rg1_gen_deu.docx",
+    docx_file_path: str = SURVEY_FILES["ot_rg1"],
     resource_type_name: str = "OT Survey Reviewers' Guide (Genesis to Deuteronomy)",
     lang_direction: LangDirEnum = LangDirEnum.LTR,
-    resource_dir: str = settings.EN_RG_DIR,
+    resource_dir: str = EN_RG_DIR,
 ) -> list[BibleReference]:
     """
     >>> from doc.domain import resource_lookup
@@ -89,7 +89,7 @@ def ot_survey_rg1_passages(
     bible_references = [
         pt.bible_reference for chapter in rg_book_chapters for pt in chapter.content
     ]
-    # Localize the book names since they are provided in English from en_ot_survey_rg1_gen_deu.docx
+    # Localize the book names since they are provided in English from the survey .docx
     book_name_map = {
         book_code_and_name[0]: book_code_and_name[1]
         for book_code_and_name in book_codes_for_lang_from_usfm_only(lang_code)
@@ -106,10 +106,10 @@ def ot_survey_rg1_passages(
 def ot_survey_rg2_passages(
     lang_code: str = "en",
     lang_name: str = "English",
-    docx_file_path: str = "en_ot_survey_rg2_jos_est.docx",
+    docx_file_path: str = SURVEY_FILES["ot_rg2"],
     resource_type_name: str = "OT Survey Reviewers' Guide (Joshua to Esther)",
     lang_direction: LangDirEnum = LangDirEnum.LTR,
-    resource_dir: str = settings.EN_RG_DIR,
+    resource_dir: str = EN_RG_DIR,
 ) -> list[BibleReference]:
     """
     >>> from doc.domain import resource_lookup
@@ -132,7 +132,7 @@ def ot_survey_rg2_passages(
     bible_references = [
         pt.bible_reference for chapter in rg_book_chapters for pt in chapter.content
     ]
-    # Localize the book names since they are provided in English from en_ot_survey_rg2_jos_est.docx
+    # Localize the book names since they are provided in English from the survey .docx
     book_name_map = {
         book_code_and_name[0]: book_code_and_name[1]
         for book_code_and_name in book_codes_for_lang_from_usfm_only(lang_code)
@@ -149,10 +149,10 @@ def ot_survey_rg2_passages(
 def ot_survey_rg3_passages(
     lang_code: str = "en",
     lang_name: str = "English",
-    docx_file_path: str = "en_ot_survey_rg3_job_sng.docx",
+    docx_file_path: str = SURVEY_FILES["ot_rg3"],
     resource_type_name: str = "OT Survey Reviewers' Guide (Job to Song of Songs)",
     lang_direction: LangDirEnum = LangDirEnum.LTR,
-    resource_dir: str = settings.EN_RG_DIR,
+    resource_dir: str = EN_RG_DIR,
 ) -> list[BibleReference]:
     """
     >>> from doc.domain import resource_lookup
@@ -175,7 +175,7 @@ def ot_survey_rg3_passages(
     bible_references = [
         pt.bible_reference for chapter in rg_book_chapters for pt in chapter.content
     ]
-    # Localize the book names since they are provided in English from en_ot_survey_rg3_job_sng.docx
+    # Localize the book names since they are provided in English from the survey .docx
     book_name_map = {
         book_code_and_name[0]: book_code_and_name[1]
         for book_code_and_name in book_codes_for_lang_from_usfm_only(lang_code)
@@ -192,10 +192,10 @@ def ot_survey_rg3_passages(
 def ot_survey_rg4_passages(
     lang_code: str = "en",
     lang_name: str = "English",
-    docx_file_path: str = "en_ot_survey_rg4_isa_mal.docx",
+    docx_file_path: str = SURVEY_FILES["ot_rg4"],
     resource_type_name: str = "OT Survey Reviewers' Guide (Isaiah to Malachi)",
     lang_direction: LangDirEnum = LangDirEnum.LTR,
-    resource_dir: str = settings.EN_RG_DIR,
+    resource_dir: str = EN_RG_DIR,
 ) -> list[BibleReference]:
     """
     >>> from doc.domain import resource_lookup
@@ -218,7 +218,7 @@ def ot_survey_rg4_passages(
     bible_references = [
         pt.bible_reference for chapter in rg_book_chapters for pt in chapter.content
     ]
-    # Localize the book names since they are provided in English from en_ot_survey_rg4_isa_mal.docx
+    # Localize the book names since they are provided in English from the survey .docx
     book_name_map = {
         book_code_and_name[0]: book_code_and_name[1]
         for book_code_and_name in book_codes_for_lang_from_usfm_only(lang_code)

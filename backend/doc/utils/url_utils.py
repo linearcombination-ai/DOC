@@ -8,6 +8,7 @@ from urllib.parse import urlparse
 import yaml
 from doc.config import settings
 from doc.domain.model import Data, JsonManifestBook, JsonManifestData
+from passages.domain.survey_files import EN_RG_DIR
 from pydantic import HttpUrl
 
 
@@ -91,7 +92,7 @@ def normalize_last_segment(
     ] = REPLACEMENTS_BY_LANG_CODE_AND_LAST_SEGMENT,
     universal_prefixes: list[str] = PREFIXES_TO_REMOVE,
     lang_specific_prefixes: dict[str, list[str]] = LANG_SPECIFIC_PREFIXES_TO_REMOVE,
-    en_rg_dir: str = settings.EN_RG_DIR,
+    en_rg_dir: str = EN_RG_DIR,
 ) -> str:
     """
     Handle special cases where git repo URL does not follow the expected pattern.

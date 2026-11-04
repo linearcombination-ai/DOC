@@ -223,7 +223,9 @@ class Settings(BaseSettings):
 
     # Location where resource assets will be cloned.
     RESOURCE_ASSETS_DIR: str = "assets_download"
-    EN_RG_DIR: str = "en_rg"
+    # Optional override of the Reviewer's Guide .docx directory. When unset
+    # the passages package supplies it, see passages.domain.survey_files.
+    EN_RG_DIR: str | None = None
 
     # Location where intermediate generated document parts are saved.
     WORKING_DIR: str = "working_temp"

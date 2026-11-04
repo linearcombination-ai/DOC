@@ -43,7 +43,6 @@ services:
     volumes:
       - shared:/app/document_output
       - shared_assets:/app/assets_download
-      - shared_en_rg:/app/en_rg
     depends_on:
       usfmparserapi:
         condition: service_healthy
@@ -70,7 +69,6 @@ services:
     volumes:
       - shared:/app/document_output
       - shared_working:/app/working_temp
-      - shared_en_rg:/app/en_rg
       - shared_assets:/app/assets_download
     depends_on:
       api:
@@ -134,5 +132,4 @@ services:
 volumes:
   shared:
   shared_working:
-  shared_en_rg:
   shared_assets:

@@ -1,3 +1,4 @@
+import os
 import re
 from collections import defaultdict
 from pprint import pprint
@@ -404,6 +405,33 @@ def create_rgbooks_from_parsed_texts(
     return rgbooks
 
 
+# Parsed, language-independent content of each .docx, keyed by file path.
+# An entry is only valid for the (mtime, size) it was parsed at, so a file
+# that is replaced on disk is reparsed without restarting the process.
+_parsed_texts_cache: dict[str, tuple[tuple[int, int], list[ParsedText]]] = {}
+
+
+def parsed_texts_from_docx(docx_file_path: str) -> list[ParsedText]:
+    """
+    Return the parsed passages of a Reviewer's Guide .docx. Reading and
+    parsing the .docx is the costly part, so the language-independent
+    result is cached in memory until the file's modification time or size
+    changes. Callers get their own copies, since they localize and
+    otherwise mutate what they receive.
+    """
+    stat = os.stat(docx_file_path)
+    signature = (stat.st_mtime_ns, stat.st_size)
+    cached = _parsed_texts_cache.get(docx_file_path)
+    if cached is None or cached[0] != signature:
+        between_texts, bible_references = find_bible_references(docx_file_path)
+        parsed = [
+            parse_text(text, ref) for text, ref in zip(between_texts, bible_references)
+        ]
+        cached = (signature, parsed)
+        _parsed_texts_cache[docx_file_path] = cached
+    return [parsed_text.model_copy(deep=True) for parsed_text in cached[1]]
+
+
 def get_rg_books(
     docx_file_path: str,
     lang_code: str,
@@ -411,10 +439,7 @@ def get_rg_books(
     resource_type_name: str,
     lang_direction: LangDirEnum,
 ) -> list[RGBook]:
-    between_texts, bible_references = find_bible_references(docx_file_path)
-    parsed_objects = [
-        parse_text(text, ref) for text, ref in zip(between_texts, bible_references)
-    ]
+    parsed_objects = parsed_texts_from_docx(docx_file_path)
     rg_books = create_rgbooks_from_parsed_texts(
         parsed_objects, lang_code, lang_name, resource_type_name, lang_direction
     )

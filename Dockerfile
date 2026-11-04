@@ -88,8 +88,6 @@ WORKDIR /app
 
 # Make the output directory where resource asset files are cloned.
 RUN mkdir -p assets_download
-# Make the input directory where en_rg_nt_survey.docx is stored.
-RUN mkdir -p en_rg
 # Make the directory where intermediate document parts are saved.
 RUN mkdir -p working_temp
 # Make the output directory where generated HTML and PDFs are placed.
@@ -127,14 +125,6 @@ COPY template_compact.docx .
 # that we can still test
 # COPY resources.json assets_download/resources.json
 # RUN touch assets_download/resources.json
-
-# We copy these files into their final place using a FastAPI
-# initialization hook. We can't do it in Dockerfile because of the
-# volumes definition that we need which overshadows /app/assets_download
-# directory and these files are not yet available through the data API
-# or at a reasonably sized clonable github repo.
-COPY en_rg_nt_survey.docx .
-COPY en_ot_survey_rg* .
 
 # Make sure Python can find the code to run
 ENV PYTHONPATH=/app/backend:/app/tests
