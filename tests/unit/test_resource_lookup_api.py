@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from doc.config import settings
 from doc.domain.model import (
     AssemblyLayoutEnum,
@@ -13,6 +15,11 @@ from passages.domain.resource_lookup import (
     ot_survey_rg3_passages,
     ot_survey_rg4_passages,
 )
+
+
+# The reviewers' guide docx files live at the repo root; read them from there
+# so these tests do not depend on en_rg/ being populated by the app's startup.
+RG_DIR = str(Path(__file__).resolve().parents[2])
 
 
 def test_lookup_successes() -> None:
@@ -78,25 +85,25 @@ def test_lookup_failures() -> None:
 
 
 def test_nt_survey_rg_passages() -> None:
-    bible_references = nt_survey_rg_passages()
+    bible_references = nt_survey_rg_passages(resource_dir=RG_DIR)
     assert bible_references
 
 
 def test_en_ot_survey_rg1_passages() -> None:
-    bible_references = ot_survey_rg1_passages()
+    bible_references = ot_survey_rg1_passages(resource_dir=RG_DIR)
     assert bible_references
 
 
 def test_en_ot_survey_rg2_passages() -> None:
-    bible_references = ot_survey_rg2_passages()
+    bible_references = ot_survey_rg2_passages(resource_dir=RG_DIR)
     assert bible_references
 
 
 def test_en_ot_survey_rg3_passages() -> None:
-    bible_references = ot_survey_rg3_passages()
+    bible_references = ot_survey_rg3_passages(resource_dir=RG_DIR)
     assert bible_references
 
 
 def test_en_ot_survey_rg4_passages() -> None:
-    bible_references = ot_survey_rg4_passages()
+    bible_references = ot_survey_rg4_passages(resource_dir=RG_DIR)
     assert bible_references
