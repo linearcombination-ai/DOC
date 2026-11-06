@@ -20,6 +20,7 @@ from doc.domain.bible_books import (
     BOOK_NAMES,
     OLD_TESTAMENT_CODES,
 )
+from doc.domain.constants import RESOURCE_TYPE_CODES_AND_NAMES, USFM_RESOURCE_TYPES
 from doc.domain.model import (
     BC_RESOURCE_TYPE,
     EN_TN_CONDENSED_RESOURCE_TYPE,
@@ -67,7 +68,7 @@ def clear_availability_cache() -> None:
 
 def resource_category(
     resource_type: str,
-    usfm_resource_types: Sequence[str] = settings.USFM_RESOURCE_TYPES,
+    usfm_resource_types: Sequence[str] = USFM_RESOURCE_TYPES,
 ) -> str:
     """
     >>> resource_category("ulb")
@@ -141,7 +142,7 @@ def _book_code_from_repo_name(
 def scan_repos(
     lang_code: str,
     repo_clone_list: Sequence[tuple[HttpUrl, str, str]],
-    usfm_resource_types: Sequence[str] = settings.USFM_RESOURCE_TYPES,
+    usfm_resource_types: Sequence[str] = USFM_RESOURCE_TYPES,
 ) -> tuple[dict[str, set[str]], set[str]]:
     """
     Walk the (already provisioned) repos of a language and return a
@@ -190,7 +191,7 @@ def build_resource_availability(
     book_scoped: Mapping[str, set[str]],
     language_wide: set[str],
     localized_book_names: Mapping[str, str],
-    resource_type_names: Mapping[str, str] = settings.RESOURCE_TYPE_CODES_AND_NAMES,
+    resource_type_names: Mapping[str, str] = RESOURCE_TYPE_CODES_AND_NAMES,
     book_names: Mapping[str, str] = BOOK_NAMES,
 ) -> ResourceAvailability:
     """
