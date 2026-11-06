@@ -24,12 +24,12 @@ from doc.domain.constants import RESOURCE_TYPE_CODES_AND_NAMES, USFM_RESOURCE_TY
 from doc.domain.model import (
     BC_RESOURCE_TYPE,
     EN_TN_CONDENSED_RESOURCE_TYPE,
-    BookAvailability,
-    ResourceAvailability,
-    ResourceTypeInfo,
     TN_RESOURCE_TYPE,
     TQ_RESOURCE_TYPE,
     TW_RESOURCE_TYPE,
+    BookAvailability,
+    ResourceAvailability,
+    ResourceTypeInfo,
 )
 from doc.domain.parsing import find_usfm_files
 from doc.utils.url_utils import get_last_segment
