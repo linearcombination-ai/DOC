@@ -2,27 +2,26 @@ from doc.utils.template_env import env
 import smtplib
 from os.path import basename
 from typing import Optional
-from doc.config import settings
+from doc.config import get_settings
 from doc.domain.model import Attachment
 from email.encoders import encode_base64
 from email.mime.base import MIMEBase
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-logger = settings.logger(__name__)
+logger = get_settings().logger(__name__)
 
 
 def should_send_email(
     # email_address comes in as pydantic.EmailStr and leaves
     # the pydantic class validator as a str.
     email_address: Optional[str],
-    send_email: bool = settings.SEND_EMAIL,
 ) -> bool:
     """
     Return True if configuration is set to send email and the user
     has supplied an email address.
     """
-    return send_email and email_address is not None
+    return get_settings().SEND_EMAIL and email_address is not None
 
 
 def send_email_with_attachment(
@@ -32,11 +31,6 @@ def send_email_with_attachment(
     attachments: list[Attachment],
     document_request_key: str,
     content_disposition: str = "attachment",
-    from_email_address: str = settings.FROM_EMAIL_ADDRESS,
-    smtp_password: str = settings.SMTP_PASSWORD,
-    email_send_subject: str = settings.EMAIL_SEND_SUBJECT,
-    smtp_host: str = settings.SMTP_HOST,
-    smtp_port: int = settings.SMTP_PORT,
     comma_space: str = ", ",
 ) -> None:
     """
@@ -45,13 +39,14 @@ def send_email_with_attachment(
     recipient's email with the document attached.
     """
     if email_address:
-        sender = from_email_address
-        email_password = smtp_password
+        settings = get_settings()
+        sender = settings.FROM_EMAIL_ADDRESS
+        email_password = settings.SMTP_PASSWORD
         recipients = [email_address]
         logger.debug("Email sender %s, recipients: %s", sender, recipients)
         # Create the enclosing (outer) message
         outer = MIMEMultipart()
-        outer["Subject"] = email_send_subject
+        outer["Subject"] = settings.EMAIL_SEND_SUBJECT
         outer["To"] = comma_space.join(recipients)
         outer["From"] = sender
         # Add the attachments to the message
@@ -78,7 +73,7 @@ def send_email_with_attachment(
         composed = outer.as_string()
         # Send the email
         try:
-            with smtplib.SMTP(smtp_host, smtp_port) as smtp:
+            with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT) as smtp:
                 smtp.ehlo()
                 smtp.starttls()
                 smtp.ehlo()

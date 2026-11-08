@@ -19,7 +19,7 @@ using the 'randomized' pytest marker.
 
 import pytest
 import random
-from doc.config import settings
+from doc.config import get_settings
 from doc.domain.constants import USFM_RESOURCE_TYPES
 from doc.domain import exceptions
 from doc.entrypoints.app import app
@@ -33,7 +33,7 @@ from tests.shared.utils import (
     # check_result,
 )
 
-logger = settings.logger(__name__)
+logger = get_settings().logger(__name__)
 
 
 @pytest.mark.parametrize("execution_number", range(25))
@@ -47,7 +47,7 @@ def test_random_non_english_document_request(
     generate a random document request requested with resources
     dynamically requested each time this is run.
     """
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         book_codes_and_names = resource_lookup.book_codes_for_lang(
             random_non_english_lang_code
         )
@@ -69,7 +69,7 @@ def test_random_non_english_document_request(
                 )
             )
         data = model.DocumentRequest(
-            email_address=settings.TO_EMAIL_ADDRESS,
+            email_address=get_settings().TO_EMAIL_ADDRESS,
             assembly_strategy_kind=model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
             assembly_layout_kind=model.AssemblyLayoutEnum.ONE_COLUMN,
             layout_for_print=False,
@@ -100,7 +100,7 @@ def test_non_english_usfm_only_document_request(
     generate a random document request requested with resources
     dynamically requested each time this is run.
     """
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         book_codes_and_names = resource_lookup.book_codes_for_lang(
             non_english_lang_code
         )
@@ -127,7 +127,7 @@ def test_non_english_usfm_only_document_request(
             response = client.post(
                 "/documents",
                 json={
-                    "email_address": settings.TO_EMAIL_ADDRESS,
+                    "email_address": get_settings().TO_EMAIL_ADDRESS,
                     "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                     "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                     "layout_for_print": False,
@@ -157,7 +157,7 @@ def test_random_english_and_non_english_combo_document_request(
     generate a random multi-language document request each time this is run.
     """
     data = random_english_and_non_english_document_request.dict()
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post("/documents", json=data)
         assert response.status_code == 200
         if any(
@@ -181,7 +181,7 @@ def test_random_two_non_english_languages_combo_document_request(
     generate a random multi-language document request each time this is run.
     """
     data = random_two_non_english_languages_document_request.dict()
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post("/documents", json=data)
         assert response.status_code == 200
         if any(
@@ -200,7 +200,7 @@ def test_all_non_english_document_request(non_english_lang_code: str) -> None:
     """
     Test all languages, all their books, and all their resource types.
     """
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         book_codes_and_names = resource_lookup.book_codes_for_lang(
             non_english_lang_code
         )
@@ -222,7 +222,7 @@ def test_all_non_english_document_request(non_english_lang_code: str) -> None:
                     )
                 )
             data = model.DocumentRequest(
-                email_address=settings.TO_EMAIL_ADDRESS,
+                email_address=get_settings().TO_EMAIL_ADDRESS,
                 assembly_strategy_kind=model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 assembly_layout_kind=model.AssemblyLayoutEnum.ONE_COLUMN,
                 layout_for_print=False,

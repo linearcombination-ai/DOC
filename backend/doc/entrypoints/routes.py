@@ -2,14 +2,14 @@ from typing import Sequence, cast
 
 import celery.states
 from celery.result import AsyncResult
-from doc.config import settings
+from doc.config import get_settings
 from doc.domain import document_generator, model, resource_lookup
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import JSONResponse
 
 router = APIRouter()
 
-logger = settings.logger(__name__)
+logger = get_settings().logger(__name__)
 
 
 @router.post("/documents")

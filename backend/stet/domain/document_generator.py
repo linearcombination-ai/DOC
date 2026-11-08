@@ -4,7 +4,7 @@ from typing import Mapping, Sequence, cast
 
 import mistune
 from celery import current_task
-from doc.config import settings
+from doc.config import get_settings
 from doc.domain.constants import (
     PREFERRED_RESOURCES,
     RESOURCE_TYPE_CODES_AND_NAMES,
@@ -58,7 +58,7 @@ from stet.utils.docx_utils import (
 )
 from stet.utils.util import extract_chapter_and_beyond
 
-logger = settings.logger(__name__)
+logger = get_settings().logger(__name__)
 
 
 def generate_docx_document(

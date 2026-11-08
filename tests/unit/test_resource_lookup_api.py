@@ -1,4 +1,4 @@
-from doc.config import settings
+from doc.config import get_settings
 from doc.domain.model import (
     AssemblyLayoutEnum,
     AssemblyStrategyEnum,
@@ -27,7 +27,7 @@ def test_lookup_successes() -> None:
         ResourceRequest(lang_code="erk-x-erakor", resource_type="reg", book_code="eph"),
     ]
     document_request = DocumentRequest(
-        email_address=settings.FROM_EMAIL_ADDRESS,
+        email_address=get_settings().FROM_EMAIL_ADDRESS,
         assembly_strategy_kind=assembly_strategy_kind,
         assembly_layout_kind=assembly_layout_kind,
         layout_for_print=True,
@@ -57,7 +57,7 @@ def test_lookup_failures() -> None:
         ResourceRequest(lang_code="zh", resource_type="ulb", book_code="jol")
     ]
     document_request = DocumentRequest(
-        email_address=settings.FROM_EMAIL_ADDRESS,
+        email_address=get_settings().FROM_EMAIL_ADDRESS,
         assembly_strategy_kind=assembly_strategy_kind,
         assembly_layout_kind=assembly_layout_kind,
         layout_for_print=False,

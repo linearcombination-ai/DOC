@@ -3,7 +3,6 @@ from __future__ import annotations
 import re
 from typing import Optional, cast, TYPE_CHECKING
 
-from doc.config import settings
 from docx import Document
 from docx.document import Document as DocxDocument
 from docx.enum.section import WD_SECTION

@@ -5,7 +5,7 @@ Utility functions used by assembly_strategies.
 from re import search
 from typing import Mapping, Optional, Sequence
 
-from doc.config import settings
+from doc.config import get_settings
 from doc.domain.constants import (
     HR,
     RESOURCE_TYPE_CODES_AND_NAMES,
@@ -30,7 +30,7 @@ from docx.enum.text import WD_BREAK
 from docx.oxml import parse_xml
 from docx.oxml.ns import qn
 
-logger = settings.logger(__name__)
+logger = get_settings().logger(__name__)
 
 
 OXML_LANGUAGE_LIST: list[str] = [

@@ -1,6 +1,6 @@
 """This module provides the FastAPI API definition."""
 
-from doc.config import settings
+from doc.config import get_settings
 from doc.domain import exceptions
 from doc.entrypoints.routes import router as doc_router
 from fastapi import FastAPI, Request, status
@@ -14,16 +14,16 @@ from stet.entrypoints.routes import router as stet_router
 app = FastAPI()
 
 
-logger = settings.logger(__name__)
+logger = get_settings().logger(__name__)
 
 # CORS configuration to allow frontend to talk to backend
-origins = settings.BACKEND_CORS_ORIGINS
+cors_origins = get_settings().BACKEND_CORS_ORIGINS
 
-logger.debug("CORS origins: %s", origins)
+logger.debug("CORS origins: %s", cors_origins)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST"],
     allow_headers=["*"],

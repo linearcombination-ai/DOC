@@ -34,6 +34,7 @@ def test_assemble_docx_content_ordering_of_books() -> None:
         document_request.layout_for_print,
         document_request.use_chapter_labels,
         document_request.generate_docx,
+        document_request.show_tn_book_intro,
     )
     document_parts = document_generator.assemble_content(
         document_request_key,

@@ -1,8 +1,8 @@
 from re import compile, match, sub, IGNORECASE, Match
 
-from doc.config import settings
+from doc.config import get_settings
 
-logger = settings.logger(__name__)
+logger = get_settings().logger(__name__)
 
 HEADING_RE = compile(r"</?h([1-6])\b", IGNORECASE)
 

@@ -4,7 +4,7 @@ import os
 import re
 
 import pytest
-from doc.config import settings
+from doc.config import get_settings
 from doc.domain import model
 from doc.entrypoints.app import app
 from fastapi.testclient import TestClient
@@ -16,16 +16,16 @@ from tests.shared.utils import (
     check_result,
 )
 
-logger = settings.logger(__name__)
+logger = get_settings().logger(__name__)
 
 
 @pytest.mark.docx
 def test_en_ulb_col_en_tn_col_language_book_order_with_no_email_1c_docx() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents_docx",
             json={
-                # "email_address": settings.TO_EMAIL_ADDRESS,
+                # "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
@@ -50,11 +50,11 @@ def test_en_ulb_col_en_tn_col_language_book_order_with_no_email_1c_docx() -> Non
 
 
 def test_fr_ulb_col_fr_tn_col_language_book_order_with_no_email_1c_c() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                # "email_address": settings.TO_EMAIL_ADDRESS,
+                # "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN_COMPACT,
                 "layout_for_print": True,
@@ -80,11 +80,11 @@ def test_fr_ulb_col_fr_tn_col_language_book_order_with_no_email_1c_c() -> None:
 
 
 def test_fr_ulb_wa_col_en_fr_wa_col_fr_tq_wa_col_language_book_order_1c() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
@@ -115,11 +115,11 @@ def test_fr_ulb_wa_col_en_fr_wa_col_fr_tq_wa_col_language_book_order_1c() -> Non
 
 
 def test_fr_ulb_col_fr_tn_col_fr_tq_col_language_book_order_1c_c() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN_COMPACT,
                 "layout_for_print": True,
@@ -151,11 +151,11 @@ def test_fr_ulb_col_fr_tn_col_fr_tq_col_language_book_order_1c_c() -> None:
 
 @pytest.mark.skip
 def test_en_ulb_tn_jud_language_book_order_1c() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
@@ -181,11 +181,11 @@ def test_en_ulb_tn_jud_language_book_order_1c() -> None:
 
 @pytest.mark.skip
 def test_en_ulb_tn_jud_language_book_order_1c_c() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN_COMPACT,
                 "layout_for_print": True,
@@ -210,11 +210,11 @@ def test_en_ulb_tn_jud_language_book_order_1c_c() -> None:
 
 
 def test_en_ulb_tn_condensed_jud_language_book_order_1c() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
@@ -239,11 +239,11 @@ def test_en_ulb_tn_condensed_jud_language_book_order_1c() -> None:
 
 
 def test_pt_br_ulb_gen_pt_br_tn_gen_language_book_order_1c() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
@@ -269,11 +269,11 @@ def test_pt_br_ulb_gen_pt_br_tn_gen_language_book_order_1c() -> None:
 
 
 def test_pt_br_ulb_tn_language_book_order_1c_c() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN_COMPACT,
                 "layout_for_print": True,
@@ -299,11 +299,11 @@ def test_pt_br_ulb_tn_language_book_order_1c_c() -> None:
 
 
 def test_pt_br_ulb_tn_en_ulb_tn_luk_language_book_order_1c() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
@@ -339,11 +339,11 @@ def test_pt_br_ulb_tn_en_ulb_tn_luk_language_book_order_1c() -> None:
 
 
 def test_pt_br_ulb_tn_en_ulb_tn_luk_language_book_order_1c_c() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN_COMPACT,
                 "layout_for_print": True,
@@ -379,11 +379,11 @@ def test_pt_br_ulb_tn_en_ulb_tn_luk_language_book_order_1c_c() -> None:
 
 
 def test_pt_br_ulb_tn_luk_en_ulb_tn_luk_sw_ulb_tn_col_language_book_order_1c() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
@@ -431,11 +431,11 @@ def test_pt_br_ulb_tn_luk_en_ulb_tn_luk_sw_ulb_tn_col_language_book_order_1c() -
 def test_pt_br_ulb_tn_luk_en_ulb_tn_luk_sw_ulb_tn_col_language_book_order_1c_c() -> (
     None
 ):
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN_COMPACT,
                 "layout_for_print": True,
@@ -482,11 +482,11 @@ def test_pt_br_ulb_tn_luk_en_ulb_tn_luk_sw_ulb_tn_col_language_book_order_1c_c()
 def test_en_ulb_col_en_tn_col_en_tq_col_en_tw_col_sw_ulb_col_sw_tn_col_sw_tq_col_sw_tw_col_sw_ulb_tit_sw_tn_tit_sw_tq_tit_sw_tw_tit_language_book_order_1c() -> (
     None
 ):
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 # "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "assembly_layout_kind": None,
@@ -559,11 +559,11 @@ def test_en_ulb_col_en_tn_col_en_tq_col_en_tw_col_sw_ulb_col_sw_tn_col_sw_tq_col
 def test_en_ulb_col_en_tn_col_en_tq_col_en_tw_col_sw_ulb_col_sw_tn_col_sw_tq_col_sw_tw_col_sw_ulb_tit_sw_tn_tit_sw_tq_tit_sw_tw_tit_language_book_order_1c_c() -> (
     None
 ):
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 # "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN_COMPACT,
                 "assembly_layout_kind": None,
@@ -636,11 +636,11 @@ def test_en_ulb_col_en_tn_col_en_tq_col_en_tw_col_sw_ulb_col_sw_tn_col_sw_tq_col
 def test_en_ulb_col_en_tn_col_en_tw_col_sw_ulb_col_sw_tn_col_sw_tw_col_sw_ulb_tit_sw_tn_tit_sw_tw_tit_language_book_order_1c() -> (
     None
 ):
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 # "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "assembly_layout_kind": None,
@@ -703,11 +703,11 @@ def test_en_ulb_col_en_tn_col_en_tw_col_sw_ulb_col_sw_tn_col_sw_tw_col_sw_ulb_ti
 def test_en_ulb_col_en_tn_col_en_tw_col_sw_ulb_col_sw_tn_col_sw_tw_col_sw_ulb_tit_sw_tn_tit_sw_tw_tit_language_book_order_1c_c() -> (
     None
 ):
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 # "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN_COMPACT,
                 "assembly_layout_kind": None,
@@ -785,11 +785,11 @@ def test_en_ulb_col_en_tn_col_en_tw_col_sw_ulb_col_sw_tn_col_sw_tw_col_sw_ulb_ti
 def test_en_ulb_col_en_tw_col_sw_ulb_col_sw_tw_col_sw_ulb_tit_sw_tw_tit_language_book_order_1c() -> (
     None
 ):
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 "assembly_layout_kind": None,
                 "layout_for_print": False,
@@ -846,11 +846,11 @@ def test_en_ulb_col_en_tw_col_sw_ulb_col_sw_tw_col_sw_ulb_tit_sw_tw_tit_language
 def test_en_ulb_col_en_tw_col_sw_ulb_col_sw_tw_col_sw_ulb_tit_sw_tw_tit_language_book_order_1c_c() -> (
     None
 ):
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 # "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN_COMPACT,
                 "assembly_layout_kind": None,
@@ -908,11 +908,11 @@ def test_en_ulb_col_en_tw_col_sw_ulb_col_sw_tw_col_sw_ulb_tit_sw_tw_tit_language
 def test_en_ulb_col_en_tq_col_en_tw_col_sw_ulb_col_sw_tq_col_sw_tw_col_sw_ulb_tit_sw_tq_tit_sw_tw_tit_language_book_order_1c() -> (
     None
 ):
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 # "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "assembly_layout_kind": None,
@@ -985,11 +985,11 @@ def test_en_ulb_col_en_tq_col_en_tw_col_sw_ulb_col_sw_tq_col_sw_tw_col_sw_ulb_ti
 def test_en_ulb_col_en_tq_col_en_tw_col_sw_ulb_col_sw_tq_col_sw_tw_col_sw_ulb_tit_sw_tq_tit_sw_tw_tit_language_book_order_1c_c() -> (
     None
 ):
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 # "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN_COMPACT,
                 "assembly_layout_kind": None,
@@ -1069,11 +1069,11 @@ def test_en_ulb_col_en_tq_col_en_tw_col_sw_ulb_col_sw_tq_col_sw_tw_col_sw_ulb_ti
 def test_en_ulb_col_en_tq_col_en_tw_col_sw_ulb_col_sw_tq_col_sw_tw_col_zh_cuv_tit_sw_tq_tit_sw_tw_tit_language_book_order_1c() -> (
     None
 ):
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 "assembly_layout_kind": None,
                 "layout_for_print": False,
@@ -1135,11 +1135,11 @@ def test_en_ulb_col_en_tq_col_en_tw_col_sw_ulb_col_sw_tq_col_sw_tw_col_zh_cuv_ti
 def test_en_ulb_col_en_tq_col_en_tw_col_sw_ulb_col_sw_tq_col_sw_tw_col_zh_cuv_tit_sw_tq_tit_sw_tw_tit_language_book_order_1c_c() -> (
     None
 ):
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 "assembly_layout_kind": None,
                 "layout_for_print": True,
@@ -1207,11 +1207,11 @@ def test_en_ulb_col_en_tq_col_en_tw_col_sw_ulb_col_sw_tq_col_sw_tw_col_zh_cuv_ti
 # cuv is not provided by data api
 @pytest.mark.skip
 def test_zh_cuv_jol_zh_tn_jol_language_book_order_1c() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 # "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "assembly_layout_kind": None,
@@ -1239,11 +1239,11 @@ def test_zh_cuv_jol_zh_tn_jol_language_book_order_1c() -> None:
 # cuv is not provided by data api
 @pytest.mark.skip
 def test_zh_cuv_jol_zh_tn_jol_language_book_order_1c_c() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 "assembly_layout_kind": None,
                 "layout_for_print": True,
@@ -1270,11 +1270,11 @@ def test_zh_cuv_jol_zh_tn_jol_language_book_order_1c_c() -> None:
 # cuv is not provided by data api
 @pytest.mark.skip
 def test_zh_cuv_jol_zh_tn_jol_zh_tq_jol_zh_tw_jol_language_book_order_1c() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 # "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "assembly_layout_kind": None,
@@ -1313,11 +1313,11 @@ def test_zh_cuv_jol_zh_tn_jol_zh_tq_jol_zh_tw_jol_language_book_order_1c() -> No
 @pytest.mark.skip
 @pytest.mark.docx
 def test_zh_cuv_jol_zh_tn_jol_zh_tq_jol_zh_tw_jol_language_book_order_1c_docx() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents_docx",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 # "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "assembly_layout_kind": None,
@@ -1355,11 +1355,11 @@ def test_zh_cuv_jol_zh_tn_jol_zh_tq_jol_zh_tw_jol_language_book_order_1c_docx() 
 # cuv is not provided by data api
 @pytest.mark.skip
 def test_zh_cuv_jol_zh_tn_jol_zh_tq_jol_zh_tw_jol_language_book_order_1c_c() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 "assembly_layout_kind": None,
                 "layout_for_print": True,
@@ -1394,11 +1394,11 @@ def test_zh_cuv_jol_zh_tn_jol_zh_tq_jol_zh_tw_jol_language_book_order_1c_c() -> 
 
 
 def test_pt_br_ulb_luk_pt_br_tn_luk_language_book_order_1c() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 "assembly_layout_kind": None,
                 "layout_for_print": False,
@@ -1423,11 +1423,11 @@ def test_pt_br_ulb_luk_pt_br_tn_luk_language_book_order_1c() -> None:
 
 
 def test_pt_br_ulb_luk_pt_br_tn_luk_language_book_order_1c_c() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 # "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN_COMPACT,
                 "assembly_layout_kind": None,
@@ -1465,11 +1465,11 @@ def test_pt_br_ulb_luk_pt_br_tn_luk_language_book_order_1c_c() -> None:
 #    ('tw', 'Translation Words (tw)')])]
 @pytest.mark.docx
 def test_fa_ulb_tn_lbo_1c_chapter() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents_docx",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 "assembly_layout_kind": None,
                 "layout_for_print": False,
@@ -1494,11 +1494,11 @@ def test_fa_ulb_tn_lbo_1c_chapter() -> None:
 
 
 def test_or_tn_mat_lbo_1c_chapter() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 # "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN_COMPACT,
                 "assembly_layout_kind": None,
@@ -1521,11 +1521,11 @@ def test_or_tn_mat_lbo_1c_chapter() -> None:
 # This language is no longer returned by the data API in the list of available languages.
 @pytest.mark.skip
 def test_nyk_x_nyanehumbe_reg_1pe_lbo_1c_chapter() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 "assembly_layout_kind": None,
                 "layout_for_print": False,
@@ -1545,11 +1545,11 @@ def test_nyk_x_nyanehumbe_reg_1pe_lbo_1c_chapter() -> None:
 
 
 def test_bjz_reg_eph_lbo_1c_chapter() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 "assembly_layout_kind": None,
                 "layout_for_print": False,
@@ -1569,11 +1569,11 @@ def test_bjz_reg_eph_lbo_1c_chapter() -> None:
 
 
 def test_bys_reg_col_lbo_1c_chapter() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 "assembly_layout_kind": None,
                 "layout_for_print": False,
@@ -1593,11 +1593,11 @@ def test_bys_reg_col_lbo_1c_chapter() -> None:
 
 
 def test_en_ulb_col_bys_reg_col_blo_1c_chapter() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_CHAPTER,
                 "assembly_layout_kind": None,
                 "layout_for_print": False,
@@ -1622,11 +1622,11 @@ def test_en_ulb_col_bys_reg_col_blo_1c_chapter() -> None:
 
 
 def test_en_ulb_col_bjz_reg_col_blo_1c_chapter() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_CHAPTER,
                 "assembly_layout_kind": None,
                 "layout_for_print": False,
@@ -1651,11 +1651,11 @@ def test_en_ulb_col_bjz_reg_col_blo_1c_chapter() -> None:
 
 
 def test_en_ulb_eph_bys_reg_eph_blo_1c_chapter_docx() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents_docx",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_CHAPTER,
                 "assembly_layout_kind": None,
                 "layout_for_print": False,
@@ -1681,11 +1681,11 @@ def test_en_ulb_eph_bys_reg_eph_blo_1c_chapter_docx() -> None:
 
 @pytest.mark.docx
 def test_en_bc_col_language_book_order_with_no_email_1c_docx() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents_docx",
             json={
-                # "email_address": settings.TO_EMAIL_ADDRESS,
+                # "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
@@ -1705,11 +1705,11 @@ def test_en_bc_col_language_book_order_with_no_email_1c_docx() -> None:
 
 
 def test_en_bc_col_language_book_order_with_no_email_1c() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                # "email_address": settings.TO_EMAIL_ADDRESS,
+                # "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
@@ -1730,11 +1730,11 @@ def test_en_bc_col_language_book_order_with_no_email_1c() -> None:
 
 @pytest.mark.skip
 def test_en_ulb_1jn_en_ulb_3jn_language_book_order_with_no_email_1c() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                # "email_address": settings.TO_EMAIL_ADDRESS,
+                # "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
@@ -1759,7 +1759,7 @@ def test_en_ulb_1jn_en_ulb_3jn_language_book_order_with_no_email_1c() -> None:
             response, suffix="html", poll_duration=4
         )
         html_filepath = os.path.join(
-            settings.DOCUMENT_OUTPUT_DIR,
+            get_settings().DOCUMENT_OUTPUT_DIR,
             "{}.html".format(finished_document_request_key),
         )
         with open(html_filepath, "r") as fin:
@@ -1774,11 +1774,11 @@ def test_en_ulb_1jn_en_ulb_3jn_language_book_order_with_no_email_1c() -> None:
 
 @pytest.mark.skip
 def test_en_tn_mat_with_book_intro() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                # "email_address": settings.TO_EMAIL_ADDRESS,
+                # "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
@@ -1798,7 +1798,7 @@ def test_en_tn_mat_with_book_intro() -> None:
             response, suffix="html", poll_duration=4
         )
         html_filepath = os.path.join(
-            settings.DOCUMENT_OUTPUT_DIR,
+            get_settings().DOCUMENT_OUTPUT_DIR,
             "{}.html".format(finished_document_request_key),
         )
         with open(html_filepath, "r") as fin:
@@ -1806,7 +1806,7 @@ def test_en_tn_mat_with_book_intro() -> None:
             body_match = re.search(r"<body.*?>(.*?)</body>", html, re.DOTALL)
             assert body_match, "Body not found in HTML"
             body_content = body_match.group(1)
-            if settings.SHOW_TN_BOOK_INTRO:
+            if get_settings().SHOW_TN_BOOK_INTRO:
                 assert (
                     "Outline of the Book of Matthew" in body_content
                 ), "Document should have had TN book intro for mat, but didn't"

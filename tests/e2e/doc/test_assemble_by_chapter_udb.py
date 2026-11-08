@@ -1,5 +1,5 @@
 import pytest
-from doc.config import settings
+from doc.config import get_settings
 from doc.domain import model
 from doc.entrypoints.app import app
 from fastapi.testclient import TestClient
@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 from tests.shared.utils import check_finished_document_with_verses_success
 
 
-logger = settings.logger(__name__)
+logger = get_settings().logger(__name__)
 
 pytest.skip("Skipping this module", allow_module_level=True)
 
@@ -15,11 +15,11 @@ pytest.skip("Skipping this module", allow_module_level=True)
 def test_en_ulb_col_en_tn_col_en_tq_col_en_tw_col_tl_ulb_col_tl_tn_col_tl_tq_col_tl_tw_col_tl_udb_col_by_chapter_1c() -> (
     None
 ):
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_CHAPTER,
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
@@ -81,11 +81,11 @@ def test_en_ulb_col_en_tn_col_en_tq_col_en_tw_col_tl_ulb_col_tl_tn_col_tl_tq_col
 def test_en_ulb_col_en_tn_col_en_tq_col_en_tw_col_tl_ulb_col_tl_tn_col_tl_tq_col_tl_tw_col_tl_udb_col_by_chapter_1c_c() -> (
     None
 ):
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_CHAPTER,
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN_COMPACT,
                 "layout_for_print": True,
@@ -152,11 +152,11 @@ def test_fr_ulb_rev_fr_tw_rev_fr_udb_rev_ndh_x_chindali_reg_mat_ndh_x_chindali_t
     content is rendered and the failing resource requests are reported
     on the cover page of the PDF.
     """
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_CHAPTER,
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
@@ -218,11 +218,11 @@ def test_fr_ulb_rev_fr_tw_rev_fr_udb_rev_ndh_x_chindali_reg_mat_ndh_x_chindali_t
     content is rendered and the failing resource requests are reported
     on the cover page of the PDF.
     """
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_CHAPTER,
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN_COMPACT,
                 "layout_for_print": True,
@@ -279,11 +279,11 @@ def test_fr_ulb_rev_fr_tw_rev_fr_udb_rev_ndh_x_chindali_reg_mat_ndh_x_chindali_t
 def test_ndh_x_chindali_reg_mat_ndh_x_chindali_tn_mat_ndh_x_chindali_tq_mat_ndh_x_chindali_tw_mat_ndh_x_chindali_udb_mat_by_chapter() -> (
     None
 ):
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_CHAPTER,
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,

@@ -15,7 +15,7 @@ from typing import Mapping, Optional, Sequence
 
 import requests
 from cachetools import TTLCache, cached
-from doc.config import settings
+from doc.config import get_settings
 from doc.domain.constants import (
     GATEWAY_LANGUAGES,
     RESOURCE_TYPE_CODES_AND_NAMES,
@@ -47,23 +47,21 @@ from fastapi import HTTPException, status
 from filelock import FileLock
 from pydantic import HttpUrl, ValidationError
 
-logger = settings.logger(__name__)
+logger = get_settings().logger(__name__)
 
+# These cache objects are built once at import, so their time to live is
+# read from settings at that time.
 fetch_source_data_cache: TTLCache[str, SourceData] = TTLCache(
-    maxsize=1, ttl=settings.DATA_API_CACHE_TTL_SECONDS
+    maxsize=1, ttl=get_settings().DATA_API_CACHE_TTL_SECONDS
 )
 
 fetch_non_primary_source_data_cache: TTLCache[str, SourceData] = TTLCache(
-    maxsize=1, ttl=settings.DATA_API_CACHE_TTL_SECONDS
+    maxsize=1, ttl=get_settings().DATA_API_CACHE_TTL_SECONDS
 )
 
 
 @cached(fetch_source_data_cache)
-def fetch_source_data(
-    data_api_url: HttpUrl = settings.DATA_API_URL,
-    user_agent_str: str = settings.USER_AGENT_STR,
-    x_requested_with_value: str = settings.X_REQUESTED_WITH_VALUE,
-) -> Optional[SourceData]:
+def fetch_source_data() -> Optional[SourceData]:
     """
     Downloads data from a GraphQL API.
 
@@ -92,9 +90,15 @@ query MyQuery {
 }
     """
     query_json = {"query": graphql_query}
-    headers = {"User-Agent": user_agent_str, "X-Requested-With": x_requested_with_value}
+    settings = get_settings()
+    headers = {
+        "User-Agent": settings.USER_AGENT_STR,
+        "X-Requested-With": settings.X_REQUESTED_WITH_VALUE,
+    }
     try:
-        response = requests.post(str(data_api_url), json=query_json, headers=headers)
+        response = requests.post(
+            str(settings.DATA_API_URL), json=query_json, headers=headers
+        )
         if response.status_code == 200:
             data_payload = response.json().get("data", {})
             if "git_repo" in data_payload:
@@ -130,11 +134,7 @@ query MyQuery {
 
 
 @cached(fetch_non_primary_source_data_cache)
-def fetch_non_primary_source_data(
-    data_api_url: HttpUrl = settings.DATA_API_URL,
-    user_agent_str: str = settings.USER_AGENT_STR,
-    x_requested_with_value: str = settings.X_REQUESTED_WITH_VALUE,
-) -> Optional[SourceData]:
+def fetch_non_primary_source_data() -> Optional[SourceData]:
     """
     Downloads data from a GraphQL API.
 
@@ -163,9 +163,15 @@ query MyQuery {
 }
     """
     query_json = {"query": graphql_query}
-    headers = {"User-Agent": user_agent_str, "X-Requested-With": x_requested_with_value}
+    settings = get_settings()
+    headers = {
+        "User-Agent": settings.USER_AGENT_STR,
+        "X-Requested-With": settings.X_REQUESTED_WITH_VALUE,
+    }
     try:
-        response = requests.post(str(data_api_url), json=query_json, headers=headers)
+        response = requests.post(
+            str(settings.DATA_API_URL), json=query_json, headers=headers
+        )
         if response.status_code == 200:
             data_payload = response.json().get("data", {})
             if "git_repo" in data_payload:
@@ -278,13 +284,13 @@ def lang_codes_and_names(
 def repos_to_clone(
     lang_code: str,
     augmented_repos_info: list[RepoEntry],
-    resource_assets_dir: str = settings.RESOURCE_ASSETS_DIR,
     dcs_mirror_git_username: str = "DCS-Mirror",
     resource_type_codes_and_names: Sequence[str] = list(
         RESOURCE_TYPE_CODES_AND_NAMES.keys()
     ),
 ) -> list[tuple[HttpUrl, str, str]]:
     repo_clone_list: list[tuple[HttpUrl, str, str]] = []
+    resource_assets_dir = get_settings().RESOURCE_ASSETS_DIR
     try:
         for repo_info in augmented_repos_info:
             content = repo_info.content
@@ -372,7 +378,6 @@ def resource_types(
     lang_code: str,
     book_codes_str: str,
     book_names: Mapping[str, str] = BOOK_NAMES,
-    download_assets: bool = settings.DOWNLOAD_ASSETS,
 ) -> Sequence[tuple[str, str]]:
     """
     Fetches and processes available resource types for the given language and book codes.
@@ -404,7 +409,7 @@ def resource_types(
             for url, path, resource_type_ in repo_clone_list
             if "rg" != resource_type_
         ]
-        if download_assets:
+        if get_settings().DOWNLOAD_ASSETS:
             batch_download_repos(repos_to_clone_)
         else:
             batch_clone_git_repos(repos_to_clone_)
@@ -423,11 +428,9 @@ def batch_download_repos(
     base_url_replacement: HttpUrl = HttpUrl(
         "https://content.bibletranslationtools.org/api/v1/repos/"
     ),
-    resource_assets_dir: str = settings.RESOURCE_ASSETS_DIR,
-    user_agent_str: str = settings.USER_AGENT_STR,
-    x_requested_with_value: str = settings.X_REQUESTED_WITH_VALUE,
 ) -> None:
     """Batch download repos and then batch unzip repos."""
+    settings = get_settings()
     download_commands = []
     zip_file_paths = []
     for url, resource_filepath in repos:
@@ -449,7 +452,7 @@ def batch_download_repos(
         zip_url_base = re.sub(str(base_url), str(base_url_replacement), str(url))
         zip_url = f"{zip_url_base}/archive/master.zip"
         download_commands.append(
-            f"curl -A {user_agent_str} -H 'X-Requested-With: {x_requested_with_value}' -X 'GET' {zip_url} -H 'accept: application/json' --output {zip_file_path} --parallel"
+            f"curl -A {settings.USER_AGENT_STR} -H 'X-Requested-With: {settings.X_REQUESTED_WITH_VALUE}' -X 'GET' {zip_url} -H 'accept: application/json' --output {zip_file_path} --parallel"
         )
         zip_file_paths.append(zip_file_path)
     download_command = " && ".join(download_commands)
@@ -457,7 +460,7 @@ def batch_download_repos(
     try:
         subprocess.check_call(download_command, shell=True)
         unzip_commands = [
-            f"unzip -q -o {zip_file_path} -d {resource_assets_dir}"
+            f"unzip -q -o {zip_file_path} -d {settings.RESOURCE_ASSETS_DIR}"
             for zip_file_path in zip_file_paths
         ]
         unzip_command = " && ".join(unzip_commands)
@@ -541,26 +544,23 @@ def batch_download_repos(
 # @worker.app.task
 def batch_clone_git_repos(
     repos: list[tuple[HttpUrl, str]],
-    asset_caching_enabled: bool = settings.ASSET_CACHING_ENABLED,
-    asset_caching_period: int = settings.ASSET_CACHING_PERIOD,
-    user_agent_str: str = settings.USER_AGENT_STR,
-    x_requested_with_value: str = settings.X_REQUESTED_WITH_VALUE,
 ) -> None:
     """
     Clones multiple git repositories in a single batch operation.
     - If a repository already exists, is fully cloned, and not stale (with respect to cache period), it is skipped.
       Conversely, if a repository is fully cloned, but stale then it is removed before (re)cloning.
     - If a repository exists but is a partial clone (corrupt or missing key files), it is removed before (re)cloning.
-    - If asset_caching_enabled is False, repositories are always removed and re-cloned.
+    - If ASSET_CACHING_ENABLED is False, repositories are always removed and re-cloned.
     """
+    settings = get_settings()
     clone_commands = []
     for url, resource_filepath in repos:
-        if asset_caching_enabled:
+        if settings.ASSET_CACHING_ENABLED:
             try:
                 git_dir = join(resource_filepath, ".git")
                 stat_ = stat(git_dir)
                 mod_time = datetime.fromtimestamp(stat_.st_mtime)
-                expiry = timedelta(minutes=asset_caching_period)
+                expiry = timedelta(minutes=settings.ASSET_CACHING_PERIOD)
                 if (
                     all(
                         exists(join(git_dir, filename))
@@ -585,8 +585,8 @@ def batch_clone_git_repos(
         if isdir(resource_filepath):
             shutil.rmtree(resource_filepath)
         clone_command = (
-            f"git -c http.userAgent='{user_agent_str}' "
-            f"-c http.extraHeader='X-Requested-With:{x_requested_with_value}' "
+            f"git -c http.userAgent='{settings.USER_AGENT_STR}' "
+            f"-c http.extraHeader='X-Requested-With:{settings.X_REQUESTED_WITH_VALUE}' "
             f"clone --depth=1 --single-branch '{url}' '{resource_filepath}' || true"
         )
         clone_commands.append(clone_command)
@@ -789,7 +789,6 @@ def add_data_not_supplied_by_data_api(repos_info: list[RepoEntry]) -> list[RepoE
 def get_book_codes_for_lang(
     lang_code: str,
     usfm_only: bool = False,
-    download_assets: bool = settings.DOWNLOAD_ASSETS,
 ) -> Sequence[tuple[str, str]]:
     data = fetch_source_data()
     if data is None:
@@ -805,7 +804,7 @@ def get_book_codes_for_lang(
             for url, path, resource_type in repo_clone_list
             if "rg" != resource_type
         ]
-        if download_assets:
+        if get_settings().DOWNLOAD_ASSETS:
             batch_download_repos(repos_to_clone_)
         else:
             batch_clone_git_repos(repos_to_clone_)
@@ -825,9 +824,9 @@ def get_book_codes_for_lang_(
     usfm_only: bool,
     book_names: Mapping[str, str] = BOOK_NAMES,
     usfm_resource_types: Sequence[str] = USFM_RESOURCE_TYPES,
-    use_localized_book_name: bool = settings.USE_LOCALIZED_BOOK_NAME,
     book_id_map: dict[str, int] = BOOK_ID_MAP,
 ) -> list[tuple[str, str]]:
+    use_localized_book_name = get_settings().USE_LOCALIZED_BOOK_NAME
     book_codes_and_names_localized: list[tuple[str, str]] = []
     book_codes_and_names: list[tuple[str, str]] = []
     for url, resource_filepath, resource_type in repo_clone_list:
@@ -1170,14 +1169,11 @@ def provision_asset_files(
             download_rg_file(url, resource_filepath)
 
 
-def prepare_resource_filepath(
-    resource_lookup_dto: ResourceLookupDto,
-    working_dir: str = settings.RESOURCE_ASSETS_DIR,
-) -> str:
+def prepare_resource_filepath(resource_lookup_dto: ResourceLookupDto) -> str:
     resource_filepath = ""
     if resource_lookup_dto.url is not None:
         resource_filepath = join(
-            working_dir,
+            get_settings().RESOURCE_ASSETS_DIR,
             get_last_segment(resource_lookup_dto.url, resource_lookup_dto.lang_code),
         )
     return resource_filepath

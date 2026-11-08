@@ -2,9 +2,9 @@ from collections.abc import Callable
 from re import Match, Pattern, compile, findall, finditer, sub
 from typing import Mapping, Sequence, TypeAlias
 
-from doc.config import settings
+from doc.config import get_settings
 
-logger = settings.logger(__name__)
+logger = get_settings().logger(__name__)
 
 
 Detector: TypeAlias = Callable[[str], Match[str] | None]

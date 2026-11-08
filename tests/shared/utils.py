@@ -4,13 +4,13 @@ import time
 from typing import Literal, Union
 
 import httpx
-from doc.config import settings
+from doc.config import get_settings
 from doc.entrypoints.app import app
 from fastapi.testclient import TestClient
 from docx import Document
 from docx.document import Document as DocxDocument
 
-logger = settings.logger(__name__)
+logger = get_settings().logger(__name__)
 
 AcceptedSuffixes = Union[
     Literal["html"], Literal["pdf"], Literal["epub"], Literal["docx"]
@@ -31,7 +31,7 @@ def check_result(
     logger.debug("task_id: %s", task_id)
     finished_document_request_key: str
     while True:
-        with TestClient(app=app, base_url=settings.api_test_url()) as client:
+        with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
             response2 = client.get(
                 status_url_fmt_str.format(task_id),
             )
@@ -40,7 +40,7 @@ def check_result(
             if json_data["state"] == success_state:
                 finished_document_request_key = json_data["result"]
                 finished_document_path = os.path.join(
-                    settings.DOCUMENT_OUTPUT_DIR,
+                    get_settings().DOCUMENT_OUTPUT_DIR,
                     "{}.{}".format(finished_document_request_key, suffix),
                 )
                 logger.debug(
@@ -91,7 +91,7 @@ def check_finished_document_with_verses_success(
     """
     finished_document_request_key = check_result(response, suffix, poll_duration)
     html_filepath = os.path.join(
-        settings.DOCUMENT_OUTPUT_DIR,
+        get_settings().DOCUMENT_OUTPUT_DIR,
         "{}.html".format(finished_document_request_key),
     )
     assert html_filepath, "HTML output file does not exist"
@@ -113,7 +113,7 @@ def check_finished_document_without_verses_success(
     """
     finished_document_request_key = check_result(response, suffix, poll_duration)
     html_filepath = os.path.join(
-        settings.DOCUMENT_OUTPUT_DIR,
+        get_settings().DOCUMENT_OUTPUT_DIR,
         "{}.html".format(finished_document_request_key),
     )
     assert html_filepath, "HTML output file does not exist"
@@ -135,7 +135,7 @@ def check_finished_document_with_body_success(
     """
     finished_document_request_key = check_result(response, suffix, poll_duration)
     html_filepath = os.path.join(
-        settings.DOCUMENT_OUTPUT_DIR,
+        get_settings().DOCUMENT_OUTPUT_DIR,
         "{}.html".format(finished_document_request_key),
     )
     with open(html_filepath, "r") as fin:

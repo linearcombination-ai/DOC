@@ -18,7 +18,7 @@ using the 'randomized' pytest marker.
 """
 
 import pytest
-from doc.config import settings
+from doc.config import get_settings
 from doc.entrypoints.app import app
 from fastapi.testclient import TestClient
 
@@ -37,6 +37,6 @@ def test_english_variable_resource_type_combos_for_all_books(
     to run. There were no errors when it ran to completion.
     """
     data = english_document_request.dict()
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post("/documents", json=data)
         assert response.status_code == 200

@@ -11,7 +11,7 @@ from os.path import exists
 from typing import Mapping, Optional, Sequence, TypeAlias, cast
 
 from celery import current_task
-from doc.config import settings
+from doc.config import get_settings
 from doc.domain.constants import USFM_RESOURCE_TYPES
 from doc.domain import parsing, resource_lookup, worker
 from doc.domain.assembly_strategies.assemble_by_book import (
@@ -83,7 +83,7 @@ from html4docx import HtmlToDocx  # type: ignore
 
 # import regex as re # not yet supported in python 3.13 - used for unicode word boundaries for RTL languages
 
-logger = settings.logger(__name__)
+logger = get_settings().logger(__name__)
 
 
 LangCode: TypeAlias = str
@@ -232,6 +232,7 @@ def locate_acquire_and_build_resource_objects(
         document_request.layout_for_print,
         document_request.use_chapter_labels,
         document_request.generate_docx,
+        document_request.show_tn_book_intro,
     )
     localize_non_usfm_book_names(
         usfm_books, list(tn_books), list(tnc_books), list(tq_books)
@@ -522,7 +523,6 @@ def assemble_content(
     tq_books: Sequence[TQBook],
     tw_books: Sequence[TWBook],
     bc_books: Sequence[BCBook],
-    link_rather_than_include_tw_definitions: bool = settings.LINK_RATHER_THAN_INCLUDE_TW_DEFINITIONS,
 ) -> list[DocumentPart]:
     """
     Assemble and return the content from all requested resources according to the
@@ -612,7 +612,7 @@ def assemble_content(
     logger.info("Time for interleaving document: %s", t1 - t0)
     if (
         tw_books
-        and not link_rather_than_include_tw_definitions
+        and not get_settings().LINK_RATHER_THAN_INCLUDE_TW_DEFINITIONS
         and not document_request.layout_for_print
     ):
         t0 = time.time()
@@ -778,8 +778,6 @@ def convert_html_to_docx(
     title1: str = "title1",
     title2: str = "title2",
     title3: str = "",
-    docx_template_path: str = settings.DOCX_TEMPLATE_PATH,
-    docx_compact_template_path: str = settings.DOCX_COMPACT_TEMPLATE_PATH,
 ) -> None:
     """Generate Docx and write it to output directory."""
     t0 = time.time()
@@ -787,8 +785,11 @@ def convert_html_to_docx(
     title1 = title1
     title2 = title2
     title3 = title3
+    settings = get_settings()
     template_path = (
-        docx_compact_template_path if layout_for_print else docx_template_path
+        settings.DOCX_COMPACT_TEMPLATE_PATH
+        if layout_for_print
+        else settings.DOCX_TEMPLATE_PATH
     )
     doc = DocxTemplate(template_path)
     toc_path = generate_docx_toc(docx_filepath)

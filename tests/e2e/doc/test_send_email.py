@@ -1,11 +1,11 @@
-from doc.config import settings
+from doc.config import get_settings
 from doc.domain import model
 from doc.entrypoints.app import app
 from fastapi.testclient import TestClient
 
 from tests.shared.utils import check_finished_document_with_verses_success
 
-logger = settings.logger(__name__)
+logger = get_settings().logger(__name__)
 
 
 def test_send_email_with_es_419_ulb_jud_pdf() -> None:
@@ -15,11 +15,11 @@ def test_send_email_with_es_419_ulb_jud_pdf() -> None:
     this time.
     """
     # First generate the PDF
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,

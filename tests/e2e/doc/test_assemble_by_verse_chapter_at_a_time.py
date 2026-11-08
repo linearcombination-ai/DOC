@@ -3,14 +3,14 @@ Tests for assembly strategy book-then-language
 """
 
 import pytest
-from doc.config import settings
+from doc.config import get_settings
 from doc.domain import model
 from doc.entrypoints.app import app
 from fastapi.testclient import TestClient
 
 from tests.shared.utils import check_finished_document_with_verses_success
 
-logger = settings.logger(__name__)
+logger = get_settings().logger(__name__)
 
 
 # en tn is not currently available from data API
@@ -18,11 +18,11 @@ logger = settings.logger(__name__)
 def test_en_ulb_col_en_tn_col_en_tq_col_en_tw_col_fr_f10_col_fr_tn_col_fr_tq_col_fr_tw_col_by_verse_chapter_at_a_time_1c_c() -> (
     None
 ):
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_VERSE,
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN_COMPACT,
                 "layout_for_print": True,
@@ -81,11 +81,11 @@ def test_en_ulb_col_en_tn_col_en_tq_col_en_tw_col_fr_f10_col_fr_tn_col_fr_tq_col
 def test_en_ulb_col_en_tn_col_en_tq_col_en_tw_col_pt_br_ulb_col_pt_br_tn_col_pt_br_tq_col_pt_br_tw_col_by_chapter_1c() -> (
     None
 ):
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_VERSE,
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,

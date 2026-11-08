@@ -3,7 +3,7 @@ from typing import Annotated, Sequence
 
 import celery.states
 from celery.result import AsyncResult
-from doc.config import settings
+from doc.config import get_settings
 from stet.domain import resource_lookup
 from docx import Document
 from fastapi import APIRouter, Depends, Request, HTTPException, status
@@ -12,7 +12,7 @@ from stet.domain import document_generator, model
 
 router = APIRouter()
 
-logger = settings.logger(__name__)
+logger = get_settings().logger(__name__)
 
 _PRODUCTION_LANG_CODES: tuple[str, ...] = ("en", "es-419", "pt-br")
 
@@ -23,7 +23,7 @@ def get_production_lang_codes() -> tuple[str, ...]:
 
 
 def get_stet_dir() -> str:
-    return settings.STET_DIR
+    return get_settings().STET_DIR
 
 
 @router.get("/stet/source_languages")

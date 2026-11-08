@@ -11,9 +11,9 @@ from pathlib import Path
 from typing import Any, Optional
 
 import yaml
-from doc.config import settings
+from doc.config import get_settings
 
-logger = settings.logger(__name__)
+logger = get_settings().logger(__name__)
 
 # User agent value required by domain host to allow serving
 # files. Other values could possibly also work.
@@ -100,52 +100,45 @@ def write_file(
         out_file.write(text_to_write)
 
 
-def file_needs_update(
-    file_path: str | Path,
-    asset_caching_enabled: bool = settings.ASSET_CACHING_ENABLED,
-    asset_caching_period: int = settings.ASSET_CACHING_PERIOD,
-) -> bool:
-    if not asset_caching_enabled:
+def file_needs_update(file_path: str | Path) -> bool:
+    settings = get_settings()
+    if not settings.ASSET_CACHING_ENABLED:
         return True
     try:
         path = Path(file_path)
         stat = path.stat()
         mod_time = datetime.fromtimestamp(stat.st_mtime)
-        expiry = timedelta(minutes=asset_caching_period)
+        expiry = timedelta(minutes=settings.ASSET_CACHING_PERIOD)
         return stat.st_size == 0 or (datetime.now() - mod_time > expiry)
     except FileNotFoundError:
         logger.debug("Cache miss for %s", file_path)
         return True
 
 
-def html_filepath(
-    document_request_key: str, output_dir: str = settings.DOCUMENT_OUTPUT_DIR
-) -> str:
+def html_filepath(document_request_key: str) -> str:
     """Given document_request_key, return the HTML output file path."""
-    return join(output_dir, "{}.html".format(document_request_key))
+    return join(
+        get_settings().DOCUMENT_OUTPUT_DIR, "{}.html".format(document_request_key)
+    )
 
 
-def pdf_filepath(
-    document_request_key: str, output_dir: str = settings.DOCUMENT_OUTPUT_DIR
-) -> str:
+def pdf_filepath(document_request_key: str) -> str:
     """Given document_request_key, return the PDF output file path."""
-    return join(output_dir, "{}.pdf".format(document_request_key))
+    return join(
+        get_settings().DOCUMENT_OUTPUT_DIR, "{}.pdf".format(document_request_key)
+    )
 
 
-def epub_filepath(
-    document_request_key: str, output_dir: str = settings.DOCUMENT_OUTPUT_DIR
-) -> str:
+def epub_filepath(document_request_key: str) -> str:
     """Given document_request_key, return the ePub output file path."""
-    return join(output_dir, "{}.epub".format(document_request_key))
+    return join(
+        get_settings().DOCUMENT_OUTPUT_DIR, "{}.epub".format(document_request_key)
+    )
 
 
-def docx_filepath(
-    document_request_key: str,
-    prefix: str = "",
-    output_dir: str = settings.DOCUMENT_OUTPUT_DIR,
-) -> str:
+def docx_filepath(document_request_key: str, prefix: str = "") -> str:
     """Given document_request_key, return the docx output file path."""
     return join(
-        output_dir,
+        get_settings().DOCUMENT_OUTPUT_DIR,
         "{}{}.docx".format(prefix, document_request_key),
     )

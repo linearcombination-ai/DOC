@@ -6,11 +6,11 @@ from typing import Any, Optional, Sequence
 
 import pydantic
 import pytest
-from doc.config import settings
+from doc.config import get_settings
 from doc.domain.constants import USFM_RESOURCE_TYPES
 from doc.domain import bible_books, exceptions, model, resource_lookup
 
-logger = settings.logger(__name__)
+logger = get_settings().logger(__name__)
 
 lang_codes_and_names = resource_lookup.lang_codes_and_names()
 ALL_LANGUAGE_CODES: Sequence[str] = [
@@ -78,7 +78,7 @@ def book_code(request: Any) -> Any:
 
 @pytest.fixture()
 def email_address() -> str:
-    return str(settings.TO_EMAIL_ADDRESS)
+    return str(get_settings().TO_EMAIL_ADDRESS)
 
 
 @pytest.fixture()

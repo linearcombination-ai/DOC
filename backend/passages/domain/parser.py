@@ -1,13 +1,13 @@
 from typing import Mapping
 
 from bs4 import BeautifulSoup, NavigableString, Tag
-from doc.config import settings
+from doc.config import get_settings
 from doc.domain.bible_books import BOOK_CHAPTER_VERSES
 from doc.domain.model import USFMBook
 from doc.domain.parsing import lookup_verse_text
 from passages.reviewers_guide.model import BibleReference
 
-logger = settings.logger(__name__)
+logger = get_settings().logger(__name__)
 
 
 def _unwrap_verse_text(raw_text: str) -> str:

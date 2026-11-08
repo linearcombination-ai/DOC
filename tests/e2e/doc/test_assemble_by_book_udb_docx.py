@@ -1,5 +1,5 @@
 import pytest
-from doc.config import settings
+from doc.config import get_settings
 from doc.entrypoints.app import app
 from fastapi.testclient import TestClient
 from tests.shared.utils import check_result
@@ -10,11 +10,11 @@ pytest.skip("Skipping this module", allow_module_level=True)
 
 @pytest.mark.docx
 def test_gu_ulb_mrk_gu_tn_mrk_gu_tq_mrk_gu_tw_mrk_gu_udb_mrk_by_book_1c_docx() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents_docx",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
@@ -55,11 +55,11 @@ def test_gu_ulb_mrk_gu_tn_mrk_gu_tq_mrk_gu_tw_mrk_gu_udb_mrk_by_book_1c_docx() -
 
 @pytest.mark.docx
 def test_mr_ulb_mrk_mr_tn_mrk_mr_tq_mrk_mr_udb_mrk_by_book_1c_docx() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents_docx",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
@@ -95,11 +95,11 @@ def test_mr_ulb_mrk_mr_tn_mrk_mr_tq_mrk_mr_udb_mrk_by_book_1c_docx() -> None:
 
 @pytest.mark.docx
 def test_mr_ulb_mrk_mr_tn_mrk_mr_tw_mrk_mr_udb_mrk_by_book_1c_docx() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents_docx",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
@@ -135,11 +135,11 @@ def test_mr_ulb_mrk_mr_tn_mrk_mr_tw_mrk_mr_udb_mrk_by_book_1c_docx() -> None:
 
 @pytest.mark.docx
 def test_mr_ulb_mrk_mr_tn_mrk_mr_udb_mrk_by_book_1c_docx() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents_docx",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
@@ -170,11 +170,11 @@ def test_mr_ulb_mrk_mr_tn_mrk_mr_udb_mrk_by_book_1c_docx() -> None:
 
 @pytest.mark.docx
 def test_mr_ulb_mrk_mr_tq_mrk_mr_udb_mrk_by_book_1c_docx() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents_docx",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
@@ -205,11 +205,11 @@ def test_mr_ulb_mrk_mr_tq_mrk_mr_udb_mrk_by_book_1c_docx() -> None:
 
 @pytest.mark.docx
 def test_tl_ulb_gen_tl_udb_gen_by_book_1c_docx() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents_docx",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
@@ -235,11 +235,11 @@ def test_tl_ulb_gen_tl_udb_gen_by_book_1c_docx() -> None:
 
 @pytest.mark.docx
 def test_gu_tn_mat_gu_tq_mat_gu_tw_mat_gu_udb_mat_by_book_1c_docx() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents_docx",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
@@ -275,11 +275,11 @@ def test_gu_tn_mat_gu_tq_mat_gu_tw_mat_gu_udb_mat_by_book_1c_docx() -> None:
 
 @pytest.mark.docx
 def test_gu_tn_mat_gu_tq_mat_gu_udb_mat_by_book_1c_docx() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents_docx",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
@@ -310,11 +310,11 @@ def test_gu_tn_mat_gu_tq_mat_gu_udb_mat_by_book_1c_docx() -> None:
 
 @pytest.mark.docx
 def test_tl_tn_gen_tl_tw_gen_tl_udb_gen_by_book_1c_docx() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents_docx",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
@@ -345,11 +345,11 @@ def test_tl_tn_gen_tl_tw_gen_tl_udb_gen_by_book_1c_docx() -> None:
 
 @pytest.mark.docx
 def test_tl_tq_gen_tl_udb_gen_by_book_1c_docx() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents_docx",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
@@ -375,11 +375,11 @@ def test_tl_tq_gen_tl_udb_gen_by_book_1c_docx() -> None:
 
 @pytest.mark.docx
 def test_tl_tw_gen_tl_udb_gen_by_book_1c_docx() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents_docx",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
@@ -405,11 +405,11 @@ def test_tl_tw_gen_tl_udb_gen_by_book_1c_docx() -> None:
 
 @pytest.mark.docx
 def test_tl_udb_gen_by_book_1c_docx() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents_docx",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,

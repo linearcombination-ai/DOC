@@ -4,7 +4,7 @@ This module tests languages which were found through automatic randomized testin
 
 from typing import Sequence
 import pytest
-from doc.config import settings
+from doc.config import get_settings
 from doc.domain import (
     model,
     exceptions,
@@ -17,7 +17,7 @@ from fastapi.testclient import TestClient
 from tests.shared.utils import check_finished_document_with_verses_success
 
 
-logger = settings.logger(__name__)
+logger = get_settings().logger(__name__)
 
 
 def languages_with_usfm_defects(
@@ -45,7 +45,7 @@ def resources_with_usfm_defects_(
     languages_with_usfm_defects(),
 )
 def test_all_usfm_books_for_language(lang_code: str) -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         book_codes_and_names = resource_lookup.book_codes_for_lang_from_usfm_only(
             lang_code
         )
@@ -70,7 +70,7 @@ def test_all_usfm_books_for_language(lang_code: str) -> None:
             response = client.post(
                 "/documents",
                 json={
-                    "email_address": settings.TO_EMAIL_ADDRESS,
+                    "email_address": get_settings().TO_EMAIL_ADDRESS,
                     "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                     "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                     "layout_for_print": False,
@@ -97,11 +97,11 @@ def test_all_usfm_books_for_language(lang_code: str) -> None:
 def test_known_defective_usfm_cases(
     lang_code: str, resource_type: str, book_code: str
 ) -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/documents",
             json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
                 "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,

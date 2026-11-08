@@ -5,20 +5,20 @@ import shutil
 from pathlib import Path
 
 import pytest
-from passages.domain.survey_files import EN_RG_DIR, SURVEY_FILES
+from passages.domain.survey_files import SURVEY_FILES, en_rg_dir
 from passages.reviewers_guide import parser
 
 
 def test_survey_files_exist_in_place() -> None:
     for file_name in SURVEY_FILES.values():
-        assert (Path(EN_RG_DIR) / file_name).is_file()
+        assert (Path(en_rg_dir()) / file_name).is_file()
 
 
 def test_parse_is_cached_and_replaced_file_is_picked_up(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    nt = Path(EN_RG_DIR) / SURVEY_FILES["nt"]
-    rg3 = Path(EN_RG_DIR) / SURVEY_FILES["ot_rg3"]
+    nt = Path(en_rg_dir()) / SURVEY_FILES["nt"]
+    rg3 = Path(en_rg_dir()) / SURVEY_FILES["ot_rg3"]
     target = tmp_path / "survey.docx"
     shutil.copyfile(nt, target)
 

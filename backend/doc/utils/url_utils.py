@@ -6,13 +6,13 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 import yaml
-from doc.config import settings
+from doc.config import get_settings
 from doc.domain.model import Data, JsonManifestBook, JsonManifestData
-from passages.domain.survey_files import EN_RG_DIR
+from passages.domain.survey_files import en_rg_dir
 from pydantic import HttpUrl
 
 
-logger = settings.logger(__name__)
+logger = get_settings().logger(__name__)
 
 # Specific replacements: lang code, last_segment -> replacement last_segment
 REPLACEMENTS_BY_LANG_CODE_AND_LAST_SEGMENT = {
@@ -92,7 +92,6 @@ def normalize_last_segment(
     ] = REPLACEMENTS_BY_LANG_CODE_AND_LAST_SEGMENT,
     universal_prefixes: list[str] = PREFIXES_TO_REMOVE,
     lang_specific_prefixes: dict[str, list[str]] = LANG_SPECIFIC_PREFIXES_TO_REMOVE,
-    en_rg_dir: str = EN_RG_DIR,
 ) -> str:
     """
     Handle special cases where git repo URL does not follow the expected pattern.
@@ -105,7 +104,7 @@ def normalize_last_segment(
     here.
     """
     if lang_code == "en" and last_segment.endswith(".docx"):
-        return en_rg_dir
+        return en_rg_dir()
     if (lang_code, last_segment) in hardcoded_replacements:
         return hardcoded_replacements[(lang_code, last_segment)]
     for prefix in universal_prefixes:

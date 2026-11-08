@@ -6,7 +6,7 @@ from re import (
     sub,
 )
 
-from doc.config import settings
+from doc.config import get_settings
 from doc.domain.bible_books import BOOK_NAMES
 from doc.domain.model import USFMChapter
 from doc.domain.resource_lookup import book_codes_for_lang_from_usfm_only
@@ -14,7 +14,7 @@ from docx import Document
 from stet.domain.model import PassageReferenceDto, WordEntryDto
 from stet.utils.util import is_valid_int
 
-logger = settings.logger(__name__)
+logger = get_settings().logger(__name__)
 
 _RV_BLOCK_PATTERN = compile(r"<r>(.*?)</r>\s*<v>(.*?)</v>", DOTALL)
 _REF_PATTERN = compile(r"^(.*) (\d+):([0-9,\- ]+)\s?(\(.*\))?$")
@@ -143,14 +143,13 @@ def get_word_entry_dtos(
     lang0_code: str,
     lang1_code: str,
     book_names: dict[str, str] = BOOK_NAMES,
-    stet_dir: str = settings.STET_DIR,
 ) -> tuple[list[WordEntryDto], list[tuple[str, str]]]:
     # Build data from source doc
     word_entry_dtos: list[WordEntryDto] = []
     lang0_book_codes_and_names = book_codes_for_lang_from_usfm_only(lang0_code)
     lang1_book_codes_and_names = book_codes_for_lang_from_usfm_only(lang1_code)
     lang0_book_codes_and_names__: list[tuple[str, str]] = []
-    doc = Document(f"{stet_dir}/stet_{lang0_code}.docx")
+    doc = Document(f"{get_settings().STET_DIR}/stet_{lang0_code}.docx")
     for table in doc.tables:
         for row in table.rows:
             # Create entry item

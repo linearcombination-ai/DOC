@@ -2,7 +2,7 @@ import json
 from typing import TYPE_CHECKING, Mapping, Optional, Sequence
 
 from celery import current_task
-from doc.config import settings
+from doc.config import get_settings
 from doc.domain.constants import (
     PREFERRED_RESOURCES,
     RESOURCE_TYPE_CODES_AND_NAMES,
@@ -59,7 +59,7 @@ else:
     Cell = _Cell
     Row = _Row
 
-logger = settings.logger(__name__)
+logger = get_settings().logger(__name__)
 
 UNAVAILABLE_COLOR = RGBColor(200, 200, 200)
 

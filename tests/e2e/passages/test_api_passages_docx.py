@@ -3,7 +3,7 @@ import pytest
 from fastapi.testclient import TestClient
 from tests.shared.utils import check_result
 from doc.entrypoints.app import app
-from doc.config import settings
+from doc.config import get_settings
 from passages.domain.model import BibleReference
 
 
@@ -13,7 +13,7 @@ from passages.domain.model import BibleReference
 @pytest.mark.passages
 @pytest.mark.docx
 def test_en_passages_docx() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/passages/document_docx",
             json={
@@ -64,7 +64,7 @@ def test_en_passages_docx() -> None:
                         ).model_dump(),
                     ]
                 ),
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
             },
         )
         check_result(response, suffix="docx")

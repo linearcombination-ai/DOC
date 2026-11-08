@@ -1,6 +1,6 @@
 from typing import Optional, Sequence
 
-from doc.config import settings
+from doc.config import get_settings
 from doc.domain.constants import RESOURCE_TYPE_NAME_FMT_STR
 from doc.domain.assembly_strategies.assembly_strategy_utils import (
     collect_unique_book_codes,
@@ -25,7 +25,7 @@ from doc.domain.model import (
     USFMBook,
 )
 
-logger = settings.logger(__name__)
+logger = get_settings().logger(__name__)
 
 
 def assemble_content_by_book(

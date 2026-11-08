@@ -1,5 +1,5 @@
 from passages.reviewers_guide.model import BibleReference
-from passages.domain.survey_files import EN_RG_DIR, SURVEY_FILES
+from passages.domain.survey_files import SURVEY_FILES, en_rg_dir
 from passages.reviewers_guide.parser import get_rg_books
 from os.path import exists, isdir, join
 from doc.domain.resource_lookup import book_codes_for_lang_from_usfm_only
@@ -20,7 +20,6 @@ def nt_survey_rg_passages(
     docx_file_path: str = SURVEY_FILES["nt"],
     resource_type_name: str = "NT Survey Reviewers' Guide",
     lang_direction: LangDirEnum = LangDirEnum.LTR,
-    resource_dir: str = EN_RG_DIR,
 ) -> list[BibleReference]:
     """
     Returns the list of all NT RG passages from the docx_file_path, but with
@@ -32,7 +31,7 @@ def nt_survey_rg_passages(
     >>> rg_books[0]
     BibleReference(lang_code='en', book_code='mat', book_name='Matthew', start_chapter=2, start_chapter_verse_ref='1-12', end_chapter=None, end_chapter_verse_ref=None)
     """
-    path = join(resource_dir, docx_file_path)
+    path = join(en_rg_dir(), docx_file_path)
     rg_books = get_rg_books(
         path,
         lang_code,
@@ -66,7 +65,6 @@ def ot_survey_rg1_passages(
     docx_file_path: str = SURVEY_FILES["ot_rg1"],
     resource_type_name: str = "OT Survey Reviewers' Guide (Genesis to Deuteronomy)",
     lang_direction: LangDirEnum = LangDirEnum.LTR,
-    resource_dir: str = EN_RG_DIR,
 ) -> list[BibleReference]:
     """
     >>> from doc.domain import resource_lookup
@@ -75,7 +73,7 @@ def ot_survey_rg1_passages(
     >>> rg_books[0]
     BibleReference(lang_code='en', book_code='gen', book_name='Genesis', start_chapter=1, start_chapter_verse_ref='1', end_chapter=2, end_chapter_verse_ref='3')
     """
-    path = join(resource_dir, docx_file_path)
+    path = join(en_rg_dir(), docx_file_path)
     rg_books = get_rg_books(
         path,
         lang_code,
@@ -109,7 +107,6 @@ def ot_survey_rg2_passages(
     docx_file_path: str = SURVEY_FILES["ot_rg2"],
     resource_type_name: str = "OT Survey Reviewers' Guide (Joshua to Esther)",
     lang_direction: LangDirEnum = LangDirEnum.LTR,
-    resource_dir: str = EN_RG_DIR,
 ) -> list[BibleReference]:
     """
     >>> from doc.domain import resource_lookup
@@ -118,7 +115,7 @@ def ot_survey_rg2_passages(
     >>> rg_books[0]
     BibleReference(lang_code='en', book_code='jos', book_name='Joshua', start_chapter=1, start_chapter_verse_ref='1-9', end_chapter=None, end_chapter_verse_ref=None)
     """
-    path = join(resource_dir, docx_file_path)
+    path = join(en_rg_dir(), docx_file_path)
     rg_books = get_rg_books(
         path,
         lang_code,
@@ -152,7 +149,6 @@ def ot_survey_rg3_passages(
     docx_file_path: str = SURVEY_FILES["ot_rg3"],
     resource_type_name: str = "OT Survey Reviewers' Guide (Job to Song of Songs)",
     lang_direction: LangDirEnum = LangDirEnum.LTR,
-    resource_dir: str = EN_RG_DIR,
 ) -> list[BibleReference]:
     """
     >>> from doc.domain import resource_lookup
@@ -161,7 +157,7 @@ def ot_survey_rg3_passages(
     >>> rg_books[0]
     BibleReference(lang_code='en', book_code='job', book_name='Job', start_chapter=1, start_chapter_verse_ref='6-22', end_chapter=None, end_chapter_verse_ref=None)
     """
-    path = join(resource_dir, docx_file_path)
+    path = join(en_rg_dir(), docx_file_path)
     rg_books = get_rg_books(
         path,
         lang_code,
@@ -195,7 +191,6 @@ def ot_survey_rg4_passages(
     docx_file_path: str = SURVEY_FILES["ot_rg4"],
     resource_type_name: str = "OT Survey Reviewers' Guide (Isaiah to Malachi)",
     lang_direction: LangDirEnum = LangDirEnum.LTR,
-    resource_dir: str = EN_RG_DIR,
 ) -> list[BibleReference]:
     """
     >>> from doc.domain import resource_lookup
@@ -204,7 +199,7 @@ def ot_survey_rg4_passages(
     >>> rg_books[0]
     BibleReference(lang_code='en', book_code='isa', book_name='Isaiah', start_chapter=1, start_chapter_verse_ref='1-9', end_chapter=None, end_chapter_verse_ref=None)
     """
-    path = join(resource_dir, docx_file_path)
+    path = join(en_rg_dir(), docx_file_path)
     rg_books = get_rg_books(
         path,
         lang_code,

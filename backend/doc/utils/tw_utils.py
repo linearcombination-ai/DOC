@@ -10,7 +10,7 @@ from os.path import basename
 from pathlib import Path
 from typing import Mapping, Optional, Sequence
 
-from doc.config import settings
+from doc.config import get_settings
 from doc.domain.constants import (
     BIEL_TW_RESOURCE_URL_FMT_STR,
     RESOURCE_TYPE_NAME_FMT_STR,
@@ -33,7 +33,7 @@ from doc.domain.model import (
 )
 from doc.utils.list_utils import unique_list_of_strings
 
-logger = settings.logger(__name__)
+logger = get_settings().logger(__name__)
 
 TW = "tw"
 
@@ -96,7 +96,7 @@ def tw_resource_dir(lang_code: str) -> Optional[str]:
     # subclasses otherwise. It is a design tradeoff.
     tw_resource_dir_candidates = glob(
         "{}/{}_{}*/{}_{}*".format(
-            settings.RESOURCE_ASSETS_DIR, lang_code, TW, lang_code, TW
+            get_settings().RESOURCE_ASSETS_DIR, lang_code, TW, lang_code, TW
         )
     )
     # If tw_resource_dir_candidates is empty it is because the user
@@ -190,7 +190,6 @@ def translation_words_content(
     tw_book: TWBook,
     content: str,
     use_section_visual_separator: bool,
-    link_rather_than_include_tw_definitions: bool = settings.LINK_RATHER_THAN_INCLUDE_TW_DEFINITIONS,
     resource_type_name_fmt_str: str = RESOURCE_TYPE_NAME_FMT_STR,
     biel_tw_resource_path_fmt_str: str = BIEL_TW_RESOURCE_URL_FMT_STR,
     tw_resource_path_fmt_str: str = TW_RESOURCE_URL_FMT_STR,
@@ -209,7 +208,7 @@ def translation_words_content(
                 use_section_visual_separator=False,
             )
         )
-        if link_rather_than_include_tw_definitions:
+        if get_settings().LINK_RATHER_THAN_INCLUDE_TW_DEFINITIONS:
             document_parts.append(
                 DocumentPart(
                     content=div_open

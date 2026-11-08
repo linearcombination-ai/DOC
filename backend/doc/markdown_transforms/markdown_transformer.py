@@ -3,7 +3,7 @@ from os.path import exists, join
 from re import finditer, search
 from typing import Sequence
 
-from doc.config import settings
+from doc.config import get_settings
 from doc.domain.bible_books import BOOK_NUMBERS
 from doc.domain.model import ResourceRequest
 from doc.markdown_transforms.link_regexes import (
@@ -35,7 +35,7 @@ from doc.markdown_transforms.model import (
 from doc.utils.file_utils import read_file
 from doc.utils.tw_utils import localized_translation_word
 
-logger = settings.logger(__name__)
+logger = get_settings().logger(__name__)
 
 TRANSLATION_WORD_ANCHOR_LINK_FMT_STR: str = "[{}](#{}-{})"
 TRANSLATION_WORD_PREFIX_ANCHOR_LINK_FMT_STR: str = "({}: [{}](#{}-{}))"
@@ -718,7 +718,6 @@ def transform_ta_markdown_https_links(
 def transform_tn_prefixed_markdown_links(
     source: str,
     resource_requests: Sequence[ResourceRequest],
-    working_dir: str = settings.RESOURCE_ASSETS_DIR,
     tn: str = "tn",
     fmt_str: str = TRANSLATION_NOTE_ANCHOR_LINK_FMT_STR,
 ) -> str:
@@ -756,7 +755,7 @@ def transform_tn_prefixed_markdown_links(
             second_resource_path_segment = "{}_tn".format(tn_resource_request.lang_code)
             path = "{}.md".format(
                 join(
-                    working_dir,
+                    get_settings().RESOURCE_ASSETS_DIR,
                     first_resource_path_segment,
                     second_resource_path_segment,
                     book_code,
@@ -793,7 +792,6 @@ def transform_tn_markdown_links(
     lang_code: str,
     resource_requests: Sequence[ResourceRequest],
     tn: str = "tn",
-    working_dir: str = settings.RESOURCE_ASSETS_DIR,
     fmt_str: str = TRANSLATION_NOTE_ANCHOR_LINK_FMT_STR,
     tn_markdown_relative_scripture_link_re: re.Pattern[
         str
@@ -831,7 +829,7 @@ def transform_tn_markdown_links(
             )
             path = "{}.md".format(
                 join(
-                    working_dir,
+                    get_settings().RESOURCE_ASSETS_DIR,
                     first_resource_path_segment,
                     second_resource_path_segment,
                     book_code,
@@ -871,7 +869,6 @@ def transform_tn_missing_book_code_markdown_links(
     lang_code: str,
     resource_requests: Sequence[ResourceRequest],
     tn: str = "tn",
-    working_dir: str = settings.RESOURCE_ASSETS_DIR,
     fmt_str: str = TRANSLATION_NOTE_ANCHOR_LINK_FMT_STR,
     tn_markdown_relative_to_current_book_scripture_link_re: re.Pattern[
         str
@@ -910,7 +907,7 @@ def transform_tn_missing_book_code_markdown_links(
             )
             path = "{}.md".format(
                 join(
-                    working_dir,
+                    get_settings().RESOURCE_ASSETS_DIR,
                     first_resource_path_segment,
                     second_resource_path_segment,
                     book_code,

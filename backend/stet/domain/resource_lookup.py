@@ -1,6 +1,6 @@
 from typing import Sequence
 
-from doc.config import settings
+from doc.config import get_settings
 from doc.domain.constants import GATEWAY_LANGUAGES
 from doc.domain.resource_lookup import fetch_source_data, fetch_non_primary_source_data
 from doc.utils.list_utils import unique_tuples
@@ -13,7 +13,7 @@ from doc.utils.list_utils import unique_tuples
 # present. It makes it seem like a bug in STET and is bad UX.
 LANG_CODES_WITH_NO_NT_USFM: frozenset[str] = frozenset(["ru"])
 
-logger = settings.logger(__name__)
+logger = get_settings().logger(__name__)
 
 
 def lang_codes_and_names_having_usfm(

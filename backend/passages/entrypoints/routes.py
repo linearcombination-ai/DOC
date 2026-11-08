@@ -3,7 +3,7 @@ from typing import Sequence, cast
 
 import celery.states
 from celery.result import AsyncResult
-from doc.config import settings
+from doc.config import get_settings
 from passages.reviewers_guide.model import BibleReference
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import JSONResponse
@@ -12,7 +12,7 @@ from passages.domain.document_generator import stet_exhaustive_verse_list
 
 router = APIRouter()
 
-logger = settings.logger(__name__)
+logger = get_settings().logger(__name__)
 
 
 @router.post("/passages/document_docx")

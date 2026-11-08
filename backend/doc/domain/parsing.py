@@ -25,7 +25,7 @@ from typing import Mapping, Optional, Sequence, cast
 import mistune
 import requests
 from bs4 import BeautifulSoup
-from doc.config import settings
+from doc.config import get_settings
 from doc.domain.constants import USFM_RESOURCE_TYPES
 from doc.utils.text_utils import demote_headings_by_one
 from doc.domain.bible_books import BOOK_NAMES
@@ -81,7 +81,7 @@ from doc.utils.url_utils import (
 )
 from pydantic import HttpUrl
 
-logger = settings.logger(__name__)
+logger = get_settings().logger(__name__)
 
 H1, H2, H3, H4, H5 = "h1", "h2", "h3", "h4", "h5"
 
@@ -259,16 +259,15 @@ def split_usfm_by_chapters(
     resource_type: str,
     book_code: str,
     usfm_text: str,
-    check_usfm: bool = settings.CHECK_USFM,
     chapter_regex: Pattern[str] = CHAPTER_REGEX,
     resources_with_usfm_defects: Sequence[
         tuple[str, str, str]
     ] = RESOURCES_WITH_USFM_DEFECTS,
-    check_all_books_for_language: bool = settings.CHECK_ALL_BOOKS_FOR_LANGUAGE,
 ) -> tuple[str, list[str], list[str]]:
     r"""
     Split the USFM text into chapters
     """
+    settings = get_settings()
     chapter_markers = []
     chapters = []
     chapter_markers = findall(chapter_regex, usfm_text)
@@ -286,7 +285,7 @@ def split_usfm_by_chapters(
         language to be checked for similar defects. Otherwise, only explicitly
         listed resource tuples are checked.
         """
-        if check_all_books_for_language:
+        if settings.CHECK_ALL_BOOKS_FOR_LANGUAGE:
             return lang_code in defective_lang_codes
         return (
             lang_code,
@@ -299,7 +298,7 @@ def split_usfm_by_chapters(
         stripped_chapter = chapter.lstrip()
         # logger.debug("stripped_chapter[0:60]: %s", stripped_chapter[0:60])
         if stripped_chapter:
-            if check_usfm and needs_fixing():
+            if settings.CHECK_USFM and needs_fixing():
                 stripped_chapter = fix_usfm(
                     stripped_chapter, lang_code, resource_type, book_code
                 )
@@ -477,14 +476,13 @@ def usfm_book_content(
     resource_dir: str,
     use_chapter_labels: bool,
     book_names: Mapping[str, str] = BOOK_NAMES,
-    working_dir: str = settings.WORKING_DIR,
-    use_localized_book_name: bool = settings.USE_LOCALIZED_BOOK_NAME,
 ) -> USFMBook:
     """
     First produce HTML content from USFM content and then break the
     HTML content returned into a model.USFMBook data structure for use
     during interleaving with other resource assets.
     """
+    settings = get_settings()
     content_file = usfm_asset_file(
         resource_lookup_dto,
         resource_dir,
@@ -504,7 +502,7 @@ def usfm_book_content(
         content,
     )
     localized_book_name = ""
-    if use_localized_book_name:
+    if settings.USE_LOCALIZED_BOOK_NAME:
         localized_book_name = get_localized_book_name(
             frontmatter, resource_dir, resource_lookup_dto
         )
@@ -527,7 +525,9 @@ def usfm_book_content(
                 str(chapter_num),
             ]
         )
-        resource_filepath_sans_suffix = join(working_dir, resource_filename_sans_suffix)
+        resource_filepath_sans_suffix = join(
+            settings.WORKING_DIR, resource_filename_sans_suffix
+        )
         input_file = f"{resource_filepath_sans_suffix}.usfm"
         output_file = f"{resource_filepath_sans_suffix}.html"
         chapter_html = usfm_chapter_html(chapter_usfm, input_file, output_file)
@@ -766,7 +766,7 @@ def tn_book_content(
     resource_dir: str,
     resource_requests: Sequence[ResourceRequest],
     layout_for_print: bool,
-    show_tn_book_intro: bool = settings.SHOW_TN_BOOK_INTRO,
+    show_tn_book_intro: bool,
 ) -> TNBook:
     chapter_verses = tn_chapter_verses(
         resource_dir,
@@ -809,7 +809,7 @@ def tnc_book_content(
     resource_dir: str,
     resource_requests: Sequence[ResourceRequest],
     layout_for_print: bool,
-    show_tn_book_intro: bool = settings.SHOW_TN_BOOK_INTRO,
+    show_tn_book_intro: bool,
 ) -> TNCBook:
     chapter_verses = tnc_chapter_verses(
         resource_dir,
@@ -1119,6 +1119,17 @@ def bc_book_content(
     )
 
 
+def effective_show_tn_book_intro(requested: bool) -> bool:
+    """
+    Return whether TN book intros are parsed.
+
+    They are only parsed if the document request asks for them (its
+    show_tn_book_intro field, which is part of the document request key)
+    and the deployment's SHOW_TN_BOOK_INTRO setting allows them.
+    """
+    return requested and get_settings().SHOW_TN_BOOK_INTRO
+
+
 def books(
     resource_lookup_dtos: Sequence[ResourceLookupDto],
     resource_dirs: Sequence[str],
@@ -1126,6 +1137,7 @@ def books(
     layout_for_print: bool,
     use_chapter_labels: bool,
     generate_docx: bool,
+    show_tn_book_intro: bool,
     usfm_resource_types: Sequence[str] = USFM_RESOURCE_TYPES,
     tn_resource_type: str = TN_RESOURCE_TYPE,
     en_tn_condensed_resource_type: str = EN_TN_CONDENSED_RESOURCE_TYPE,
@@ -1147,6 +1159,7 @@ def books(
     tq_books = []
     tw_books = []
     bc_books = []
+    show_tn_book_intro_ = effective_show_tn_book_intro(show_tn_book_intro)
     for resource_lookup_dto, resource_dir in zip(resource_lookup_dtos, resource_dirs):
         if resource_lookup_dto.resource_type in usfm_resource_types:
             usfm_book = usfm_book_content(
@@ -1157,14 +1170,22 @@ def books(
             usfm_books.append(usfm_book)
         elif resource_lookup_dto.resource_type == tn_resource_type:
             tn_book = tn_book_content(
-                resource_lookup_dto, resource_dir, resource_requests, layout_for_print
+                resource_lookup_dto,
+                resource_dir,
+                resource_requests,
+                layout_for_print,
+                show_tn_book_intro_,
             )
             tn_books.append(tn_book)
         elif (
             resource_lookup_dto.resource_type == en_tn_condensed_resource_type
         ):  # Handle English Condensed TN
             tnc_book = tnc_book_content(
-                resource_lookup_dto, resource_dir, resource_requests, layout_for_print
+                resource_lookup_dto,
+                resource_dir,
+                resource_requests,
+                layout_for_print,
+                show_tn_book_intro_,
             )
             tnc_books.append(tnc_book)
         elif resource_lookup_dto.resource_type == tq_resource_type:
@@ -1241,11 +1262,10 @@ def get_book_name(
     resource_path: str,
     resource_lookup_dto: ResourceLookupDto,
     bible_book_names: Mapping[str, str] = BOOK_NAMES,
-    use_localized_book_name: bool = settings.USE_LOCALIZED_BOOK_NAME,
 ) -> str:
     """Retrieve the book name, preferring a localized title if available."""
     title_path = join(resource_path, "front", "title.txt")
-    if use_localized_book_name:
+    if get_settings().USE_LOCALIZED_BOOK_NAME:
         try:
             with open(title_path, encoding="utf-8") as f:
                 return normalize_localized_book_name(f.read())

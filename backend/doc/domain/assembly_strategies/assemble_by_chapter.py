@@ -1,7 +1,7 @@
 from itertools import zip_longest
 from typing import Mapping, Sequence
 
-from doc.config import settings
+from doc.config import get_settings
 from doc.domain.constants import (
     BOOK_NAME_FMT_STR,
     RESOURCE_TYPE_NAME_FMT_STR,
@@ -41,7 +41,7 @@ from doc.domain.model import (
     USFMBook,
 )
 
-logger = settings.logger(__name__)
+logger = get_settings().logger(__name__)
 
 
 def assemble_content_by_chapter(

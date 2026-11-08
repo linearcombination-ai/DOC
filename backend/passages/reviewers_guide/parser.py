@@ -3,7 +3,7 @@ import re
 from collections import defaultdict
 from pprint import pprint
 
-from doc.config import settings
+from doc.config import get_settings
 from doc.domain.bible_books import BOOK_NAMES
 from doc.domain.model import ChapterNum, LangDirEnum
 from passages.reviewers_guide.model import (
@@ -19,7 +19,7 @@ from docx import Document
 # Pattern for chapter and verse references after Bible books
 CHAPTER_VERSE_PATTERN = re.compile(r"^\d+:\d+(-\d+(:\d+)?)?$")
 
-logger = settings.logger(__name__)
+logger = get_settings().logger(__name__)
 
 
 def get_book_code(book_name: str, book_names: dict[str, str] = BOOK_NAMES) -> str:

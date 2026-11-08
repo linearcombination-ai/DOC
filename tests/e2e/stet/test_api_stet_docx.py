@@ -7,20 +7,20 @@ from tests.shared.utils import (
     AcceptedSuffixes,
 )
 from doc.entrypoints.app import app
-from doc.config import settings
+from doc.config import get_settings
 from docx import Document  # type: ignore
 
 
 @pytest.mark.stet
 @pytest.mark.docx
 def test_en_es_419_stet_docx() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/stet/documents_docx",
             json={
                 "lang0_code": "en",
                 "lang1_code": "es-419",
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
             },
         )
         check_result(response, suffix="docx")
@@ -29,13 +29,13 @@ def test_en_es_419_stet_docx() -> None:
 @pytest.mark.stet
 @pytest.mark.docx
 def test_en_abu_stet_docx() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/stet/documents_docx",
             json={
                 "lang0_code": "en",
                 "lang1_code": "abu",
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
             },
         )
         check_result(response, suffix="docx")
@@ -45,13 +45,13 @@ def test_en_abu_stet_docx() -> None:
 @pytest.mark.docx
 @pytest.mark.skip
 def test_en_ln_stet_docx() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/stet/documents_docx",
             json={
                 "lang0_code": "en",
                 "lang1_code": "ln",
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
             },
         )
         check_result(response, suffix="docx")
@@ -61,13 +61,13 @@ def test_en_ln_stet_docx() -> None:
 @pytest.mark.docx
 @pytest.mark.skip
 def test_en_ln_stet_docx_contents() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
+    with TestClient(app=app, base_url=get_settings().api_test_url()) as client:
         response = client.post(
             "/stet/documents_docx",
             json={
                 "lang0_code": "en",
                 "lang1_code": "ln",
-                "email_address": settings.TO_EMAIL_ADDRESS,
+                "email_address": get_settings().TO_EMAIL_ADDRESS,
             },
         )
         # Check that all of Luke 1:49 is present in result
@@ -77,7 +77,7 @@ def test_en_ln_stet_docx_contents() -> None:
         suffix: AcceptedSuffixes = "docx"
         finished_document_request_key = check_result(response, suffix=suffix)
         finished_document_path = os.path.join(
-            settings.DOCUMENT_OUTPUT_DIR,
+            get_settings().DOCUMENT_OUTPUT_DIR,
             "{}.{}".format(finished_document_request_key, suffix),
         )
         doc = Document(finished_document_path)

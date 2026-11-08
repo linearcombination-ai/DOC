@@ -1,7 +1,7 @@
 from typing import Iterator
 
 import pytest
-from doc.config import settings
+from doc.config import get_settings
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from stet.domain import resource_lookup
@@ -34,7 +34,7 @@ def app() -> FastAPI:
 
 
 def test_get_stet_dir_reads_settings() -> None:
-    assert routes.get_stet_dir() == settings.STET_DIR
+    assert routes.get_stet_dir() == get_settings().STET_DIR
 
 
 def test_get_production_lang_codes() -> None:
@@ -57,7 +57,7 @@ def test_source_languages_uses_settings_stet_dir_by_default(
 ) -> None:
     response = TestClient(app).get("/stet/source_languages")
     assert response.status_code == 200
-    assert scanned_dirs == [settings.STET_DIR]
+    assert scanned_dirs == [get_settings().STET_DIR]
 
 
 @pytest.mark.stet
