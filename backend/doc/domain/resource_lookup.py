@@ -7,6 +7,7 @@ assets.
 import re
 import shutil
 import subprocess
+import time
 from datetime import datetime, timedelta
 from os import scandir, stat
 from os.path import exists, isdir, join
@@ -44,7 +45,7 @@ from doc.utils.url_utils import (
     book_codes_and_names_from_manifest,
 )
 from fastapi import HTTPException, status
-from filelock import FileLock
+from filelock import FileLock, Timeout
 from pydantic import HttpUrl, ValidationError
 
 logger = settings.logger(__name__)
@@ -407,7 +408,7 @@ def resource_types(
         if download_assets:
             batch_download_repos(repos_to_clone_)
         else:
-            batch_clone_git_repos(repos_to_clone_)
+            clone_git_repos_until_complete(repos_to_clone_)
         resource_types_ = get_resource_types(repo_clone_list, book_codes)
     except Exception:
         logger.exception("Failed due to the following exception.")
@@ -471,71 +472,76 @@ def batch_download_repos(
         )
 
 
-# @worker.app.task
-# def batch_clone_git_repos(
-#     repos: list[tuple[HttpUrl, str]],
-#     asset_caching_enabled: bool = settings.ASSET_CACHING_ENABLED,
-#     asset_caching_period: int = settings.ASSET_CACHING_PERIOD,
-#     user_agent_str: str = settings.USER_AGENT_STR,
-#     x_requested_with_value: str = settings.X_REQUESTED_WITH_VALUE,
-#     lock_timeout_seconds: int = settings.LOCK_TIMEOUT_SECONDS,
-# ) -> None:
-#     """
-#     Celery-managed batch git clone with per-repository filesystem locking.
-#     Locking is per `resource_filepath` to prevent concurrent deletion/cloning
-#     races while still allowing parallel clones of distinct repositories.
-#     """
-#     clone_commands: list[str] = []
-#     for url, resource_filepath in repos:
-#         lock_path = resource_filepath + ".lock"
-#         lock = FileLock(
-#             lock_path, timeout=lock_timeout_seconds
-#         )  # prevent race condition possibility; timeout in case of process crash causing blocking
-#         with lock:
-#             if asset_caching_enabled:
-#                 try:
-#                     git_dir = join(resource_filepath, ".git")
-#                     stat_ = stat(git_dir)
-#                     mod_time = datetime.fromtimestamp(stat_.st_mtime)
-#                     expiry = timedelta(minutes=asset_caching_period)
-#                     if (
-#                         all(
-#                             exists(join(git_dir, filename))
-#                             for filename in ("config", "HEAD", "objects")
-#                         )
-#                         and any(scandir(resource_filepath))
-#                         and datetime.now() - mod_time <= expiry
-#                     ):
-#                         logger.info(
-#                             "Skipping clone: %s exists, valid, and not stale",
-#                             resource_filepath,
-#                         )
-#                         continue  # ✅ Reuse cached repo
-#                 except FileNotFoundError:
-#                     logger.warning("Git directory not found for %s", resource_filepath)
-#                 logger.info(
-#                     "Removing stale, incomplete, or corrupt repository: %s",
-#                     resource_filepath,
-#                 )
-#             else:
-#                 logger.info(
-#                     "Asset caching disabled: forcibly removing %s",
-#                     resource_filepath,
-#                 )
-#             if isdir(resource_filepath):
-#                 shutil.rmtree(resource_filepath)
-#             clone_command = (
-#                 f"git -c http.userAgent='{user_agent_str}' "
-#                 f"-c http.extraHeader='X-Requested-With:{x_requested_with_value}' "
-#                 f"clone --depth=1 --single-branch '{url}' '{resource_filepath}' || true"
-#             )
-#             clone_commands.append(clone_command)
-#     if clone_commands:
-#         full_command = " && ".join(clone_commands)
-#         try:
-#             subprocess.call(full_command, shell=True)
-#         except subprocess.SubprocessError:
-#             logger.error("Batch git clone failed!")
+# Last-resort backstop on how long one request keeps retrying repos locked by
+# other processes' in-flight clones. The app runs under gunicorn's default
+# sync worker class with TIMEOUT=120s (backend/gunicorn.conf.py); a worker
+# blocked longer than that is killed, so stay comfortably below it.
+CLONE_CONTENTION_CEILING_SECONDS: int = 75
+CLONE_RETRY_INITIAL_SLEEP_SECONDS: float = 0.5
+CLONE_RETRY_MAX_SLEEP_SECONDS: float = 5.0
+
+
+def clone_git_repos_until_complete(
+    repos: list[tuple[HttpUrl, str]],
+    max_wait_seconds: float = CLONE_CONTENTION_CEILING_SECONDS,
+    lock_timeout_seconds: int = settings.LOCK_TIMEOUT_SECONDS,
+    asset_caching_enabled: bool = settings.ASSET_CACHING_ENABLED,
+) -> None:
+    """
+    Clone repos, then keep retrying any that batch_clone_git_repos skipped
+    because another process held their lock, sleeping with exponential
+    backoff between attempts, until all are cloned.
+
+    A skip means another process is (normally) cloning that repo right now.
+    Retries always use the caching-aware staleness check, even if caching is
+    disabled for the first pass: once the holder has finished, the repo is
+    complete and fresh so the retry does no work rather than re-cloning what
+    a peer just cloned. If the holder died, its lock was released and the
+    retry clones the repo itself. We never return with a missing or partial
+    repo. If max_wait_seconds elapses with repos still contended (a
+    last-resort backstop kept below the gunicorn worker timeout), we log
+    clearly and raise TimeoutError rather than let callers proceed with
+    partial assets.
+    """
+    deadline = time.monotonic() + max_wait_seconds
+    pending = repos
+    attempt = 0
+    sleep_seconds = CLONE_RETRY_INITIAL_SLEEP_SECONDS
+    while pending:
+        attempt += 1
+        skipped_paths: set[str] = set()
+        for repo in pending:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                skipped_paths.add(repo[1])
+                continue
+            skipped_paths.update(
+                batch_clone_git_repos(
+                    [repo],
+                    asset_caching_enabled=asset_caching_enabled or attempt > 1,
+                    lock_timeout_seconds=max(
+                        1, min(lock_timeout_seconds, int(remaining))
+                    ),
+                )
+            )
+        if not skipped_paths:
+            return
+        pending = [(url, path) for url, path in pending if path in skipped_paths]
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            logger.error(
+                f"Gave up after {max_wait_seconds}s waiting on {len(pending)} repo(s) "
+                f"locked by other processes: {sorted(skipped_paths)}"
+            )
+            raise TimeoutError(
+                f"Timed out waiting for other processes to finish cloning: {sorted(skipped_paths)}"
+            )
+        pause = min(sleep_seconds, remaining)
+        logger.info(
+            f"Retrying {len(pending)} contended repo(s) in {pause:.1f}s (attempt {attempt + 1}): {sorted(skipped_paths)}"
+        )
+        time.sleep(pause)
+        sleep_seconds = min(sleep_seconds * 2, CLONE_RETRY_MAX_SLEEP_SECONDS)
 
 
 # @worker.app.task
@@ -545,57 +551,80 @@ def batch_clone_git_repos(
     asset_caching_period: int = settings.ASSET_CACHING_PERIOD,
     user_agent_str: str = settings.USER_AGENT_STR,
     x_requested_with_value: str = settings.X_REQUESTED_WITH_VALUE,
-) -> None:
+    lock_timeout_seconds: int = settings.LOCK_TIMEOUT_SECONDS,
+) -> list[str]:
     """
-    Clones multiple git repositories in a single batch operation.
+    Clones multiple git repositories in a batch operation.
     - If a repository already exists, is fully cloned, and not stale (with respect to cache period), it is skipped.
       Conversely, if a repository is fully cloned, but stale then it is removed before (re)cloning.
     - If a repository exists but is a partial clone (corrupt or missing key files), it is removed before (re)cloning.
     - If asset_caching_enabled is False, repositories are always removed and re-cloned.
+
+    Each repository's staleness-check, removal, and clone are performed
+    while holding a per-`resource_filepath` FileLock, so that two
+    concurrent callers (e.g., different gunicorn worker processes handling
+    overlapping resource_types/get_book_codes_for_lang requests) computing
+    the same deterministic resource_filepath cannot race shutil.rmtree()
+    and git clone against each other. lock_timeout_seconds bounds how long
+    a caller waits behind another in-flight clone of the same repo before
+    giving up on that repo for this request; repos that time out are
+    skipped (left untouched) rather than raising, and their paths are
+    returned; callers should use clone_git_repos_until_complete, which
+    retries them until cloned.
     """
-    clone_commands = []
+    skipped_resource_filepaths: list[str] = []
     for url, resource_filepath in repos:
-        if asset_caching_enabled:
-            try:
-                git_dir = join(resource_filepath, ".git")
-                stat_ = stat(git_dir)
-                mod_time = datetime.fromtimestamp(stat_.st_mtime)
-                expiry = timedelta(minutes=asset_caching_period)
-                if (
-                    all(
-                        exists(join(git_dir, filename))
-                        for filename in ["config", "HEAD", "objects"]
-                    )
-                    and any(scandir(resource_filepath))
-                    and datetime.now() - mod_time <= expiry
-                ):
-                    logger.info(
-                        f"Skipping clone: {resource_filepath} already exists, is a valid git repo, and is not stale."
-                    )
-                    continue  # ✅ Fully cloned and not stale, reuse
-            except FileNotFoundError:
-                logger.warning(f"Git directory, {git_dir}, not found")
-            logger.info(
-                f"Removing stale, incomplete, or corrupt repository: {resource_filepath}"
-            )
-        else:
-            logger.info(
-                f"Asset caching disabled: forcibly removing {resource_filepath}"
-            )
-        if isdir(resource_filepath):
-            shutil.rmtree(resource_filepath)
-        clone_command = (
-            f"git -c http.userAgent='{user_agent_str}' "
-            f"-c http.extraHeader='X-Requested-With:{x_requested_with_value}' "
-            f"clone --depth=1 --single-branch '{url}' '{resource_filepath}' || true"
-        )
-        clone_commands.append(clone_command)
-    if clone_commands:
-        full_command = " && ".join(clone_commands)
+        lock = FileLock(resource_filepath + ".lock", timeout=lock_timeout_seconds)
         try:
-            subprocess.call(full_command, shell=True)
-        except subprocess.SubprocessError:
-            logger.error("Batch git clone failed!")
+            with lock:
+                do_clone = True
+                if asset_caching_enabled:
+                    try:
+                        git_dir = join(resource_filepath, ".git")
+                        stat_ = stat(git_dir)
+                        mod_time = datetime.fromtimestamp(stat_.st_mtime)
+                        expiry = timedelta(minutes=asset_caching_period)
+                        if (
+                            all(
+                                exists(join(git_dir, filename))
+                                for filename in ["config", "HEAD", "objects"]
+                            )
+                            and any(scandir(resource_filepath))
+                            and datetime.now() - mod_time <= expiry
+                        ):
+                            logger.info(
+                                f"Skipping clone: {resource_filepath} already exists, is a valid git repo, and is not stale."
+                            )
+                            do_clone = False  # ✅ Fully cloned and not stale, reuse
+                    except FileNotFoundError:
+                        logger.warning(f"Git directory, {git_dir}, not found")
+                    if do_clone:
+                        logger.info(
+                            f"Removing stale, incomplete, or corrupt repository: {resource_filepath}"
+                        )
+                else:
+                    logger.info(
+                        f"Asset caching disabled: forcibly removing {resource_filepath}"
+                    )
+                if do_clone:
+                    if isdir(resource_filepath):
+                        shutil.rmtree(resource_filepath)
+                    clone_command = (
+                        f"git -c http.userAgent='{user_agent_str}' "
+                        f"-c http.extraHeader='X-Requested-With:{x_requested_with_value}' "
+                        f"clone --depth=1 --single-branch '{url}' '{resource_filepath}'"
+                    )
+                    rc = subprocess.call(clone_command, shell=True)
+                    if rc != 0:
+                        logger.error(
+                            f"git clone failed for {resource_filepath} (exit code {rc})"
+                        )
+        except Timeout:
+            logger.warning(
+                f"Skipping {resource_filepath} this request: lock contended, another worker is likely mid-clone; try again shortly."
+            )
+            skipped_resource_filepaths.append(resource_filepath)
+    return skipped_resource_filepaths
 
 
 # Used by some tests
@@ -808,7 +837,7 @@ def get_book_codes_for_lang(
         if download_assets:
             batch_download_repos(repos_to_clone_)
         else:
-            batch_clone_git_repos(repos_to_clone_)
+            clone_git_repos_until_complete(repos_to_clone_)
         book_codes_and_names = get_book_codes_for_lang_(
             repo_clone_list,
             lang_code,
