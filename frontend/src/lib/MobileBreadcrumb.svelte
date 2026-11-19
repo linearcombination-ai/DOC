@@ -4,23 +4,18 @@
   import BackButton from '$lib/BackButton.svelte'
   import NextButton from '$lib/NextButton.svelte'
   import { langCountStore } from '$lib/stores/LanguagesStore'
-  import { bookCountStore } from '$lib/stores/BooksStore'
-  import { resourceTypesCountStore } from '$lib/stores/ResourceTypesStore'
-  import { langRegExp, bookRegExp, resourceTypeRegExp, settingsRegExp } from '$lib/utils'
+  import { languagesWithResourcesCountStore } from '$lib/stores/ResourcesStore'
+  import { langRegExp, resourcesRegExp, settingsRegExp } from '$lib/utils'
   import LeftArrowIcon from '$lib/LeftArrowIcon.svelte'
   import RightArrowIcon from '$lib/RightArrowIcon.svelte'
 
   export let title: string
   export let stepLabel: string
   export let turnLangStepOn: boolean
-  export let turnBookStepOn: boolean
-  export let turnResourceTypeStepOn: boolean
+  export let turnResourcesStepOn: boolean
   export let turnSettingsStepOn: boolean
   export let submitLanguages: Function
-  export let submitBooks: Function
-  export let submitResourceTypes: Function
-  export let numLang0ResourceTypes: number
-  export let numLang1ResourceTypes: number
+  export let submitResources: Function
 
   let MAX_LANGUAGES = PUBLIC_MAX_LANGUAGES as unknown as number
 </script>
@@ -36,12 +31,10 @@
   </div>
   <div class="flex items-center">
     <!-- back button logic -->
-    {#if bookRegExp.test($page.url.pathname)}
+    {#if resourcesRegExp.test($page.url.pathname)}
       <BackButton url="/languages" />
-    {:else if resourceTypeRegExp.test($page.url.pathname)}
-      <BackButton url="/books" />
     {:else if settingsRegExp.test($page.url.pathname)}
-      <BackButton url="/resource_types" />
+      <BackButton url="/resources" />
     {:else}
       <button
         class="flex cursor-not-allowed items-center rounded-md border
@@ -55,10 +48,8 @@
     <!-- next button logic -->
     {#if langRegExp.test($page.url.pathname) && $langCountStore > 0 && $langCountStore <= MAX_LANGUAGES}
       <NextButton func={submitLanguages} />
-    {:else if bookRegExp.test($page.url.pathname) && $bookCountStore > 0}
-      <NextButton func={submitBooks} />
-    {:else if resourceTypeRegExp.test($page.url.pathname) && (($langCountStore == 1 && $resourceTypesCountStore > 0) || ($langCountStore === 2 && numLang0ResourceTypes > 0 && numLang1ResourceTypes > 0))}
-      <NextButton func={submitResourceTypes} />
+    {:else if resourcesRegExp.test($page.url.pathname) && $langCountStore > 0 && $languagesWithResourcesCountStore === $langCountStore}
+      <NextButton func={submitResources} />
     {:else}
       <button
         class="ml-2 flex cursor-not-allowed items-center rounded-md
@@ -71,12 +62,10 @@
   </div>
 </div>
 
-{#if turnLangStepOn && !turnBookStepOn && !turnResourceTypeStepOn && !turnSettingsStepOn}
-  <div class="w-1/4 border border-[#015ad9] sm:hidden" />
-{:else if turnBookStepOn && !turnResourceTypeStepOn && !turnSettingsStepOn}
-  <div class="w-1/2 border border-[#015ad9] sm:hidden" />
-{:else if turnResourceTypeStepOn && !turnSettingsStepOn}
-  <div class="w-3/4 border border-[#015ad9] sm:hidden" />
+{#if turnLangStepOn && !turnResourcesStepOn && !turnSettingsStepOn}
+  <div class="w-1/3 border border-[#015ad9] sm:hidden" />
+{:else if turnResourcesStepOn && !turnSettingsStepOn}
+  <div class="w-2/3 border border-[#015ad9] sm:hidden" />
 {:else if turnSettingsStepOn}
   <div class="w-full border border-[#015ad9] sm:hidden" />
 {/if}
