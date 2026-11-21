@@ -4,73 +4,33 @@
 #
 #    pip-compile ./backend/requirements-dev.in
 #
-amqp==5.3.1
-    # via
-    #   -c backend/requirements.txt
-    #   kombu
-astroid==4.0.4
+ast-serialize==0.13.1
+    # via mypy
+astroid==4.3.4
     # via pylint
-billiard==4.2.4
-    # via
-    #   -c backend/requirements.txt
-    #   celery
-black==26.1.0
+black==26.10.1
     # via
     #   -r backend/requirements-dev.in
     #   python-lsp-server
-celery==5.6.2
-    # via
-    #   -c backend/requirements.txt
-    #   pytest-celery
-certifi==2026.1.4
-    # via
-    #   -c backend/requirements.txt
-    #   requests
 chardet==5.2.0
     # via pygount
-charset-normalizer==3.4.4
-    # via
-    #   -c backend/requirements.txt
-    #   requests
-click==8.3.1
+click==8.5.1
     # via
     #   -c backend/requirements.txt
     #   black
-    #   celery
-    #   click-didyoumean
-    #   click-plugins
-    #   click-repl
-click-didyoumean==0.3.1
-    # via
-    #   -c backend/requirements.txt
-    #   celery
-click-plugins==1.1.1.2
-    # via
-    #   -c backend/requirements.txt
-    #   celery
-click-repl==0.3.0
-    # via
-    #   -c backend/requirements.txt
-    #   celery
 cohesion==1.2.0
     # via -r backend/requirements-dev.in
 colorama==0.4.6
     # via radon
-debugpy==1.8.20
-    # via pytest-celery
 dill==0.4.1
     # via pylint
-dlint==0.16.0
+dlint==0.17.0
     # via -r backend/requirements-dev.in
-docker==7.1.0
-    # via
-    #   pytest-celery
-    #   pytest-docker-tools
 docstring-to-markdown==0.17
     # via python-lsp-server
 execnet==2.1.2
     # via pytest-xdist
-flake8==7.3.0
+flake8==7.5.0
     # via
     #   -r backend/requirements-dev.in
     #   dlint
@@ -78,36 +38,29 @@ flake8-fixme==1.1.1
     # via -r backend/requirements-dev.in
 gitdb==4.0.12
     # via gitpython
-gitpython==3.1.46
+gitpython==3.2.1
     # via pygount
 icdiff==2.0.10
     # via pytest-icdiff
-idna==3.11
-    # via
-    #   -c backend/requirements.txt
-    #   requests
-importlib-metadata==8.7.1
+importlib-metadata==10.2.0
     # via docstring-to-markdown
 iniconfig==2.3.1
     # via
     #   -c backend/requirements.txt
     #   pytest
-isort==7.0.0
+isort==9.0.2
     # via
     #   -r backend/requirements-dev.in
     #   pylint
-jedi==0.19.2
+jedi==0.20.1
     # via python-lsp-server
-kombu==5.6.2
-    # via
-    #   -c backend/requirements.txt
-    #   celery
-    #   pytest-celery
-librt==0.8.0
+lazy-importer==0.1.0
+    # via importlib-metadata
+librt==0.17.0
     # via mypy
 mando==0.7.1
     # via radon
-markdown-it-py==4.0.0
+markdown-it-py==4.3.0
     # via
     #   -c backend/requirements.txt
     #   rich
@@ -119,27 +72,28 @@ mdurl==0.1.2
     # via
     #   -c backend/requirements.txt
     #   markdown-it-py
-mypy==1.19.1
+mypy==2.4.1
     # via
     #   -r backend/requirements-dev.in
     #   pylsp-mypy
-mypy-extensions==1.1.0
+mypy-extensions==1.2.0
     # via
     #   black
+    #   isort
+    #   librt
     #   mypy
-packaging==26.0
+packaging==26.3
     # via
     #   -c backend/requirements.txt
     #   black
-    #   kombu
     #   pytest
-parso==0.8.6
+parso==0.8.7
     # via jedi
-pathspec==1.0.4
+pathspec==1.1.1
     # via
     #   black
     #   mypy
-platformdirs==4.7.0
+platformdirs==4.14.8
     # via
     #   black
     #   pylint
@@ -150,68 +104,49 @@ pluggy==1.7.0
     #   python-lsp-server
 pprintpp==0.4.0
     # via pytest-icdiff
-prompt-toolkit==3.0.52
-    # via
-    #   -c backend/requirements.txt
-    #   click-repl
 psutil==7.2.2
-    # via
-    #   -r backend/requirements-dev.in
-    #   pytest-celery
-pycodestyle==2.14.0
+    # via -r backend/requirements-dev.in
+pycodestyle==2.15.0
     # via flake8
-pyflakes==3.4.0
+pyflakes==4.1.0
     # via flake8
-pygments==2.19.2
+pygments==2.21.0
     # via
     #   -c backend/requirements.txt
     #   pygount
     #   pytest
     #   rich
-pygount==3.1.0
+pygount==3.2.0
     # via -r backend/requirements-dev.in
-pylint==4.0.4
+pylint==4.1.4
     # via -r backend/requirements-dev.in
-pylsp-mypy==0.7.1
+pylsp-mypy==0.8.2
     # via -r backend/requirements-dev.in
 pytest==9.2.0
     # via
     #   -c backend/requirements.txt
     #   -r backend/requirements-dev.in
     #   pytest-datafiles
-    #   pytest-docker-tools
     #   pytest-icdiff
     #   pytest-repeat
     #   pytest-xdist
-pytest-celery==1.2.1
-    # via -r backend/requirements-dev.in
 pytest-datafiles==3.0.1
     # via -r backend/requirements-dev.in
-pytest-docker-tools==3.1.9
-    # via pytest-celery
 pytest-icdiff==0.9
     # via -r backend/requirements-dev.in
 pytest-repeat==0.9.4
     # via -r backend/requirements-dev.in
 pytest-xdist==3.8.0
     # via -r backend/requirements-dev.in
-python-dateutil==2.9.0.post0
-    # via
-    #   -c backend/requirements.txt
-    #   celery
 python-lsp-jsonrpc==1.1.2
     # via python-lsp-server
-python-lsp-server==1.14.0
+python-lsp-server==1.15.0
     # via pylsp-mypy
 pytokens==0.4.1
     # via black
 radon==6.0.1
     # via -r backend/requirements-dev.in
-requests==2.32.5
-    # via
-    #   -c backend/requirements.txt
-    #   docker
-rich==14.3.2
+rich==15.0.0
     # via
     #   -c backend/requirements.txt
     #   pygount
@@ -219,50 +154,20 @@ six==1.17.0
     # via
     #   -c backend/requirements.txt
     #   mando
-    #   python-dateutil
-smmap==5.0.2
+smmap==5.0.3
     # via gitdb
-tenacity==9.1.4
-    # via pytest-celery
-tomlkit==0.14.0
+tomlkit==0.15.2
     # via pylint
-typing-extensions==4.15.0
+typing-extensions==4.16.0
     # via
     #   -c backend/requirements.txt
     #   docstring-to-markdown
     #   mypy
-tzdata==2025.3
+ujson==6.1.0
     # via
-    #   -c backend/requirements.txt
-    #   kombu
-tzlocal==5.3.1
-    # via
-    #   -c backend/requirements.txt
-    #   celery
-ujson==5.11.0
-    # via
-    #   -c backend/requirements.txt
     #   python-lsp-jsonrpc
     #   python-lsp-server
-urllib3==2.6.3
-    # via
-    #   -c backend/requirements.txt
-    #   docker
-    #   requests
-vine==5.1.0
-    # via
-    #   -c backend/requirements.txt
-    #   amqp
-    #   celery
-    #   kombu
-vulture==2.14
+vulture==2.16
     # via -r backend/requirements-dev.in
-wcwidth==0.6.0
-    # via
-    #   -c backend/requirements.txt
-    #   prompt-toolkit
-zipp==3.23.0
+zipp==4.1.2
     # via importlib-metadata
-
-# The following packages are considered to be unsafe in a requirements file:
-# setuptools

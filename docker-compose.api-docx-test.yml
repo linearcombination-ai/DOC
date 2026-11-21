@@ -20,9 +20,7 @@ services:
       BACKEND_API_URL: http://localhost:5005
       FILE_SERVER_URL: http://localhost:8089
       LOGROCKET_ID: ${LOGROCKET_ID:-ct7zyg/interleaved-resource-generator}
-      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/0}
-      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:-redis://redis:6379/0}
-      FLOWER_PORT: 5555
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       FROM_EMAIL_ADDRESS: ${FROM_EMAIL_ADDRESS}
       SMTP_PASSWORD: ${SMTP_PASSWORD}
       SMTP_HOST: ${SMTP_HOST}

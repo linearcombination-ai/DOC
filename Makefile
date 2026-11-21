@@ -320,14 +320,13 @@ local-e2e-tests:  local-prepare-for-tests
 local-repeat-randomized-tests: local-prepare-for-tests
 	TO_EMAIL="foo@example.com" pytest -n auto --count 10 tests/e2e/ -k test_api_randomized_combinatoric.py
 
-.PHONY: local-run-celery
-local-run-celery:
-	celery -A doc.domain.worker.app worker --loglevel=DEBUG -E
+.PHONY: local-run-rq-worker
+local-run-rq-worker:
+        rq worker --url redis:// --worker-class doc.domain.rq_worker.PreloadedWorker
 
-
-.PHONY: local-run-flower
-local-run-flower:
-	celery --broker=redis:// --result-backend=redis:// flower
+.PHONY: local-run-rq-dashboard
+local-run-rq-dashboard:
+	cd backend && gunicorn --bind 127.0.0.1:9181 doc.dashboard:app
 
 # Run after running local-e2e-tests or any tests which has yielded HTML
 # and PDFs that need to be checked for linking correctness.

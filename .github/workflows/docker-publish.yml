@@ -91,7 +91,7 @@ jobs:
           docker load -i ${{ runner.temp }}/images/usfmparser.tar
           docker load -i ${{ runner.temp }}/images/fileserver.tar
 
-      # Pulls/builds only what isn't already loaded (e.g. redis, flower).
+      # Pulls/builds only what isn't already loaded (e.g. redis).
       - name: Prepare compose stack
         run: |
           docker compose -f docker-compose.yml -f docker-compose.api-test.yml \
@@ -135,7 +135,7 @@ jobs:
       - name: Load images
         run: for f in ${{ runner.temp }}/images/*.tar; do docker load -i "$f"; done
 
-      # Pulls/builds only what isn't already loaded (e.g. redis, flower).
+      # Pulls/builds only what isn't already loaded (e.g. redis).
       - name: Prepare compose stack
         run: |
           docker compose -f docker-compose.yml -f docker-compose.frontend-test.yml \

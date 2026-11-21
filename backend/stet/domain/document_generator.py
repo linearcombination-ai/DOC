@@ -3,7 +3,6 @@ from datetime import datetime
 from typing import Mapping, Sequence, cast
 
 import mistune
-from celery import current_task
 from doc.config import settings
 from doc.domain.constants import (
     PREFERRED_RESOURCES,
@@ -157,19 +156,19 @@ def generate_docx_document(
         source_usfm_book = None
         target_usfm_book = None
         for book_code, book_name in lang0_book_codes_and_names:
-            current_task.update_state(state="Locating assets")
+            worker.update_state("Locating assets")
             lang0_resource_lookup_dto_ = resource_lookup_dto(
                 lang0_code, lang0_usfm_resource_type, book_code
             )
             if lang0_resource_lookup_dto_ and lang0_resource_lookup_dto_.url:
-                current_task.update_state(state="Provisioning asset files")
+                worker.update_state("Provisioning asset files")
                 lang0_resource_dir = prepare_resource_filepath(
                     lang0_resource_lookup_dto_
                 )
                 provision_asset_files(
                     lang0_resource_lookup_dto_.url, lang0_resource_dir
                 )
-                current_task.update_state(state="Parsing asset files")
+                worker.update_state("Parsing asset files")
                 source_usfm_book = usfm_book_content(
                     lang0_resource_lookup_dto_,
                     lang0_resource_dir,
@@ -219,7 +218,7 @@ def generate_docx_document(
             reference_counter[ref] += len(passage_ref_dto.verse_refs)
     # Track current occurrence number as we process
     occurrence_tracker: defaultdict[str, int] = defaultdict(int)
-    current_task.update_state(state="Assembling content")
+    worker.update_state("Assembling content")
     for word_entry_dto in word_entry_dtos:
         source_passage_text = ""
         target_passage_text = ""
@@ -317,7 +316,7 @@ def generate_docx_document(
                 )
             )
         word_entries.append(word_entry)
-    current_task.update_state(state="Converting to Docx")
+    worker.update_state("Converting to Docx")
     generate_docx(
         word_entries, docx_filepath_, lang0_code, lang1_code, use_increased_line_spacing
     )
@@ -497,7 +496,6 @@ def stet_request_key(
     )
 
 
-@worker.app.task
 def generate_stet_docx_document(
     lang0_code: str,
     lang1_code: str,
@@ -533,7 +531,7 @@ def generate_stet_docx_document(
                     ),
                 )
             ]
-            current_task.update_state(state="Sending email")
+            worker.update_state("Sending email")
             send_email_with_attachment(
                 email_address,
                 attachments,

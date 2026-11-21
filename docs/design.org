@@ -125,11 +125,11 @@ then ...
  docker run -p 6379:6379 redis
  #+end_src
 
-**** Run celery
+**** Run the RQ worker
 
 In another terminal window, in project root directory, in virtual env (source .venv/bin/activate[.fish]):
  #+begin_src shell
-make local-run-celery
+make local-run-rq-worker
  #+end_src
 
  If you get an error regarding pydantic.core, then try this
@@ -146,12 +146,15 @@ make local-run-celery
  =cffi= package.
 
  If you get an error regarding =PIL=, then uninstall and reinstall =Pillow=
-**** (optional) Run flower (a celery dashboard)
+**** (optional) Run rq-dashboard
 
 In another terminal window, in project root directory, in virtual env:
  #+begin_src shell
-make local-run-flower
+make local-run-rq-dashboard
  #+end_src
+
+Then navigate to http://localhost:9181. (Under docker compose it is the
+=rq-dashboard= service, on port 9181 by default.)
 
 **** Run API
 :PROPERTIES:
@@ -211,11 +214,6 @@ Once all 6 steps are running fine you can navigate to
 http://localhost:4173 (if vite production mode is chosen) or
 http://localhost:5173 (if vite development mode is chosen) to access
 the app and interact with it for manual QA.
-
-**** (optional) Use the celery dashboard
-
-And then, if desired, you can navigate to http://localhost:5555 to
-access the flower celery dashboard.
 
 **** (optional) Run a quick smoke test (run one pytest test)
 In another terminal window, in project root directory, in virtual env:

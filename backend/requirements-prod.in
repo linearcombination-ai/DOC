@@ -5,3 +5,4 @@ pytest-datafiles
 pytest-icdiff
 pytest-repeat
 pytest-xdist
+rq-dashboard

@@ -11,12 +11,9 @@ license = "MIT"
 # a package to take advantage of it as a library.
 dependencies = [
   "aiofiles",
-  "celery",
-  "celery-types",
   "docxtpl",
   "fastapi[all]",
   "filelock",
-  "flower",
   "html-for-docx",
   "html2docx",
   "gunicorn",
@@ -27,6 +24,7 @@ dependencies = [
   "python-dotenv",
   "pyyaml",
   "redis",
+  "rq",
   "requests",
   "termcolor",
   "toolz",

@@ -1,3 +1,5 @@
+from typing import Sequence
+
 from re import (
     DOTALL,
     compile,
@@ -24,8 +26,8 @@ def _parse_ref_to_dto(
     reference_: str,
     lang0_code: str,
     lang1_code: str,
-    lang0_book_codes_and_names: list[tuple[str, str]],
-    lang1_book_codes_and_names: list[tuple[str, str]],
+    lang0_book_codes_and_names: Sequence[tuple[str, str]],
+    lang1_book_codes_and_names: Sequence[tuple[str, str]],
     book_names: dict[str, str],
     lang0_book_codes_and_names__: list[tuple[str, str]],
     source_text_with_bolding: str | None = None,
@@ -90,8 +92,8 @@ def _parse_fully_specified_column4(
     word_entry_dto: WordEntryDto,
     lang0_code: str,
     lang1_code: str,
-    lang0_book_codes_and_names: list[tuple[str, str]],
-    lang1_book_codes_and_names: list[tuple[str, str]],
+    lang0_book_codes_and_names: Sequence[tuple[str, str]],
+    lang1_book_codes_and_names: Sequence[tuple[str, str]],
     book_names: dict[str, str],
     lang0_book_codes_and_names__: list[tuple[str, str]],
 ) -> None:
@@ -117,8 +119,8 @@ def _parse_bible_reference_column3(
     word_entry_dto: WordEntryDto,
     lang0_code: str,
     lang1_code: str,
-    lang0_book_codes_and_names: list[tuple[str, str]],
-    lang1_book_codes_and_names: list[tuple[str, str]],
+    lang0_book_codes_and_names: Sequence[tuple[str, str]],
+    lang1_book_codes_and_names: Sequence[tuple[str, str]],
     book_names: dict[str, str],
     lang0_book_codes_and_names__: list[tuple[str, str]],
 ) -> None:

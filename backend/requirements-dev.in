@@ -17,7 +17,6 @@ pygount
 pylint
 pylsp-mypy
 pytest
-pytest-celery
 pytest-datafiles
 pytest-icdiff
 pytest-repeat

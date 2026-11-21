@@ -30,8 +30,7 @@ services:
     environment:
       DATA_API_URL: ${DATA_API_URL:-https://api.bibleineverylanguage.org/v1/graphql}
       BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS}
-      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/0}
-      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:-redis://redis:6379/0}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
       FROM_EMAIL_ADDRESS: ${FROM_EMAIL_ADDRESS}
       SMTP_PASSWORD: ${SMTP_PASSWORD}
       SMTP_HOST: ${SMTP_HOST}
@@ -57,15 +56,19 @@ services:
     restart: unless-stopped
   worker:
     image: wycliffeassociates/doc:${IMAGE_TAG}
-    command: celery --app=doc.domain.worker.app worker --hostname=worker@%h --loglevel=DEBUG -E
+    # One worker per CPU core unless RQ_WORKERS is set, matching the
+    # old Celery default. PreloadedWorker imports the job modules once
+    # in the parent so forked job processes don't re-import them.
+    command: >-
+      sh -c 'exec rq worker-pool --url "$$REDIS_URL"
+      --num-workers "$${RQ_WORKERS:-$$(nproc)}"
+      --worker-class doc.domain.rq_worker.PreloadedWorker'
     environment:
-      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/0}
-      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:-redis://redis:6379/0}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      RQ_WORKERS: ${RQ_WORKERS:-}
       FROM_EMAIL_ADDRESS: ${FROM_EMAIL_ADDRESS}
       SMTP_PASSWORD: ${SMTP_PASSWORD}
       SMTP_HOST: ${SMTP_HOST}
-      SMTP_PORT: ${SMTP_PORT}
-      SEND_EMAIL: ${SEND_EMAIL}
     volumes:
       - shared:/app/document_output
       - shared_working:/app/working_temp
@@ -76,24 +79,25 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: celery -A doc.domain.worker.app inspect ping
+      test: ["CMD", "python", "-c", "import os, sys; from redis import Redis; from rq import Worker; sys.exit(0 if Worker.count(connection=Redis.from_url(os.environ['REDIS_URL'])) else 1)"]
       interval: 5s
       timeout: 5s
       retries: 10
       start_period: 15s
     restart: unless-stopped
-  celery-dashboard:
-    image: mher/flower:2.0.1
+  rq-dashboard:
+    image: wycliffeassociates/doc:${IMAGE_TAG}
+    command: gunicorn --bind 0.0.0.0:9181 --workers 1 doc.dashboard:app
     environment:
-      CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/0}
-      CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:-redis://redis:6379/0}
-      FLOWER_PORT: 5555
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      # Optional HTTP basic auth. The dashboard is read-only (see
+      # backend/doc/dashboard.py) but still shows job arguments and results.
+      RQ_DASHBOARD_USERNAME: ${RQ_DASHBOARD_USERNAME:-}
+      RQ_DASHBOARD_PASSWORD: ${RQ_DASHBOARD_PASSWORD:-}
     ports:
-      - ${CELERY_DASHBOARD_HOST_PORT:-5555}:5555
+      - ${RQ_DASHBOARD_HOST_PORT:-9181}:9181
     depends_on:
       redis:
-        condition: service_healthy
-      worker:
         condition: service_healthy
     restart: unless-stopped
   fileserver:

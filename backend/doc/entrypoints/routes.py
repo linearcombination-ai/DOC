@@ -1,9 +1,7 @@
-from typing import Sequence, cast
+from typing import Sequence
 
-import celery.states
-from celery.result import AsyncResult
 from doc.config import settings
-from doc.domain import document_generator, model, resource_lookup
+from doc.domain import document_generator, model, resource_lookup, worker
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import JSONResponse
 
@@ -13,15 +11,15 @@ logger = settings.logger(__name__)
 
 
 @router.post("/documents")
-async def generate_document(document_request: model.DocumentRequest) -> JSONResponse:
+def generate_document(document_request: model.DocumentRequest) -> JSONResponse:
     """
     Get the document request and hand it off to the document_generator
     module for processing.
     """
     # Top level exception handler
     try:
-        task = document_generator.generate_document.apply_async(
-            args=(document_request.json(),)
+        task_id = worker.enqueue(
+            document_generator.generate_document, document_request.json()
         )
     except HTTPException as exc:
         raise exc
@@ -37,12 +35,12 @@ async def generate_document(document_request: model.DocumentRequest) -> JSONResp
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)
         )
     else:
-        logger.debug("task_id: %s", task.id)
-        return JSONResponse({"task_id": task.id})
+        logger.debug("task_id: %s", task_id)
+        return JSONResponse({"task_id": task_id})
 
 
 @router.post("/documents_docx")
-async def generate_docx_document(
+def generate_docx_document(
     document_request: model.DocumentRequest,
 ) -> JSONResponse:
     """
@@ -51,8 +49,8 @@ async def generate_docx_document(
     """
     # Top level exception handler
     try:
-        task = document_generator.generate_docx_document.apply_async(
-            args=(document_request.json(),)
+        task_id = worker.enqueue(
+            document_generator.generate_docx_document, document_request.json()
         )
     except HTTPException as exc:
         raise exc
@@ -68,24 +66,17 @@ async def generate_docx_document(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)
         )
     else:
-        logger.debug("task_id: %s", task.id)
-        return JSONResponse({"task_id": task.id})
+        logger.debug("task_id: %s", task_id)
+        return JSONResponse({"task_id": task_id})
 
 
 @router.get("/task_status/{task_id}")
-async def task_status(task_id: str) -> JSONResponse:
-    res: AsyncResult[dict[str, str]] = AsyncResult(task_id)
-    if res.state == celery.states.SUCCESS:
-        return JSONResponse({"state": celery.states.SUCCESS, "result": res.result})
-    return JSONResponse(
-        {
-            "state": res.state,
-        }
-    )
+def task_status(task_id: str) -> JSONResponse:
+    return JSONResponse(worker.task_status(task_id))
 
 
 @router.get("/language_codes_and_names")
-async def lang_codes_and_names() -> Sequence[tuple[str, str, bool]]:
+def lang_codes_and_names() -> Sequence[tuple[str, str, bool]]:
     """
     Return list of all available language code, name tuples.
     """
@@ -93,7 +84,7 @@ async def lang_codes_and_names() -> Sequence[tuple[str, str, bool]]:
 
 
 @router.get("/shared_book_codes/{lang0_code}/{lang1_code}")
-async def shared_book_codes(
+def shared_book_codes(
     lang0_code: str, lang1_code: str
 ) -> Sequence[tuple[str, str]]:
     """
@@ -103,7 +94,7 @@ async def shared_book_codes(
 
 
 @router.get("/resource_types/{lang_code}/{book_codes}")
-async def resource_types(
+def resource_types(
     lang_code: str,
     book_codes: str,
 ) -> Sequence[tuple[str, str]]:
@@ -111,37 +102,30 @@ async def resource_types(
     Return the list of available resource types tuples for lang_code
     with book_codes.
     """
-    return cast(
-        Sequence[tuple[str, str]], resource_lookup.resource_types(lang_code, book_codes)
-    )
+    return resource_lookup.resource_types(lang_code, book_codes)
 
 
 @router.get("/book_codes_for_lang/{lang_code}")
-async def book_codes_for_lang(lang_code: str) -> Sequence[tuple[str, str]]:
+def book_codes_for_lang(lang_code: str) -> Sequence[tuple[str, str]]:
     """Return list of all available resource codes."""
-    return cast(
-        Sequence[tuple[str, str]], resource_lookup.book_codes_for_lang(lang_code)
-    )
+    return resource_lookup.book_codes_for_lang(lang_code)
 
 
 @router.get("/book_codes_for_lang_from_usfm_only/{lang_code}")
-async def book_codes_for_lang_from_usfm_only(
+def book_codes_for_lang_from_usfm_only(
     lang_code: str,
 ) -> Sequence[tuple[str, str]]:
     """Return list of all available resource codes."""
-    return cast(
-        Sequence[tuple[str, str]],
-        resource_lookup.book_codes_for_lang_from_usfm_only(lang_code),
-    )
+    return resource_lookup.book_codes_for_lang_from_usfm_only(lang_code)
 
 
 @router.get("/chapters_in_books")
-async def chapters_in_books() -> dict[str, list[int]]:
+def chapters_in_books() -> dict[str, list[int]]:
     return resource_lookup.chapters_in_books()
 
 
 # @router.get("/chapters_in_book/{book_code}")
-# async def chapters_in_book(book_code: str) -> list[int]:
+# def chapters_in_book(book_code: str) -> list[int]:
 #     return resource_lookup.chapters_in_book(book_code)
 
 

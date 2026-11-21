@@ -1,13 +1,10 @@
 aiofiles
 beautifulsoup4
 cachetools
-celery
-celery-types
 docxcompose3
 docxtpl
 fastapi[all]
 filelock
-flower
 gunicorn
 html-for-docx
 jinja2
@@ -19,6 +16,7 @@ pytest-split
 python-dotenv
 pyyaml
 redis
+rq
 regex # for unicode aware word boundaries for RTL languages
 requests
 setuptools

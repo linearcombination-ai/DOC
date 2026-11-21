@@ -21,7 +21,6 @@ from doc.domain.constants import (
     RESOURCE_TYPE_CODES_AND_NAMES,
     USFM_RESOURCE_TYPES,
 )
-from doc.domain import worker
 from doc.domain.bible_books import BOOK_CHAPTERS, BOOK_ID_MAP, BOOK_NAMES
 from doc.domain.model import (
     NON_USFM_RESOURCE_TYPES,
@@ -367,7 +366,6 @@ def filter_excluded_resource_types(
     ]
 
 
-@worker.app.task
 def resource_types(
     lang_code: str,
     book_codes_str: str,
@@ -1011,7 +1009,6 @@ def get_book_names_from_usfm_metadata(
     return book_codes_and_names_localized
 
 
-@worker.app.task
 def book_codes_for_lang(
     lang_code: str,
 ) -> Sequence[tuple[str, str]]:
@@ -1029,7 +1026,6 @@ def book_codes_for_lang(
     )
 
 
-@worker.app.task
 def book_codes_for_lang_from_usfm_only(
     lang_code: str,
 ) -> Sequence[tuple[str, str]]:

@@ -1,13 +1,12 @@
 from os import scandir
 from typing import Annotated, Sequence
 
-import celery.states
-from celery.result import AsyncResult
 from doc.config import settings
 from stet.domain import resource_lookup
 from docx import Document
 from fastapi import APIRouter, Depends, Request, HTTPException, status
 from fastapi.responses import JSONResponse
+from doc.domain import worker
 from stet.domain import document_generator, model
 
 router = APIRouter()
@@ -27,7 +26,7 @@ def get_stet_dir() -> str:
 
 
 @router.get("/stet/source_languages")
-async def source_lang_codes_and_names(
+def source_lang_codes_and_names(
     request: Request,
     stet_dir: Annotated[str, Depends(get_stet_dir)],
     production_lang_codes: Annotated[
@@ -78,7 +77,7 @@ async def source_lang_codes_and_names(
 
 
 @router.get("/stet/target_languages/{lang0_code}")
-async def target_lang_codes_and_names(
+def target_lang_codes_and_names(
     lang0_code: str,
 ) -> Sequence[tuple[str, str, bool]]:
     """
@@ -96,18 +95,17 @@ async def target_lang_codes_and_names(
 
 
 @router.post("/stet/documents_docx")
-async def generate_docx_document(
+def generate_docx_document(
     stet_document_request: model.StetDocumentRequest,
 ) -> JSONResponse:
     # Top level exception handler
     try:
-        task = document_generator.generate_stet_docx_document.apply_async(
-            args=(
-                stet_document_request.lang0_code,
-                stet_document_request.lang1_code,
-                stet_document_request.email_address,
-                stet_document_request.use_increased_line_spacing,
-            )
+        task_id = worker.enqueue(
+            document_generator.generate_stet_docx_document,
+            stet_document_request.lang0_code,
+            stet_document_request.lang1_code,
+            stet_document_request.email_address,
+            stet_document_request.use_increased_line_spacing,
         )
     except HTTPException as exc:
         raise exc
@@ -123,17 +121,10 @@ async def generate_docx_document(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)
         )
     else:
-        logger.debug("task_id: %s", task.id)
-        return JSONResponse({"task_id": task.id})
+        logger.debug("task_id: %s", task_id)
+        return JSONResponse({"task_id": task_id})
 
 
 @router.get("/stet/task_status/{task_id}")
-async def task_status(task_id: str) -> JSONResponse:
-    res: AsyncResult[dict[str, str]] = AsyncResult(task_id)
-    if res.state == celery.states.SUCCESS:
-        return JSONResponse({"state": celery.states.SUCCESS, "result": res.result})
-    return JSONResponse(
-        {
-            "state": res.state,
-        }
-    )
+def task_status(task_id: str) -> JSONResponse:
+    return JSONResponse(worker.task_status(task_id))

@@ -1,7 +1,6 @@
 import json
 from typing import TYPE_CHECKING, Mapping, Optional, Sequence
 
-from celery import current_task
 from doc.config import settings
 from doc.domain.constants import (
     PREFERRED_RESOURCES,
@@ -153,15 +152,15 @@ def get_usfm_books_and_usfm_resource_type(
     if usfm_resource_type:
         usfm_book = None
         for book_code in book_codes:
-            current_task.update_state(state="Locating assets")
+            worker.update_state("Locating assets")
             resource_lookup_dto_ = resource_lookup_dto(
                 lang_code, usfm_resource_type, book_code
             )
             if resource_lookup_dto_ and resource_lookup_dto_.url:
-                current_task.update_state(state="Provisioning asset files")
+                worker.update_state("Provisioning asset files")
                 resource_dir = prepare_resource_filepath(resource_lookup_dto_)
                 provision_asset_files(resource_lookup_dto_.url, resource_dir)
-                current_task.update_state(state="Parsing asset files")
+                worker.update_state("Parsing asset files")
                 usfm_book = usfm_book_content(
                     resource_lookup_dto_,
                     resource_dir,
@@ -211,7 +210,7 @@ def generate_docx_document(
                 bible_references_with_availability_lang1, lang1_code
             )
         )
-    current_task.update_state(state="Assembling content")
+    worker.update_state("Assembling content")
     lang0_passages = get_passages(
         bible_references_with_availability_lang0,
         usfm_resource_type_lang0,
@@ -224,7 +223,7 @@ def generate_docx_document(
             usfm_resource_type_lang1,
             usfm_books_lang1,
         )
-    current_task.update_state(state="Converting to Docx")
+    worker.update_state("Converting to Docx")
     generate_docx(
         lang0_passages,
         lang1_passages,
@@ -494,7 +493,6 @@ def document_request_key(
     )
 
 
-@worker.app.task
 def generate_passages_docx_document(
     lang0_code: str,
     lang0_name: str,
@@ -544,7 +542,7 @@ def generate_passages_docx_document(
                     ),
                 )
             ]
-            current_task.update_state(state="Sending email")
+            worker.update_state("Sending email")
             send_email_with_attachment(
                 email_address,
                 attachments,
@@ -555,7 +553,6 @@ def generate_passages_docx_document(
     return document_request_key_
 
 
-@worker.app.task
 def stet_exhaustive_verse_list(
     lang_code: str = "en",
     filepath: str = "backend/passages/data/Spiritual_Terms_Evaluation_Exhaustive_Verse_List.txt",

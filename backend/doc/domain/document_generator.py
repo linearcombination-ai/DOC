@@ -10,7 +10,6 @@ from datetime import datetime
 from os.path import exists
 from typing import Mapping, Optional, Sequence, TypeAlias, cast
 
-from celery import current_task
 from doc.config import settings
 from doc.domain.constants import USFM_RESOURCE_TYPES
 from doc.domain import parsing, resource_lookup, worker
@@ -204,7 +203,7 @@ def locate_acquire_and_build_resource_objects(
     Sequence[TWBook],
     Sequence[BCBook],
 ]:
-    current_task.update_state(state="Locating assets")
+    worker.update_state("Locating assets")
     resource_lookup_dtos = []
     for resource_request in document_request.resource_requests:
         resource_lookup_dto = resource_lookup.resource_lookup_dto(
@@ -219,7 +218,7 @@ def locate_acquire_and_build_resource_objects(
         for resource_lookup_dto in resource_lookup_dtos
         if resource_lookup_dto.url is not None
     ]
-    current_task.update_state(state="Provisioning asset files")
+    worker.update_state("Provisioning asset files")
     t0 = time.time()
     resource_dirs = [
         resource_lookup.prepare_resource_filepath(dto)
@@ -231,7 +230,7 @@ def locate_acquire_and_build_resource_objects(
     logger.info(
         "Time to provision asset files (acquire and write to disk): %s", t1 - t0
     )
-    current_task.update_state(state="Parsing asset files")
+    worker.update_state("Parsing asset files")
     t0 = time.time()
     usfm_books, tn_books, tnc_books, tq_books, tw_books, bc_books = parsing.books(
         found_resource_lookup_dtos,
@@ -257,7 +256,6 @@ def locate_acquire_and_build_resource_objects(
     )
 
 
-@worker.app.task
 def generate_document(
     document_request_json: str,
 ) -> str:
@@ -267,7 +265,7 @@ def generate_document(
     >>> document_request_json = '{"email_address":null,"assembly_strategy_kind":"lbo","assembly_layout_kind":"1c","layout_for_print":false,"resource_requests":[{"lang_code":"es-419","resource_type":"ulb","book_code":"mat"}],"generate_pdf":true,"generate_epub":false,"generate_docx":false,"chunk_size":"chapter","limit_words":false,"show_tn_book_intro":false,"document_request_source":"ui"}'
     >>> document_generator.generate_document(document_request_json)
     """
-    current_task.update_state(state="Receiving request")
+    worker.update_state("Receiving request")
     document_request, document_request_key_ = initialize_document_request_and_key(
         document_request_json
     )
@@ -284,7 +282,7 @@ def generate_document(
             tw_books,
             bc_books,
         ) = locate_acquire_and_build_resource_objects(document_request)
-        current_task.update_state(state="Assembling content")
+        worker.update_state("Assembling content")
         document_parts = assemble_content(
             document_request_key_,
             document_request,
@@ -307,7 +305,7 @@ def generate_document(
     # Immediately return pre-built PDF if the document has previously been
     # generated and is fresh enough.
     if document_request.generate_pdf and file_needs_update(pdf_filepath_):
-        current_task.update_state(state="Converting to PDF")
+        worker.update_state("Converting to PDF")
         convert_html_to_pdf(
             html_filepath_,
             pdf_filepath_,
@@ -318,14 +316,14 @@ def generate_document(
             attachments = [
                 Attachment(filepath=pdf_filepath_, mime_type=("application", "pdf"))
             ]
-            current_task.update_state(state="Sending email")
+            worker.update_state("Sending email")
             send_email_with_attachment(
                 document_request.email_address,
                 attachments,
                 document_request_key_,
             )
     if document_request.generate_epub and file_needs_update(epub_filepath_):
-        current_task.update_state(state="Converting to ePub")
+        worker.update_state("Converting to ePub")
         convert_html_to_epub(html_filepath_, epub_filepath_, document_request_key_)
         if should_send_email(document_request.email_address):
             attachments = [
@@ -333,7 +331,7 @@ def generate_document(
                     filepath=epub_filepath_, mime_type=("application", "epub+zip")
                 )
             ]
-            current_task.update_state(state="Sending email")
+            worker.update_state("Sending email")
             send_email_with_attachment(
                 document_request.email_address,
                 attachments,
@@ -342,14 +340,13 @@ def generate_document(
     return document_request_key_
 
 
-@worker.app.task
 def generate_docx_document(
     document_request_json: str,
 ) -> str:
     """
     This is the alternative entry point for Docx document creation only.
     """
-    current_task.update_state(state="Receiving request")
+    worker.update_state("Receiving request")
     document_request, document_request_key_ = initialize_document_request_and_key(
         document_request_json
     )
@@ -365,7 +362,7 @@ def generate_docx_document(
             tw_books,
             bc_books,
         ) = locate_acquire_and_build_resource_objects(document_request)
-        current_task.update_state(state="Assembling content")
+        worker.update_state("Assembling content")
         document_parts = assemble_content(
             document_request_key_,
             document_request,
@@ -379,7 +376,7 @@ def generate_docx_document(
         title1, title2 = get_languages_title_page_strings(
             found_resource_lookup_dtos, usfm_books
         )
-        current_task.update_state(state="Converting to Docx")
+        worker.update_state("Converting to Docx")
         convert_html_to_docx(
             html_filepath_,
             docx_filepath_,
@@ -398,7 +395,7 @@ def generate_docx_document(
                     ),
                 )
             ]
-            current_task.update_state(state="Sending email")
+            worker.update_state("Sending email")
             send_email_with_attachment(
                 document_request.email_address,
                 attachments,
