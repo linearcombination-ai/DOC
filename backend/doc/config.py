@@ -37,6 +37,27 @@ class Settings(BaseSettings):
 
     DATA_API_CACHE_TTL_SECONDS: int
 
+    # Bounds on external calls. All values are env-tunable and are kept
+    # well below the Celery soft time limit (assumed to be 20 minutes =
+    # 1200 seconds) so that Python kills a stalled child process itself
+    # rather than leaving it orphaned when Celery kills the pool child.
+    HTTP_CONNECT_TIMEOUT_SECONDS: float = 10.0
+    HTTP_READ_TIMEOUT_SECONDS: float = 60.0
+    HTTP_RETRY_TOTAL: int = 3
+    HTTP_RETRY_BACKOFF_FACTOR: float = 0.5
+    # Per-attempt limit for one git clone or one curl download.
+    GIT_CLONE_TIMEOUT_SECONDS: int = 300
+    # Overall ceiling for a clone including retries and waits between
+    # attempts when failures are transient.
+    GIT_CLONE_RETRY_CEILING_SECONDS: int = 600
+    GIT_CLONE_RETRY_WAIT_SECONDS: float = 5.0
+    DOWNLOAD_TIMEOUT_SECONDS: int = 300
+    # Overall ceiling for one batch of downloads plus unzips.
+    DOWNLOAD_BATCH_CEILING_SECONDS: int = 1000
+    # Limit for weasyprint/prince/ebook-convert subprocesses.
+    CONVERTER_TIMEOUT_SECONDS: int = 900
+    SMTP_TIMEOUT_SECONDS: float = 30.0
+
     def logger(self, name: str) -> logging.Logger:
         """
         Return a Logger for scope named by name, e.g., module, that can be

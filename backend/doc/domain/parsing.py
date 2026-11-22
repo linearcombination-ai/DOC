@@ -26,6 +26,7 @@ import mistune
 import requests
 from bs4 import BeautifulSoup
 from doc.config import settings
+from doc.utils import http_session
 from doc.domain.constants import USFM_RESOURCE_TYPES
 from doc.utils.text_utils import demote_headings_by_one
 from doc.domain.bible_books import BOOK_NAMES
@@ -180,7 +181,7 @@ def convert_usfm_chapter_to_html(
         "OutputFile": output_file,
     }
     try:
-        response = requests.post(api_url, json=payload)
+        response = http_session.post(api_url, json=payload)
         # response.raise_for_status()  # Raise an error for 4xx/5xx responses
         if response.json():
             logger.info("Conversion successful: %s", output_file)

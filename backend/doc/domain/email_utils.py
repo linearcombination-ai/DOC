@@ -78,7 +78,9 @@ def send_email_with_attachment(
         composed = outer.as_string()
         # Send the email
         try:
-            with smtplib.SMTP(smtp_host, smtp_port) as smtp:
+            with smtplib.SMTP(
+                smtp_host, smtp_port, timeout=settings.SMTP_TIMEOUT_SECONDS
+            ) as smtp:
                 smtp.ehlo()
                 smtp.starttls()
                 smtp.ehlo()
