@@ -466,11 +466,46 @@ def test_batch_download_uses_arg_lists_and_timeouts(
     curl = run.calls[0]
     assert curl["command"][0] == "curl" and "--fail" in curl["command"]
     assert curl["timeout"] <= settings.DOWNLOAD_TIMEOUT_SECONDS
-    assert unzip_calls[0]["timeout"] == settings.DOWNLOAD_TIMEOUT_SECONDS
+    assert unzip_calls[0]["timeout"] <= settings.DOWNLOAD_TIMEOUT_SECONDS
+
+
+def test_batch_download_total_is_bounded_by_batch_deadline(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+) -> None:
+    run = FakeRun(completed(0))
+    patch_process(monkeypatch, run)
+    monkeypatch.setattr(settings, "DOWNLOAD_BATCH_CEILING_SECONDS", 5)
+    unzip_calls: list[dict[str, Any]] = []
+    monkeypatch.setattr(
+        subprocess, "run", lambda cmd, **kw: unzip_calls.append({"cmd": cmd, **kw})
+    )
+    resource_lookup.batch_download_repos(
+        [
+            ("https://example.com/o/a", str(tmp_path / "a")),  # type: ignore[list-item]
+            ("https://example.com/o/b", str(tmp_path / "b")),  # type: ignore[list-item]
+        ],
+        resource_assets_dir=str(tmp_path),
+    )
+    assert all(c["timeout"] <= 5 for c in run.calls)
+    assert all(c["timeout"] <= 5 for c in unzip_calls)
+
+
+def test_batch_download_exhausted_batch_deadline_fails(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+) -> None:
+    run = FakeRun(completed(0))
+    patch_process(monkeypatch, run)
+    monkeypatch.setattr(settings, "DOWNLOAD_BATCH_CEILING_SECONDS", -1)
+    with pytest.raises(HTTPException):
+        resource_lookup.batch_download_repos(
+            [("https://example.com/o/a", str(tmp_path / "a"))],  # type: ignore[list-item]
+            resource_assets_dir=str(tmp_path),
+        )
 
 
 def test_timeouts_below_celery_soft_limit() -> None:
     soft_limit = 20 * 60
+    assert settings.DOWNLOAD_BATCH_CEILING_SECONDS < soft_limit
     assert settings.GIT_CLONE_RETRY_CEILING_SECONDS < soft_limit
     assert settings.CONVERTER_TIMEOUT_SECONDS < soft_limit
     assert settings.DOWNLOAD_TIMEOUT_SECONDS < soft_limit

@@ -561,9 +561,13 @@ def batch_download_repos(
             ]
         )
         zip_file_paths.append(zip_file_path)
+    batch_deadline = deadline_from_now(settings.DOWNLOAD_BATCH_CEILING_SECONDS)
     try:
         for download_command in download_commands:
-            deadline = deadline_from_now(settings.GIT_CLONE_RETRY_CEILING_SECONDS)
+            deadline = min(
+                deadline_from_now(settings.GIT_CLONE_RETRY_CEILING_SECONDS),
+                batch_deadline,
+            )
             logger.info("Downloading repo with command: %s", " ".join(download_command))
             run_with_retry(
                 download_command,
@@ -582,10 +586,15 @@ def batch_download_repos(
                 resource_assets_dir,
             ]
             logger.info("Unzipping downloaded file: %s", " ".join(unzip_command))
+            remaining = batch_deadline - deadline_from_now(0)
+            if remaining <= 0:
+                raise subprocess.TimeoutExpired(
+                    unzip_command, settings.DOWNLOAD_BATCH_CEILING_SECONDS
+                )
             subprocess.run(
                 unzip_command,
                 check=True,
-                timeout=settings.DOWNLOAD_TIMEOUT_SECONDS,
+                timeout=min(settings.DOWNLOAD_TIMEOUT_SECONDS, remaining),
             )
     except (CommandFailed, subprocess.CalledProcessError, subprocess.TimeoutExpired):
         logger.exception("Batch download or unzip failed!")

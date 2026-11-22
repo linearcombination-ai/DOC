@@ -52,6 +52,8 @@ class Settings(BaseSettings):
     GIT_CLONE_RETRY_CEILING_SECONDS: int = 600
     GIT_CLONE_RETRY_WAIT_SECONDS: float = 5.0
     DOWNLOAD_TIMEOUT_SECONDS: int = 300
+    # Overall ceiling for one batch of downloads plus unzips.
+    DOWNLOAD_BATCH_CEILING_SECONDS: int = 1000
     # Limit for weasyprint/prince/ebook-convert subprocesses.
     CONVERTER_TIMEOUT_SECONDS: int = 900
     SMTP_TIMEOUT_SECONDS: float = 30.0
