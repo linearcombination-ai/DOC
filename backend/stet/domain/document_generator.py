@@ -516,7 +516,7 @@ def generate_stet_docx_document(
         lang0_code, lang1_code, use_increased_line_spacing
     )
     docx_filepath_ = docx_filepath(document_request_key_)
-    with fail_cleanly_on_soft_time_limit([docx_filepath_]):
+    with fail_cleanly_on_soft_time_limit([docx_filepath_]) as guard:
         if file_needs_update(docx_filepath_):
             generate_docx_document(
                 lang0_code,
@@ -525,6 +525,7 @@ def generate_stet_docx_document(
                 document_request_key_,
                 docx_filepath_,
             )
+            guard.mark_complete(docx_filepath_)
             if should_send_email(email_address):
                 attachments = [
                     Attachment(

@@ -23,8 +23,20 @@ class DocumentGenerationTimeoutError(Exception):
     """The document could not be generated within the allotted time."""
 
 
+class SoftTimeLimitGuard:
+    """Tracks which outputs finished generating so they survive a timeout."""
+
+    def __init__(self) -> None:
+        self.completed: set[str] = set()
+
+    def mark_complete(self, filepath: str) -> None:
+        self.completed.add(filepath)
+
+
 @contextmanager
-def fail_cleanly_on_soft_time_limit(output_filepaths: Iterable[str]) -> Iterator[None]:
+def fail_cleanly_on_soft_time_limit(
+    output_filepaths: Iterable[str],
+) -> Iterator[SoftTimeLimitGuard]:
     """
     Run the enclosed task body. If Celery's soft time limit fires, delete any
     of ``output_filepaths`` that this run was going to (re)build, then raise
@@ -32,19 +44,25 @@ def fail_cleanly_on_soft_time_limit(output_filepaths: Iterable[str]) -> Iterator
     cleanly instead of leaving partial outputs behind.
 
     Only files that were missing or stale on entry are removed; a fresh cached
-    output that this run did not touch is left alone.
+    output that this run did not touch is left alone. Outputs the body reported
+    via ``guard.mark_complete`` are fully generated, so they are kept even if
+    the limit fires later (for instance while sending email).
     """
     stale_filepaths = [
         filepath for filepath in output_filepaths if file_needs_update(filepath)
     ]
+    guard = SoftTimeLimitGuard()
     try:
-        yield
+        yield guard
     except SoftTimeLimitExceeded as exc:
+        partial_filepaths = [
+            filepath for filepath in stale_filepaths if filepath not in guard.completed
+        ]
         logger.error(
             "Task exceeded its soft time limit; removing partial outputs: %s",
-            stale_filepaths,
+            partial_filepaths,
         )
-        for filepath in stale_filepaths:
+        for filepath in partial_filepaths:
             try:
                 os.remove(filepath)
             except FileNotFoundError:

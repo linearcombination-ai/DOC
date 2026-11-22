@@ -178,3 +178,16 @@ def test_no_exception_leaves_outputs_alone(tmp_path: Path) -> None:
         out.write_bytes(b"complete")
     assert out.read_bytes() == b"complete"
     assert os.path.exists(out)
+
+
+def test_soft_time_limit_keeps_outputs_marked_complete(tmp_path: Path) -> None:
+    done = tmp_path / "done.docx"
+    partial = tmp_path / "partial.pdf"
+    with pytest.raises(DocumentGenerationTimeoutError):
+        with fail_cleanly_on_soft_time_limit([str(done), str(partial)]) as guard:
+            done.write_bytes(b"complete")
+            guard.mark_complete(str(done))
+            partial.write_bytes(b"partial")
+            raise SoftTimeLimitExceeded()
+    assert done.read_bytes() == b"complete"
+    assert not partial.exists()

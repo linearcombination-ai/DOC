@@ -279,7 +279,7 @@ def generate_document(
         [html_filepath_]
         + ([pdf_filepath_] if document_request.generate_pdf else [])
         + ([epub_filepath_] if document_request.generate_epub else [])
-    ):
+    ) as guard:
         if file_needs_update(html_filepath_):
             (
                 found_resource_lookup_dtos,
@@ -308,6 +308,7 @@ def generate_document(
                 content_str, document_request, found_resource_lookup_dtos, usfm_books
             )
             write_html_content_to_file(content_str, html_filepath_)
+            guard.mark_complete(html_filepath_)
         else:
             logger.info("Cache hit for %s", html_filepath_)
         # Immediately return pre-built PDF if the document has previously been
@@ -320,6 +321,7 @@ def generate_document(
                 document_request_key_,
                 document_request.use_prince,
             )
+            guard.mark_complete(pdf_filepath_)
             if should_send_email(document_request.email_address):
                 attachments = [
                     Attachment(filepath=pdf_filepath_, mime_type=("application", "pdf"))
@@ -333,6 +335,7 @@ def generate_document(
         if document_request.generate_epub and file_needs_update(epub_filepath_):
             current_task.update_state(state="Converting to ePub")
             convert_html_to_epub(html_filepath_, epub_filepath_, document_request_key_)
+            guard.mark_complete(epub_filepath_)
             if should_send_email(document_request.email_address):
                 attachments = [
                     Attachment(
@@ -361,7 +364,7 @@ def generate_docx_document(
     )
     html_filepath_ = html_filepath(document_request_key_)
     docx_filepath_ = docx_filepath(document_request_key_)
-    with fail_cleanly_on_soft_time_limit([docx_filepath_]):
+    with fail_cleanly_on_soft_time_limit([docx_filepath_]) as guard:
         if document_request.generate_docx and file_needs_update(docx_filepath_):
             (
                 found_resource_lookup_dtos,
@@ -395,6 +398,7 @@ def generate_docx_document(
                 title1,
                 title2,
             )
+            guard.mark_complete(docx_filepath_)
             if should_send_email(document_request.email_address):
                 attachments = [
                     Attachment(
