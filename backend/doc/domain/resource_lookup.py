@@ -4,17 +4,20 @@ resource's asset files in the cloud and acquiring said resource
 assets.
 """
 
+import os
 import re
 import shutil
 import subprocess
+import threading
 from datetime import datetime, timedelta
 from os import scandir, stat
 from os.path import exists, isdir, join
 from pathlib import Path
-from typing import Mapping, Optional, Sequence
+from typing import Any, Callable, Mapping, Optional, Sequence, cast
 
 import requests
 from cachetools import TTLCache, cached
+from cachetools.keys import hashkey
 from doc.config import settings
 from doc.domain.constants import (
     GATEWAY_LANGUAGES,
@@ -31,6 +34,14 @@ from doc.domain.model import (
     RepoEntry,
     ResourceLookupDto,
     SourceData,
+)
+from doc.utils import http_session
+from doc.utils.process_utils import (
+    CommandFailed,
+    deadline_from_now,
+    is_transient_curl_failure,
+    is_transient_git_failure,
+    run_with_retry,
 )
 from doc.utils.file_utils import (
     delete_tree,
@@ -49,29 +60,93 @@ from pydantic import HttpUrl, ValidationError
 
 logger = settings.logger(__name__)
 
-fetch_source_data_cache: TTLCache[str, SourceData] = TTLCache(
+
+class DataApiError(Exception):
+    """The data API did not give us a usable, non-empty answer."""
+
+
+fetch_source_data_cache: TTLCache[Any, SourceData] = TTLCache(
     maxsize=1, ttl=settings.DATA_API_CACHE_TTL_SECONDS
 )
+fetch_source_data_lock = threading.Lock()
+# Most recent successful value per argument set, served when a refresh fails.
+fetch_source_data_last_good: dict[Any, SourceData] = {}
 
-fetch_non_primary_source_data_cache: TTLCache[str, SourceData] = TTLCache(
+fetch_non_primary_source_data_cache: TTLCache[Any, SourceData] = TTLCache(
     maxsize=1, ttl=settings.DATA_API_CACHE_TTL_SECONDS
 )
+fetch_non_primary_source_data_lock = threading.Lock()
+fetch_non_primary_source_data_last_good: dict[Any, SourceData] = {}
 
 
-@cached(fetch_source_data_cache)
-def fetch_source_data(
-    data_api_url: HttpUrl = settings.DATA_API_URL,
-    user_agent_str: str = settings.USER_AGENT_STR,
-    x_requested_with_value: str = settings.X_REQUESTED_WITH_VALUE,
-) -> Optional[SourceData]:
+def query_data_api(
+    graphql_query: str,
+    data_api_url: HttpUrl,
+    user_agent_str: str,
+    x_requested_with_value: str,
+) -> list[dict[str, Any]]:
     """
-    Downloads data from a GraphQL API.
+    POST graphql_query to the data API (with timeout and retry on
+    transient errors) and return the git_repo entries. Raises
+    DataApiError on any failure so that callers never mistake a failure
+    for an answer.
+    """
+    query_json = {"query": graphql_query}
+    headers = {"User-Agent": user_agent_str, "X-Requested-With": x_requested_with_value}
+    try:
+        response = http_session.post(
+            str(data_api_url), json=query_json, headers=headers
+        )
+        if response.status_code != 200:
+            raise DataApiError(
+                "Data API returned HTTP status {}".format(response.status_code)
+            )
+        data_payload = response.json().get("data") or {}
+    except requests.RequestException as e:
+        raise DataApiError("Request to data API failed: {}".format(e)) from e
+    except ValueError as e:  # response body is not JSON
+        raise DataApiError("Data API returned invalid JSON: {}".format(e)) from e
+    if "git_repo" not in data_payload:
+        raise DataApiError("Invalid payload structure, no data.")
+    return cast(list[dict[str, Any]], data_payload["git_repo"])
 
-    >>> from doc.domain import resource_lookup
-    >>> ();result = resource_lookup.fetch_source_data();() # doctest: +ELLIPSIS
-    (...)
-    >>> result.git_repo[0]
-    RepoEntry(repo_url=HttpUrl('https://content.bibletranslationtools.org/0success/cli_1co_text_reg'), content=Content(resource_type='reg', language=Language(english_name='Chakali', ietf_code='cli', national_name='Chakali', direction=<LangDirEnum.LTR: 'ltr'>)))
+
+def source_data_or_stale(
+    fetch_cached: Callable[..., SourceData],
+    last_good: dict[Any, SourceData],
+    name: str,
+    data_api_url: HttpUrl,
+    user_agent_str: str,
+    x_requested_with_value: str,
+) -> SourceData:
+    """
+    Return fetch_cached's value. If the refresh fails serve the last good
+    value (stale-on-error) rather than an empty result. With no last
+    good value return empty SourceData, which is never cached, so the
+    next call tries the data API again.
+    """
+    try:
+        return fetch_cached(data_api_url, user_agent_str, x_requested_with_value)
+    except DataApiError as e:
+        logger.error("%s: %s", name, e)
+    key = hashkey(data_api_url, user_agent_str, x_requested_with_value)
+    stale = last_good.get(key)
+    if stale is not None:
+        logger.warning("%s: refresh failed, serving last good (stale) data.", name)
+        return stale
+    logger.error("%s: failed and no earlier good data to serve.", name)
+    return SourceData(git_repo=[])
+
+
+@cached(fetch_source_data_cache, lock=fetch_source_data_lock)
+def _fetch_source_data_cached(
+    data_api_url: HttpUrl,
+    user_agent_str: str,
+    x_requested_with_value: str,
+) -> SourceData:
+    """
+    Raises DataApiError on failure or an empty result. cachetools does
+    not cache exceptions, so failures and empty answers are never cached.
     """
     graphql_query = """
 query MyQuery {
@@ -91,46 +166,30 @@ query MyQuery {
   }
 }
     """
-    query_json = {"query": graphql_query}
-    headers = {"User-Agent": user_agent_str, "X-Requested-With": x_requested_with_value}
+    repos = query_data_api(
+        graphql_query, data_api_url, user_agent_str, x_requested_with_value
+    )
+    valid_repos = [
+        repo
+        for repo in repos
+        if repo.get("content", {}).get("resource_type") is not None
+        and repo.get("content", {}).get("language") is not None
+    ]
+    # Sort for test stability - ensures consistent ordering
+    valid_repos.sort(key=lambda repo: repo["repo_url"])
     try:
-        response = requests.post(str(data_api_url), json=query_json, headers=headers)
-        if response.status_code == 200:
-            data_payload = response.json().get("data", {})
-            if "git_repo" in data_payload:
-                valid_repos = [
-                    repo
-                    for repo in data_payload["git_repo"]
-                    if repo.get("content", {}).get("resource_type") is not None
-                    and repo.get("content", {}).get("language") is not None
-                ]
-                # Sort for test stability - ensures consistent ordering
-                valid_repos.sort(key=lambda repo: repo["repo_url"])
-                return SourceData.model_validate({"git_repo": valid_repos})
-            else:
-                logger.info("Invalid payload structure, no data.")
-                return SourceData(git_repo=[])
-        else:
-            logger.info(
-                "Failed to get data from data API, graphql API might be down..."
-            )
-            return SourceData(git_repo=[])
-    except requests.RequestException as e:
-        logger.exception("Request failed: %s", e)
-        logger.info("Failed to get data from data API, API might be down...")
-        return SourceData(git_repo=[])
+        result = SourceData.model_validate({"git_repo": valid_repos})
     except ValidationError as e:
-        logger.exception(
-            "Request failed due to invalid data returned from data API: %s", e
-        )
-        logger.info(
-            "Some of the data returned by data API is invalid, check logs for details"
-        )
-        return SourceData(git_repo=[])
+        raise DataApiError("Invalid data returned from data API: {}".format(e)) from e
+    if not result.git_repo:
+        raise DataApiError("Data API returned no repos.")
+    fetch_source_data_last_good[
+        hashkey(data_api_url, user_agent_str, x_requested_with_value)
+    ] = result
+    return result
 
 
-@cached(fetch_non_primary_source_data_cache)
-def fetch_non_primary_source_data(
+def fetch_source_data(
     data_api_url: HttpUrl = settings.DATA_API_URL,
     user_agent_str: str = settings.USER_AGENT_STR,
     x_requested_with_value: str = settings.X_REQUESTED_WITH_VALUE,
@@ -138,12 +197,33 @@ def fetch_non_primary_source_data(
     """
     Downloads data from a GraphQL API.
 
+    Successful, non-empty results are cached for
+    DATA_API_CACHE_TTL_SECONDS. Failed or empty results are never
+    cached; if a refresh fails the last good value is served.
+
     >>> from doc.domain import resource_lookup
     >>> ();result = resource_lookup.fetch_source_data();() # doctest: +ELLIPSIS
     (...)
-    >>> len(result.git_repo) > 0
-    True
+    >>> result.git_repo[0]
+    RepoEntry(repo_url=HttpUrl('https://content.bibletranslationtools.org/0success/cli_1co_text_reg'), content=Content(resource_type='reg', language=Language(english_name='Chakali', ietf_code='cli', national_name='Chakali', direction=<LangDirEnum.LTR: 'ltr'>)))
     """
+    return source_data_or_stale(
+        _fetch_source_data_cached,
+        fetch_source_data_last_good,
+        "fetch_source_data",
+        data_api_url,
+        user_agent_str,
+        x_requested_with_value,
+    )
+
+
+@cached(fetch_non_primary_source_data_cache, lock=fetch_non_primary_source_data_lock)
+def _fetch_non_primary_source_data_cached(
+    data_api_url: HttpUrl,
+    user_agent_str: str,
+    x_requested_with_value: str,
+) -> SourceData:
+    """Like _fetch_source_data_cached, for the non-primary query."""
     graphql_query = """
 query MyQuery {
   git_repo(
@@ -162,43 +242,53 @@ query MyQuery {
   }
 }
     """
-    query_json = {"query": graphql_query}
-    headers = {"User-Agent": user_agent_str, "X-Requested-With": x_requested_with_value}
+    repos = query_data_api(
+        graphql_query, data_api_url, user_agent_str, x_requested_with_value
+    )
+    valid_repos = [
+        repo
+        for repo in repos
+        if repo.get("content", {}).get("resource_type") is not None
+        and repo.get("content", {}).get("language") is not None
+        and "WA-Catalog" in repo.get("repo_url", {})
+    ]
+    # Sort for test stability - ensures consistent ordering
+    valid_repos.sort(key=lambda repo: repo["repo_url"])
     try:
-        response = requests.post(str(data_api_url), json=query_json, headers=headers)
-        if response.status_code == 200:
-            data_payload = response.json().get("data", {})
-            if "git_repo" in data_payload:
-                valid_repos = [
-                    repo
-                    for repo in data_payload["git_repo"]
-                    if repo.get("content", {}).get("resource_type") is not None
-                    and repo.get("content", {}).get("language") is not None
-                    and "WA-Catalog" in repo.get("repo_url", {})
-                ]
-                # Sort for test stability - ensures consistent ordering
-                valid_repos.sort(key=lambda repo: repo["repo_url"])
-                return SourceData.model_validate({"git_repo": valid_repos})
-            else:
-                logger.info("Invalid payload structure, no data.")
-                return SourceData(git_repo=[])
-        else:
-            logger.info(
-                "Failed to get data from data API, graphql API might be down..."
-            )
-            return SourceData(git_repo=[])
-    except requests.RequestException as e:
-        logger.exception("Request failed: %s", e)
-        logger.info("Failed to get data from data API, API might be down...")
-        return SourceData(git_repo=[])
+        result = SourceData.model_validate({"git_repo": valid_repos})
     except ValidationError as e:
-        logger.exception(
-            "Request failed due to invalid data returned from data API: %s", e
-        )
-        logger.info(
-            "Some of the data returned by data API is invalid, check logs for details"
-        )
-        return SourceData(git_repo=[])
+        raise DataApiError("Invalid data returned from data API: {}".format(e)) from e
+    if not result.git_repo:
+        raise DataApiError("Data API returned no repos.")
+    fetch_non_primary_source_data_last_good[
+        hashkey(data_api_url, user_agent_str, x_requested_with_value)
+    ] = result
+    return result
+
+
+def fetch_non_primary_source_data(
+    data_api_url: HttpUrl = settings.DATA_API_URL,
+    user_agent_str: str = settings.USER_AGENT_STR,
+    x_requested_with_value: str = settings.X_REQUESTED_WITH_VALUE,
+) -> Optional[SourceData]:
+    """
+    Downloads data from a GraphQL API. Caching and failure behavior is
+    the same as fetch_source_data.
+
+    >>> from doc.domain import resource_lookup
+    >>> ();result = resource_lookup.fetch_source_data();() # doctest: +ELLIPSIS
+    (...)
+    >>> len(result.git_repo) > 0
+    True
+    """
+    return source_data_or_stale(
+        _fetch_non_primary_source_data_cached,
+        fetch_non_primary_source_data_last_good,
+        "fetch_non_primary_source_data",
+        data_api_url,
+        user_agent_str,
+        x_requested_with_value,
+    )
 
 
 def lang_codes_and_names(
@@ -428,7 +518,7 @@ def batch_download_repos(
     x_requested_with_value: str = settings.X_REQUESTED_WITH_VALUE,
 ) -> None:
     """Batch download repos and then batch unzip repos."""
-    download_commands = []
+    download_commands: list[list[str]] = []
     zip_file_paths = []
     for url, resource_filepath in repos:
         zip_file_path = Path(f"{resource_filepath}.zip")
@@ -448,23 +538,57 @@ def batch_download_repos(
                 continue
         zip_url_base = re.sub(str(base_url), str(base_url_replacement), str(url))
         zip_url = f"{zip_url_base}/archive/master.zip"
+        # An argument list (no shell) since the URL comes from remote data.
+        # --fail makes an HTTP error a failure rather than saving the error
+        # page as the zip file.
         download_commands.append(
-            f"curl -A {user_agent_str} -H 'X-Requested-With: {x_requested_with_value}' -X 'GET' {zip_url} -H 'accept: application/json' --output {zip_file_path} --parallel"
+            [
+                "curl",
+                "--fail",
+                "--silent",
+                "--show-error",
+                "-A",
+                user_agent_str,
+                "-H",
+                f"X-Requested-With: {x_requested_with_value}",
+                "-X",
+                "GET",
+                zip_url,
+                "-H",
+                "accept: application/json",
+                "--output",
+                str(zip_file_path),
+            ]
         )
         zip_file_paths.append(zip_file_path)
-    download_command = " && ".join(download_commands)
-    logger.info(f"Downloading repos with command: {download_command}")
+    deadline = deadline_from_now(settings.GIT_CLONE_RETRY_CEILING_SECONDS)
     try:
-        subprocess.check_call(download_command, shell=True)
-        unzip_commands = [
-            f"unzip -q -o {zip_file_path} -d {resource_assets_dir}"
-            for zip_file_path in zip_file_paths
-        ]
-        unzip_command = " && ".join(unzip_commands)
-        logger.info(f"Unzipping downloaded files with command: {unzip_command}")
-        subprocess.check_call(unzip_command, shell=True)
-    except subprocess.CalledProcessError:
-        logger.error("Batch download or unzip failed!")
+        for download_command in download_commands:
+            logger.info("Downloading repo with command: %s", " ".join(download_command))
+            run_with_retry(
+                download_command,
+                per_attempt_timeout=settings.DOWNLOAD_TIMEOUT_SECONDS,
+                deadline=deadline,
+                wait_seconds=settings.GIT_CLONE_RETRY_WAIT_SECONDS,
+                is_transient=is_transient_curl_failure,
+            )
+        for zip_file_path in zip_file_paths:
+            unzip_command = [
+                "unzip",
+                "-q",
+                "-o",
+                str(zip_file_path),
+                "-d",
+                resource_assets_dir,
+            ]
+            logger.info("Unzipping downloaded file: %s", " ".join(unzip_command))
+            subprocess.run(
+                unzip_command,
+                check=True,
+                timeout=settings.DOWNLOAD_TIMEOUT_SECONDS,
+            )
+    except (CommandFailed, subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        logger.exception("Batch download or unzip failed!")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Download of repo master.zip failed",
@@ -553,7 +677,7 @@ def batch_clone_git_repos(
     - If a repository exists but is a partial clone (corrupt or missing key files), it is removed before (re)cloning.
     - If asset_caching_enabled is False, repositories are always removed and re-cloned.
     """
-    clone_commands = []
+    repos_to_clone_now: list[tuple[HttpUrl, str]] = []
     for url, resource_filepath in repos:
         if asset_caching_enabled:
             try:
@@ -584,18 +708,60 @@ def batch_clone_git_repos(
             )
         if isdir(resource_filepath):
             shutil.rmtree(resource_filepath)
-        clone_command = (
-            f"git -c http.userAgent='{user_agent_str}' "
-            f"-c http.extraHeader='X-Requested-With:{x_requested_with_value}' "
-            f"clone --depth=1 --single-branch '{url}' '{resource_filepath}' || true"
-        )
-        clone_commands.append(clone_command)
-    if clone_commands:
-        full_command = " && ".join(clone_commands)
+        repos_to_clone_now.append((url, resource_filepath))
+    # One deadline for the whole batch keeps the total bounded.
+    deadline = deadline_from_now(settings.GIT_CLONE_RETRY_CEILING_SECONDS)
+    unfinished: list[str] = []
+    for url, resource_filepath in repos_to_clone_now:
+        clone_command = [
+            "git",
+            "-c",
+            f"http.userAgent={user_agent_str}",
+            "-c",
+            f"http.extraHeader=X-Requested-With:{x_requested_with_value}",
+            "clone",
+            "--depth=1",
+            "--single-branch",
+            str(url),
+            resource_filepath,
+        ]
         try:
-            subprocess.call(full_command, shell=True)
-        except subprocess.SubprocessError:
-            logger.error("Batch git clone failed!")
+            run_git_clone(clone_command, resource_filepath, deadline)
+        except CommandFailed as e:
+            # A repo that does not exist must not stop the others from
+            # being cloned, but a failure is never treated as success.
+            logger.error("Clone of %s failed: %s", url, e.detail)
+            if e.transient:
+                unfinished.append(str(url))
+    if unfinished:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="git clone failed for: {}".format(", ".join(unfinished)),
+        )
+
+
+def run_git_clone(
+    clone_command: list[str],
+    resource_filepath: str,
+    deadline: float,
+) -> None:
+    """
+    Run a git clone (argument list, no shell) bounded by a timeout per
+    attempt and the deadline overall, waiting out transient failures.
+    Raises CommandFailed if it does not succeed.
+    """
+    logger.info("git command: %s", " ".join(clone_command))
+    run_with_retry(
+        clone_command,
+        per_attempt_timeout=settings.GIT_CLONE_TIMEOUT_SECONDS,
+        deadline=deadline,
+        wait_seconds=settings.GIT_CLONE_RETRY_WAIT_SECONDS,
+        is_transient=is_transient_git_failure,
+        # A killed or failed clone can leave a partial directory behind.
+        cleanup=lambda: shutil.rmtree(resource_filepath, ignore_errors=True),
+        env={**os.environ, "GIT_TERMINAL_PROMPT": "0"},
+    )
+    logger.info("git clone succeeded: %s", resource_filepath)
 
 
 # Used by some tests
@@ -1188,21 +1354,20 @@ def clone_git_repo(
     resource_filepath: str,
     branch: Optional[str] = None,
 ) -> None:
+    command = ["git", "clone", "--depth=1"]
     if branch:  # CLient specified a particular branch
-        command = "git clone --depth=1 --branch '{}' '{}' '{}'".format(
-            branch, url, resource_filepath
-        )
-    else:
-        command = "git clone --depth=1 '{}' '{}'".format(url, resource_filepath)
+        command += ["--branch", branch]
+    command += [str(url), resource_filepath]
     if not isdir(resource_filepath):
         logger.info("Attempting to clone into %s ...", resource_filepath)
         try:
-            subprocess.call(command, shell=True)
-            logger.info("git command: %s", command)
-            logger.info("git clone succeeded.")
-        except subprocess.SubprocessError:
-            logger.info("git command: %s", command)
-            logger.info("git clone failed!")
+            run_git_clone(
+                command,
+                resource_filepath,
+                deadline_from_now(settings.GIT_CLONE_RETRY_CEILING_SECONDS),
+            )
+        except CommandFailed as e:
+            logger.error("git clone failed! %s", e.detail)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="git clone failed",

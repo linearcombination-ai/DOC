@@ -692,6 +692,7 @@ def convert_html_to_pdf(
         command,
         check=True,
         text=True,
+        timeout=settings.CONVERTER_TIMEOUT_SECONDS,
     )
     t1 = time.time()
     logger.info("Time for converting HTML to PDF: %s", t1 - t0)
@@ -716,7 +717,9 @@ def convert_html_to_epub(
     ]
     logger.info("Generate ePub command: %s", " ".join(command))
     t0 = time.time()
-    subprocess.run(command, check=True, text=True)
+    subprocess.run(
+        command, check=True, text=True, timeout=settings.CONVERTER_TIMEOUT_SECONDS
+    )
     t1 = time.time()
     logger.info("Time for converting HTML to ePub: %s", t1 - t0)
 
