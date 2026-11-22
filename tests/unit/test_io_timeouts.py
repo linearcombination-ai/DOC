@@ -8,7 +8,9 @@ git, docker or sleeping.
 import smtplib
 import subprocess
 import time
-from typing import Any
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Callable, Iterator, Mapping, Optional, Sequence
 
 import pytest
 import requests
@@ -17,58 +19,80 @@ from doc.domain import document_generator, email_utils, parsing, resource_lookup
 from doc.domain.model import SourceData
 from doc.utils import http_session, process_utils
 from fastapi import HTTPException
+from pydantic import HttpUrl
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-GOOD_PAYLOAD = {
-    "data": {
-        "git_repo": [
-            {
-                "repo_url": "https://example.com/org/en_ulb",
-                "content": {
-                    "resource_type": "ulb",
-                    "language": {
-                        "english_name": "English",
-                        "ietf_code": "en",
-                        "national_name": "English",
-                        "direction": "ltr",
-                    },
-                },
-            }
-        ]
+
+def repo_entry(url: str) -> dict[str, object]:
+    return {
+        "repo_url": url,
+        "content": {
+            "resource_type": "ulb",
+            "language": {
+                "english_name": "English",
+                "ietf_code": "en",
+                "national_name": "English",
+                "direction": "ltr",
+            },
+        },
     }
-}
-URL_ARGS = ("https://api.example.com/graphql", "ua", "xrw")
+
+
+def payload_with(*urls: str) -> dict[str, object]:
+    return {"data": {"git_repo": [repo_entry(url) for url in urls]}}
+
+
+GOOD_PAYLOAD = payload_with("https://example.com/org/en_ulb")
+API_URL = HttpUrl("https://api.example.com/graphql")
 
 
 class FakeResponse:
-    def __init__(self, status_code: int = 200, payload: Any = None) -> None:
+    def __init__(self, status_code: int = 200, payload: object = None) -> None:
         self.status_code = status_code
         self._payload = payload
 
-    def json(self) -> Any:
+    def json(self) -> object:
         if self._payload is None:
             raise ValueError("no json")
         return self._payload
 
 
 class FakePost:
-    """Scripted replacement for http_session.post."""
+    """Scripted replacement for http_session.post; records requested URLs."""
 
-    def __init__(self, *outcomes: Any) -> None:
+    def __init__(self, *outcomes: FakeResponse | Exception) -> None:
         self.outcomes = list(outcomes)
-        self.calls: list[tuple[tuple[Any, ...], dict[str, Any]]] = []
+        self.urls: list[str] = []
 
-    def __call__(self, *args: Any, **kwargs: Any) -> Any:
-        self.calls.append((args, kwargs))
+    def __call__(
+        self,
+        url: str,
+        *,
+        json: Mapping[str, object],
+        headers: Optional[Mapping[str, str]] = None,
+    ) -> FakeResponse:
+        self.urls.append(url)
         outcome = self.outcomes.pop(0) if len(self.outcomes) > 1 else self.outcomes[0]
         if isinstance(outcome, Exception):
             raise outcome
         return outcome
 
 
+def fetch_primary() -> SourceData:
+    result = resource_lookup.fetch_source_data(API_URL, "ua", "xrw")
+    assert result is not None
+    return result
+
+
+def fetch_non_primary() -> SourceData:
+    result = resource_lookup.fetch_non_primary_source_data(API_URL, "ua", "xrw")
+    assert result is not None
+    return result
+
+
 @pytest.fixture(autouse=True)
-def clean_caches() -> Any:
+def clean_caches() -> Iterator[None]:
     def clear() -> None:
         for cache in (
             resource_lookup.fetch_source_data_cache,
@@ -97,60 +121,47 @@ def clean_caches() -> Any:
     ],
 )
 def test_failed_or_empty_response_is_not_cached(
-    monkeypatch: pytest.MonkeyPatch, bad: Any
+    monkeypatch: pytest.MonkeyPatch, bad: FakeResponse | Exception
 ) -> None:
     fake = FakePost(bad, FakeResponse(200, GOOD_PAYLOAD))
     monkeypatch.setattr(http_session, "post", fake)
-    first = resource_lookup.fetch_source_data(*URL_ARGS)  # type: ignore[arg-type]
-    assert first is not None and first.git_repo == []
+    assert fetch_primary().git_repo == []
     # The API has recovered: the very next call must reach it, not a cache.
-    second = resource_lookup.fetch_source_data(*URL_ARGS)  # type: ignore[arg-type]
-    assert second is not None and len(second.git_repo) == 1
-    assert len(fake.calls) == 2
+    assert len(fetch_primary().git_repo) == 1
+    assert len(fake.urls) == 2
 
 
 def test_good_response_is_cached(monkeypatch: pytest.MonkeyPatch) -> None:
     fake = FakePost(FakeResponse(200, GOOD_PAYLOAD))
     monkeypatch.setattr(http_session, "post", fake)
-    resource_lookup.fetch_source_data(*URL_ARGS)  # type: ignore[arg-type]
-    resource_lookup.fetch_source_data(*URL_ARGS)  # type: ignore[arg-type]
-    assert len(fake.calls) == 1
+    fetch_primary()
+    fetch_primary()
+    assert len(fake.urls) == 1
 
 
 def test_stale_on_error_serves_last_good(monkeypatch: pytest.MonkeyPatch) -> None:
     fake = FakePost(FakeResponse(200, GOOD_PAYLOAD), requests.Timeout("slow"))
     monkeypatch.setattr(http_session, "post", fake)
-    good = resource_lookup.fetch_source_data(*URL_ARGS)  # type: ignore[arg-type]
-    assert good is not None and len(good.git_repo) == 1
+    good = fetch_primary()
+    assert len(good.git_repo) == 1
     resource_lookup.fetch_source_data_cache.clear()  # TTL expiry
-    stale = resource_lookup.fetch_source_data(*URL_ARGS)  # type: ignore[arg-type]
-    assert stale == good
-    assert len(fake.calls) == 2
+    assert fetch_primary() == good
+    assert len(fake.urls) == 2
 
 
 def test_non_primary_failure_not_cached_and_stale_on_error(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    payload = {
-        "data": {
-            "git_repo": [
-                {
-                    **GOOD_PAYLOAD["data"]["git_repo"][0],
-                    "repo_url": "https://example.com/WA-Catalog/bg_ulb",
-                }
-            ]
-        }
-    }
+    payload = payload_with("https://example.com/WA-Catalog/bg_ulb")
     fake = FakePost(
         FakeResponse(503), FakeResponse(200, payload), requests.ConnectionError("x")
     )
     monkeypatch.setattr(http_session, "post", fake)
-    fetch = resource_lookup.fetch_non_primary_source_data
-    assert fetch(*URL_ARGS).git_repo == []  # type: ignore[arg-type,union-attr]
-    good = fetch(*URL_ARGS)  # type: ignore[arg-type]
-    assert good is not None and len(good.git_repo) == 1
+    assert fetch_non_primary().git_repo == []
+    good = fetch_non_primary()
+    assert len(good.git_repo) == 1
     resource_lookup.fetch_non_primary_source_data_cache.clear()
-    assert fetch(*URL_ARGS) == good  # type: ignore[arg-type]
+    assert fetch_non_primary() == good
 
 
 def test_cached_decorators_have_locks() -> None:
@@ -168,12 +179,19 @@ def test_cached_decorators_have_locks() -> None:
 
 
 def test_http_post_passes_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
-    seen: dict[str, Any] = {}
+    seen: dict[str, object] = {}
     sentinel = requests.Response()
 
     class FakeSession:
-        def post(self, url: str, **kwargs: Any) -> requests.Response:
-            seen.update(kwargs)
+        def post(
+            self,
+            url: str,
+            *,
+            json: Mapping[str, object],
+            headers: Optional[Mapping[str, str]],
+            timeout: tuple[float, float],
+        ) -> requests.Response:
+            seen["timeout"] = timeout
             return sentinel
 
     monkeypatch.setattr(http_session, "get_session", lambda: FakeSession())
@@ -202,7 +220,7 @@ def test_parser_post_goes_through_timeout_session(
     fake = FakePost(FakeResponse(200, {"ok": 1}))
     monkeypatch.setattr(http_session, "post", fake)
     parsing.convert_usfm_chapter_to_html("c", "in", "out", api_url="http://p/x")
-    assert fake.calls[0][0] == ("http://p/x",)
+    assert fake.urls == ["http://p/x"]
 
 
 # ---- run_with_retry / git clone ----------------------------------------
@@ -212,17 +230,51 @@ def completed(rc: int, stderr: str = "") -> subprocess.CompletedProcess[str]:
     return subprocess.CompletedProcess([], rc, "", stderr)
 
 
-class FakeRun:
-    def __init__(self, *outcomes: Any) -> None:
-        self.outcomes = list(outcomes)
-        self.calls: list[dict[str, Any]] = []
+@dataclass
+class RecordedCall:
+    command: list[str]
+    timeout: Optional[float]
+    env: Optional[Mapping[str, str]] = None
 
-    def __call__(self, command: list[str], **kwargs: Any) -> Any:
-        self.calls.append({"command": command, **kwargs})
+
+class FakeRun:
+    """Scripted replacement for subprocess.run as used by run_with_retry."""
+
+    def __init__(self, *outcomes: subprocess.CompletedProcess[str] | Exception) -> None:
+        self.outcomes = list(outcomes)
+        self.calls: list[RecordedCall] = []
+
+    def __call__(
+        self,
+        command: list[str],
+        *,
+        capture_output: bool,
+        text: bool,
+        timeout: Optional[float],
+        env: Optional[Mapping[str, str]],
+    ) -> subprocess.CompletedProcess[str]:
+        self.calls.append(RecordedCall(command, timeout, env))
         outcome = self.outcomes.pop(0) if len(self.outcomes) > 1 else self.outcomes[0]
         if isinstance(outcome, Exception):
             raise outcome
         return outcome
+
+
+class SubprocessRecorder:
+    """Replacement for subprocess.run that only records calls."""
+
+    def __init__(self) -> None:
+        self.calls: list[RecordedCall] = []
+
+    def __call__(
+        self,
+        command: list[str],
+        *,
+        check: bool = False,
+        text: bool = False,
+        timeout: Optional[float] = None,
+    ) -> None:
+        self.calls.append(RecordedCall(command, timeout))
 
 
 class Clock:
@@ -240,12 +292,19 @@ class Clock:
         self.now += seconds
 
 
-def retry_kwargs(clock: Clock, run: FakeRun, deadline: float = 100.0) -> dict[str, Any]:
-    return dict(
+def call_retry(
+    clock: Clock,
+    run: FakeRun,
+    deadline: float = 100.0,
+    cleanup: Optional[Callable[[], None]] = None,
+) -> subprocess.CompletedProcess[str]:
+    return process_utils.run_with_retry(
+        ["git", "clone"],
         per_attempt_timeout=30,
         deadline=deadline,
         wait_seconds=2.0,
         is_transient=process_utils.is_transient_git_failure,
+        cleanup=cleanup,
         run=run,
         sleep=clock.sleep,
         monotonic=clock.monotonic,
@@ -256,7 +315,7 @@ def test_clone_nonzero_exit_is_not_swallowed_permanent() -> None:
     clock = Clock()
     run = FakeRun(completed(128, "fatal: repository 'x' not found"))
     with pytest.raises(process_utils.CommandFailed) as exc:
-        process_utils.run_with_retry(["git", "clone"], **retry_kwargs(clock, run))
+        call_retry(clock, run)
     assert not exc.value.transient
     assert len(run.calls) == 1  # permanent: no pointless waiting
     assert clock.slept == []
@@ -301,11 +360,7 @@ def test_clone_transient_failure_is_retried_until_success() -> None:
         subprocess.TimeoutExpired("git", 30),
         completed(0),
     )
-    result = process_utils.run_with_retry(
-        ["git", "clone"],
-        cleanup=lambda: cleaned.append(1),
-        **retry_kwargs(clock, run),
-    )
+    result = call_retry(clock, run, cleanup=lambda: cleaned.append(1))
     assert result.returncode == 0
     assert len(run.calls) == 3
     assert len(clock.slept) == 2 and len(cleaned) == 2
@@ -315,9 +370,7 @@ def test_clone_transient_failure_gives_up_at_deadline() -> None:
     clock = Clock()
     run = FakeRun(completed(128, "early EOF"))
     with pytest.raises(process_utils.CommandFailed) as exc:
-        process_utils.run_with_retry(
-            ["git", "clone"], **retry_kwargs(clock, run, deadline=10.0)
-        )
+        call_retry(clock, run, deadline=10.0)
     assert exc.value.transient
     assert clock.now <= 10.0 + 1e-9  # bounded
 
@@ -325,11 +378,11 @@ def test_clone_transient_failure_gives_up_at_deadline() -> None:
 def test_every_attempt_has_timeout_capped_by_deadline() -> None:
     clock = Clock()
     run = FakeRun(subprocess.TimeoutExpired("git", 1), completed(0))
-    process_utils.run_with_retry(
-        ["git", "clone"], **retry_kwargs(clock, run, deadline=35.0)
+    call_retry(clock, run, deadline=35.0)
+    assert run.calls[0].timeout == 30
+    assert all(
+        call.timeout is not None and 0 < call.timeout <= 30 for call in run.calls
     )
-    assert run.calls[0]["timeout"] == 30
-    assert all(0 < call["timeout"] <= 30 for call in run.calls)
 
 
 def test_curl_4xx_is_permanent_but_5xx_transient() -> None:
@@ -340,50 +393,75 @@ def test_curl_4xx_is_permanent_but_5xx_transient() -> None:
     assert f(completed(28, "Operation timed out"))
 
 
+def no_sleep(seconds: float) -> None:
+    return None
+
+
 def patch_process(
-    monkeypatch: pytest.MonkeyPatch, run: FakeRun, sleep: Any = lambda s: None
+    monkeypatch: pytest.MonkeyPatch,
+    run: FakeRun,
+    sleep: Callable[[float], None] = no_sleep,
 ) -> None:
     real = process_utils.run_with_retry
 
-    def with_fakes(command: Any, **kwargs: Any) -> Any:
-        kwargs.update(run=run, sleep=sleep)
-        return real(command, **kwargs)
+    def with_fakes(
+        command: Sequence[str],
+        *,
+        per_attempt_timeout: float,
+        deadline: float,
+        wait_seconds: float,
+        is_transient: Callable[[subprocess.CompletedProcess[str]], bool],
+        cleanup: Optional[Callable[[], None]] = None,
+        env: Optional[Mapping[str, str]] = None,
+    ) -> subprocess.CompletedProcess[str]:
+        return real(
+            command,
+            per_attempt_timeout=per_attempt_timeout,
+            deadline=deadline,
+            wait_seconds=wait_seconds,
+            is_transient=is_transient,
+            cleanup=cleanup,
+            env=env,
+            run=run,
+            sleep=sleep,
+        )
 
     monkeypatch.setattr(resource_lookup, "run_with_retry", with_fakes)
 
 
 def test_clone_git_repo_raises_on_failure_and_uses_arg_list(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     run = FakeRun(completed(128, "fatal: repository not found"))
     patch_process(monkeypatch, run)
     dest = str(tmp_path / "repo")
     with pytest.raises(HTTPException):
         resource_lookup.clone_git_repo(
-            "https://example.com/o/r; touch /tmp/pwned",  # type: ignore[arg-type]
+            HttpUrl("https://example.com/o/r"),
             dest,
             branch="main",
         )
-    command = run.calls[0]["command"]
-    assert isinstance(command, list)
+    command = run.calls[0].command
     assert command[:3] == ["git", "clone", "--depth=1"]
     assert "--branch" in command and command[-1] == dest
-    assert "shell" not in run.calls[0]
-    assert run.calls[0]["timeout"] <= settings.GIT_CLONE_TIMEOUT_SECONDS
+    timeout = run.calls[0].timeout
+    assert timeout is not None and timeout <= settings.GIT_CLONE_TIMEOUT_SECONDS
 
 
-def test_clone_git_repo_success(monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> None:
+def test_clone_git_repo_success(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     run = FakeRun(completed(0))
     patch_process(monkeypatch, run)
     resource_lookup.clone_git_repo(
-        "https://example.com/o/r",  # type: ignore[arg-type]
+        HttpUrl("https://example.com/o/r"),
         str(tmp_path / "repo"),
     )
     assert len(run.calls) == 1
 
 
 def test_batch_clone_failure_is_raised_when_transient_exhausted(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     run = FakeRun(completed(128, "Could not resolve host"))
     # Tiny real ceiling and real (short) waits: retries happen, then it gives up.
@@ -393,38 +471,36 @@ def test_batch_clone_failure_is_raised_when_transient_exhausted(
     )
     with pytest.raises(HTTPException):
         resource_lookup.batch_clone_git_repos(
-            [("https://example.com/o/r", str(tmp_path / "r"))],  # type: ignore[list-item]
+            [(HttpUrl("https://example.com/o/r"), str(tmp_path / "r"))],
             asset_caching_enabled=False,
         )
     assert len(run.calls) > 1  # it waited and retried before giving up
 
 
 def test_batch_clone_permanent_failure_does_not_block_other_repos(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     run = FakeRun(completed(128, "repository not found"), completed(0))
     patch_process(monkeypatch, run)
     resource_lookup.batch_clone_git_repos(
         [
-            ("https://example.com/o/missing", str(tmp_path / "a")),  # type: ignore[list-item]
-            ("https://example.com/o/ok", str(tmp_path / "b")),  # type: ignore[list-item]
+            (HttpUrl("https://example.com/o/missing"), str(tmp_path / "a")),
+            (HttpUrl("https://example.com/o/ok"), str(tmp_path / "b")),
         ],
         asset_caching_enabled=False,
     )
     assert len(run.calls) == 2
-    assert all("||" not in " ".join(c["command"]) for c in run.calls)
+    assert all("||" not in " ".join(c.command) for c in run.calls)
 
 
 # ---- timeouts on remaining subprocess/SMTP calls -----------------------
 
 
 def test_converters_pass_timeout(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    calls: list[dict[str, Any]] = []
-    monkeypatch.setattr(
-        subprocess, "run", lambda cmd, **kw: calls.append({"cmd": cmd, **kw})
-    )
+    recorder = SubprocessRecorder()
+    monkeypatch.setattr(subprocess, "run", recorder)
     html = tmp_path / "a.html"
     html.write_text("<html></html>")
     document_generator.convert_html_to_epub(str(html), str(tmp_path / "a.epub"), "key")
@@ -432,17 +508,16 @@ def test_converters_pass_timeout(
         document_generator.convert_html_to_pdf(
             str(html), str(tmp_path / "a.pdf"), "key", use_prince
         )
-    assert len(calls) == 3
-    assert all(c["timeout"] == settings.CONVERTER_TIMEOUT_SECONDS for c in calls)
-    assert all(isinstance(c["cmd"], list) for c in calls)
+    assert len(recorder.calls) == 3
+    assert all(c.timeout == settings.CONVERTER_TIMEOUT_SECONDS for c in recorder.calls)
 
 
 def test_smtp_gets_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
-    seen: dict[str, Any] = {}
+    seen: dict[str, object] = {}
 
     class FakeSMTP:
-        def __init__(self, host: str, port: int, **kwargs: Any) -> None:
-            seen.update(kwargs)
+        def __init__(self, host: str, port: int, *, timeout: float) -> None:
+            seen["timeout"] = timeout
             raise OSError("stop here")  # email errors are swallowed by design
 
     monkeypatch.setattr(smtplib, "SMTP", FakeSMTP)
@@ -451,26 +526,26 @@ def test_smtp_gets_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_batch_download_uses_arg_lists_and_timeouts(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     run = FakeRun(completed(0))
     patch_process(monkeypatch, run)
-    unzip_calls: list[dict[str, Any]] = []
-    monkeypatch.setattr(
-        subprocess, "run", lambda cmd, **kw: unzip_calls.append({"cmd": cmd, **kw})
-    )
+    unzip = SubprocessRecorder()
+    monkeypatch.setattr(subprocess, "run", unzip)
     resource_lookup.batch_download_repos(
-        [("https://example.com/o/r", str(tmp_path / "r"))],  # type: ignore[list-item]
+        [(HttpUrl("https://example.com/o/r"), str(tmp_path / "r"))],
         resource_assets_dir=str(tmp_path),
     )
     curl = run.calls[0]
-    assert curl["command"][0] == "curl" and "--fail" in curl["command"]
-    assert curl["timeout"] <= settings.DOWNLOAD_TIMEOUT_SECONDS
-    assert unzip_calls[0]["timeout"] <= settings.DOWNLOAD_TIMEOUT_SECONDS
+    assert curl.command[0] == "curl" and "--fail" in curl.command
+    assert curl.timeout is not None
+    assert curl.timeout <= settings.DOWNLOAD_TIMEOUT_SECONDS
+    assert unzip.calls[0].timeout is not None
+    assert unzip.calls[0].timeout <= settings.DOWNLOAD_TIMEOUT_SECONDS
 
 
 def test_batch_download_total_is_bounded_by_batch_deadline(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     run = FakeRun(completed(0))
     patch_process(monkeypatch, run)
@@ -479,23 +554,22 @@ def test_batch_download_total_is_bounded_by_batch_deadline(
         "settings",
         settings.model_copy(update={"DOWNLOAD_BATCH_CEILING_SECONDS": 5}),
     )
-    unzip_calls: list[dict[str, Any]] = []
-    monkeypatch.setattr(
-        subprocess, "run", lambda cmd, **kw: unzip_calls.append({"cmd": cmd, **kw})
-    )
+    unzip = SubprocessRecorder()
+    monkeypatch.setattr(subprocess, "run", unzip)
     resource_lookup.batch_download_repos(
         [
-            ("https://example.com/o/a", str(tmp_path / "a")),  # type: ignore[list-item]
-            ("https://example.com/o/b", str(tmp_path / "b")),  # type: ignore[list-item]
+            (HttpUrl("https://example.com/o/a"), str(tmp_path / "a")),
+            (HttpUrl("https://example.com/o/b"), str(tmp_path / "b")),
         ],
         resource_assets_dir=str(tmp_path),
     )
-    assert all(c["timeout"] <= 5 for c in run.calls)
-    assert all(c["timeout"] <= 5 for c in unzip_calls)
+    assert run.calls and unzip.calls
+    for call in run.calls + unzip.calls:
+        assert call.timeout is not None and call.timeout <= 5
 
 
 def test_batch_download_exhausted_batch_deadline_fails(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     run = FakeRun(completed(0))
     patch_process(monkeypatch, run)
@@ -506,7 +580,7 @@ def test_batch_download_exhausted_batch_deadline_fails(
     )
     with pytest.raises(HTTPException):
         resource_lookup.batch_download_repos(
-            [("https://example.com/o/a", str(tmp_path / "a"))],  # type: ignore[list-item]
+            [(HttpUrl("https://example.com/o/a"), str(tmp_path / "a"))],
             resource_assets_dir=str(tmp_path),
         )
 

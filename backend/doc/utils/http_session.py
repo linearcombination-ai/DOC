@@ -9,7 +9,7 @@ so retrying POSTs is safe.
 """
 
 import threading
-from typing import Any, Optional
+from typing import Mapping, Optional
 
 import requests
 from doc.config import settings
@@ -57,7 +57,17 @@ def get_session() -> requests.Session:
     return _session
 
 
-def post(url: str, **kwargs: Any) -> requests.Response:
+def post(
+    url: str,
+    *,
+    json: Mapping[str, object],
+    headers: Optional[Mapping[str, str]] = None,
+    timeout: Optional[tuple[float, float]] = None,
+) -> requests.Response:
     """POST via the shared session, always with a (connect, read) timeout."""
-    kwargs.setdefault("timeout", request_timeout())
-    return get_session().post(url, **kwargs)
+    return get_session().post(
+        url,
+        json=json,
+        headers=headers,
+        timeout=request_timeout() if timeout is None else timeout,
+    )

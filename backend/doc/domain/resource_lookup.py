@@ -13,7 +13,7 @@ from datetime import datetime, timedelta
 from os import scandir, stat
 from os.path import exists, isdir, join
 from pathlib import Path
-from typing import Any, Callable, Mapping, Optional, Sequence, cast
+from typing import Callable, Hashable, Mapping, Optional, Sequence
 
 import requests
 from cachetools import TTLCache, cached
@@ -65,18 +65,18 @@ class DataApiError(Exception):
     """The data API did not give us a usable, non-empty answer."""
 
 
-fetch_source_data_cache: TTLCache[Any, SourceData] = TTLCache(
+fetch_source_data_cache: TTLCache[Hashable, SourceData] = TTLCache(
     maxsize=1, ttl=settings.DATA_API_CACHE_TTL_SECONDS
 )
 fetch_source_data_lock = threading.Lock()
 # Most recent successful value per argument set, served when a refresh fails.
-fetch_source_data_last_good: dict[Any, SourceData] = {}
+fetch_source_data_last_good: dict[Hashable, SourceData] = {}
 
-fetch_non_primary_source_data_cache: TTLCache[Any, SourceData] = TTLCache(
+fetch_non_primary_source_data_cache: TTLCache[Hashable, SourceData] = TTLCache(
     maxsize=1, ttl=settings.DATA_API_CACHE_TTL_SECONDS
 )
 fetch_non_primary_source_data_lock = threading.Lock()
-fetch_non_primary_source_data_last_good: dict[Any, SourceData] = {}
+fetch_non_primary_source_data_last_good: dict[Hashable, SourceData] = {}
 
 
 def query_data_api(
@@ -84,7 +84,7 @@ def query_data_api(
     data_api_url: HttpUrl,
     user_agent_str: str,
     x_requested_with_value: str,
-) -> list[dict[str, Any]]:
+) -> list[Mapping[str, object]]:
     """
     POST graphql_query to the data API (with timeout and retry on
     transient errors) and return the git_repo entries. Raises
@@ -101,19 +101,45 @@ def query_data_api(
             raise DataApiError(
                 "Data API returned HTTP status {}".format(response.status_code)
             )
-        data_payload = response.json().get("data") or {}
+        # Third party JSON is untyped: bind it to object and narrow it.
+        body: object = response.json()
     except requests.RequestException as e:
         raise DataApiError("Request to data API failed: {}".format(e)) from e
     except ValueError as e:  # response body is not JSON
         raise DataApiError("Data API returned invalid JSON: {}".format(e)) from e
-    if "git_repo" not in data_payload:
+    if not isinstance(body, Mapping):
         raise DataApiError("Invalid payload structure, no data.")
-    return cast(list[dict[str, Any]], data_payload["git_repo"])
+    data_payload: object = body.get("data")
+    if not isinstance(data_payload, Mapping) or "git_repo" not in data_payload:
+        raise DataApiError("Invalid payload structure, no data.")
+    git_repo: object = data_payload["git_repo"]
+    if not isinstance(git_repo, list):
+        raise DataApiError("Invalid payload structure, git_repo is not a list.")
+    repos: list[Mapping[str, object]] = []
+    for entry in git_repo:
+        if not isinstance(entry, Mapping):
+            raise DataApiError("Invalid payload structure, bad git_repo entry.")
+        repos.append(entry)
+    return repos
+
+
+def repo_has_content(repo: Mapping[str, object]) -> bool:
+    """True if the repo entry names a resource type and a language."""
+    content: object = repo.get("content")
+    if not isinstance(content, Mapping):
+        return False
+    return (
+        content.get("resource_type") is not None and content.get("language") is not None
+    )
+
+
+def repo_url_of(repo: Mapping[str, object]) -> str:
+    return str(repo.get("repo_url", ""))
 
 
 def source_data_or_stale(
     fetch_cached: Callable[..., SourceData],
-    last_good: dict[Any, SourceData],
+    last_good: dict[Hashable, SourceData],
     name: str,
     data_api_url: HttpUrl,
     user_agent_str: str,
@@ -169,14 +195,9 @@ query MyQuery {
     repos = query_data_api(
         graphql_query, data_api_url, user_agent_str, x_requested_with_value
     )
-    valid_repos = [
-        repo
-        for repo in repos
-        if repo.get("content", {}).get("resource_type") is not None
-        and repo.get("content", {}).get("language") is not None
-    ]
+    valid_repos = [repo for repo in repos if repo_has_content(repo)]
     # Sort for test stability - ensures consistent ordering
-    valid_repos.sort(key=lambda repo: repo["repo_url"])
+    valid_repos.sort(key=repo_url_of)
     try:
         result = SourceData.model_validate({"git_repo": valid_repos})
     except ValidationError as e:
@@ -248,12 +269,10 @@ query MyQuery {
     valid_repos = [
         repo
         for repo in repos
-        if repo.get("content", {}).get("resource_type") is not None
-        and repo.get("content", {}).get("language") is not None
-        and "WA-Catalog" in repo.get("repo_url", {})
+        if repo_has_content(repo) and "WA-Catalog" in repo_url_of(repo)
     ]
     # Sort for test stability - ensures consistent ordering
-    valid_repos.sort(key=lambda repo: repo["repo_url"])
+    valid_repos.sort(key=repo_url_of)
     try:
         result = SourceData.model_validate({"git_repo": valid_repos})
     except ValidationError as e:
