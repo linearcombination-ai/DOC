@@ -23,7 +23,9 @@ _PERMANENT_GIT_PATTERNS = (
     "could not read password",
 )
 _GIT_PERMANENT_RE = re.compile(
-    r"remote branch .* not found in upstream|returned error: 40[134]"
+    r"repository '[^']*' not found"
+    r"|remote branch .* not found in upstream"
+    r"|returned error: 40[134]"
 )
 # curl --fail reports "The requested URL returned error: 404". 4xx other
 # than 408 (request timeout) and 429 (too many requests) are permanent.
