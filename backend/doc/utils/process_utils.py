@@ -17,16 +17,13 @@ logger = settings.logger(__name__)
 # help: the repository or branch does not exist, or we are not allowed.
 _PERMANENT_GIT_PATTERNS = (
     "repository not found",
-    "not found",
     "does not exist",
     "authentication failed",
     "could not read username",
     "could not read password",
-    "access denied",
-    "permission denied",
-    "returned error: 401",
-    "returned error: 403",
-    "returned error: 404",
+)
+_GIT_PERMANENT_RE = re.compile(
+    r"remote branch .* not found in upstream|returned error: 40[134]"
 )
 # curl --fail reports "The requested URL returned error: 404". 4xx other
 # than 408 (request timeout) and 429 (too many requests) are permanent.
@@ -56,6 +53,8 @@ def is_transient_git_failure(
     result: subprocess.CompletedProcess[str],
 ) -> bool:
     stderr = (result.stderr or "").lower()
+    if _GIT_PERMANENT_RE.search(stderr):
+        return False
     return not any(pattern in stderr for pattern in _PERMANENT_GIT_PATTERNS)
 
 

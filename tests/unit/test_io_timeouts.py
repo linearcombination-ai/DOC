@@ -257,6 +257,37 @@ def test_clone_nonzero_exit_is_not_swallowed_permanent() -> None:
     assert clock.slept == []
 
 
+@pytest.mark.parametrize(
+    "stderr",
+    [
+        "fatal: repository 'x' not found",
+        "fatal: repository 'x' does not exist",
+        "fatal: Remote branch v1 not found in upstream origin",
+        "remote: Authentication failed for 'x'",
+        "fatal: could not read Username for 'https://x'",
+        "fatal: could not read Password for 'https://x'",
+        "fatal: unable to access 'x': The requested URL returned error: 403",
+        "fatal: unable to access 'x': The requested URL returned error: 404",
+    ],
+)
+def test_known_git_messages_are_permanent(stderr: str) -> None:
+    assert not process_utils.is_transient_git_failure(completed(128, stderr))
+
+
+@pytest.mark.parametrize(
+    "stderr",
+    [
+        "<html>502 Bad Gateway: upstream not found</html>",
+        "fatal: not found",
+        "fatal: Permission denied while proxying",
+        "fatal: unable to access 'x': The requested URL returned error: 503",
+        "",
+    ],
+)
+def test_other_git_stderr_is_transient(stderr: str) -> None:
+    assert process_utils.is_transient_git_failure(completed(128, stderr))
+
+
 def test_clone_transient_failure_is_retried_until_success() -> None:
     clock = Clock()
     cleaned: list[int] = []

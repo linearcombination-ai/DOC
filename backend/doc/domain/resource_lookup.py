@@ -561,9 +561,9 @@ def batch_download_repos(
             ]
         )
         zip_file_paths.append(zip_file_path)
-    deadline = deadline_from_now(settings.GIT_CLONE_RETRY_CEILING_SECONDS)
     try:
         for download_command in download_commands:
+            deadline = deadline_from_now(settings.GIT_CLONE_RETRY_CEILING_SECONDS)
             logger.info("Downloading repo with command: %s", " ".join(download_command))
             run_with_retry(
                 download_command,
