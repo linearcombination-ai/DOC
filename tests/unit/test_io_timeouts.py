@@ -474,7 +474,11 @@ def test_batch_download_total_is_bounded_by_batch_deadline(
 ) -> None:
     run = FakeRun(completed(0))
     patch_process(monkeypatch, run)
-    monkeypatch.setattr(settings, "DOWNLOAD_BATCH_CEILING_SECONDS", 5)
+    monkeypatch.setattr(
+        resource_lookup,
+        "settings",
+        settings.model_copy(update={"DOWNLOAD_BATCH_CEILING_SECONDS": 5}),
+    )
     unzip_calls: list[dict[str, Any]] = []
     monkeypatch.setattr(
         subprocess, "run", lambda cmd, **kw: unzip_calls.append({"cmd": cmd, **kw})
@@ -495,7 +499,11 @@ def test_batch_download_exhausted_batch_deadline_fails(
 ) -> None:
     run = FakeRun(completed(0))
     patch_process(monkeypatch, run)
-    monkeypatch.setattr(settings, "DOWNLOAD_BATCH_CEILING_SECONDS", -1)
+    monkeypatch.setattr(
+        resource_lookup,
+        "settings",
+        settings.model_copy(update={"DOWNLOAD_BATCH_CEILING_SECONDS": -1}),
+    )
     with pytest.raises(HTTPException):
         resource_lookup.batch_download_repos(
             [("https://example.com/o/a", str(tmp_path / "a"))],  # type: ignore[list-item]
