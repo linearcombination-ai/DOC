@@ -5,6 +5,7 @@ clone failures that are not swallowed. Uses its own fakes; no network,
 git, docker or sleeping.
 """
 
+import smtplib
 import subprocess
 import time
 from typing import Any
@@ -16,6 +17,7 @@ from doc.domain import document_generator, email_utils, parsing, resource_lookup
 from doc.domain.model import SourceData
 from doc.utils import http_session, process_utils
 from fastapi import HTTPException
+from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 GOOD_PAYLOAD = {
@@ -133,7 +135,7 @@ def test_non_primary_failure_not_cached_and_stale_on_error(
         "data": {
             "git_repo": [
                 {
-                    **GOOD_PAYLOAD["data"]["git_repo"][0],  # type: ignore[dict-item]
+                    **GOOD_PAYLOAD["data"]["git_repo"][0],
                     "repo_url": "https://example.com/WA-Catalog/bg_ulb",
                 }
             ]
@@ -167,14 +169,15 @@ def test_cached_decorators_have_locks() -> None:
 
 def test_http_post_passes_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
     seen: dict[str, Any] = {}
+    sentinel = requests.Response()
 
     class FakeSession:
-        def post(self, url: str, **kwargs: Any) -> str:
+        def post(self, url: str, **kwargs: Any) -> requests.Response:
             seen.update(kwargs)
-            return "ok"
+            return sentinel
 
     monkeypatch.setattr(http_session, "get_session", lambda: FakeSession())
-    assert http_session.post("http://x", json={}) == "ok"
+    assert http_session.post("http://x", json={}) is sentinel
     assert seen["timeout"] == (
         settings.HTTP_CONNECT_TIMEOUT_SECONDS,
         settings.HTTP_READ_TIMEOUT_SECONDS,
@@ -183,7 +186,9 @@ def test_http_post_passes_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_session_retries_connect_errors_and_gateway_statuses() -> None:
     session = http_session._build_session()
-    retry = session.get_adapter("https://example.com").max_retries
+    adapter = session.get_adapter("https://example.com")
+    assert isinstance(adapter, HTTPAdapter)
+    retry = adapter.max_retries
     assert isinstance(retry, Retry)
     assert set(retry.status_forcelist) == {502, 503, 504}
     assert retry.connect == settings.HTTP_RETRY_TOTAL
@@ -440,7 +445,7 @@ def test_smtp_gets_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
             seen.update(kwargs)
             raise OSError("stop here")  # email errors are swallowed by design
 
-    monkeypatch.setattr(email_utils.smtplib, "SMTP", FakeSMTP)
+    monkeypatch.setattr(smtplib, "SMTP", FakeSMTP)
     email_utils.send_email_with_attachment("a@example.com", [], "key")
     assert seen["timeout"] == settings.SMTP_TIMEOUT_SECONDS
 
