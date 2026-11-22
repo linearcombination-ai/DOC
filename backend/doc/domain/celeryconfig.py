@@ -1,5 +1,4 @@
 import os
-from typing import Any
 
 
 def _int_env(name: str, default: int) -> int:
@@ -74,7 +73,7 @@ worker_cancel_long_running_tasks_on_connection_loss = False
 
 # Be patient when publishing a task during a broker blip (roughly 20 s in total
 # with the defaults) rather than failing the user's request after under a second.
-task_publish_retry_policy: dict[str, Any] = {
+task_publish_retry_policy: dict[str, object] = {
     "max_retries": _int_env("CELERY_PUBLISH_MAX_RETRIES", 10),
     "interval_start": _float_env("CELERY_PUBLISH_INTERVAL_START", 0.2),
     "interval_step": _float_env("CELERY_PUBLISH_INTERVAL_STEP", 0.5),
@@ -86,7 +85,7 @@ result_backend_always_retry = True
 result_backend_max_retries = _int_env("CELERY_RESULT_BACKEND_MAX_RETRIES", 10)
 
 # Redis connection health for both the broker transport and the result backend.
-broker_transport_options: dict[str, Any] = {
+broker_transport_options: dict[str, object] = {
     "socket_keepalive": True,
     "retry_on_timeout": True,
 }

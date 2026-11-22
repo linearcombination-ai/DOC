@@ -6,7 +6,7 @@ import importlib
 import os
 from pathlib import Path
 from types import ModuleType
-from typing import Any, Iterator
+from typing import Iterator
 
 import pytest
 from celery.exceptions import SoftTimeLimitExceeded
@@ -93,7 +93,7 @@ def test_connection_self_healing_settings(clean_env: pytest.MonkeyPatch) -> None
 
 
 def test_publish_retry_policy_is_patient(clean_env: pytest.MonkeyPatch) -> None:
-    policy: dict[str, Any] = reload_config().task_publish_retry_policy
+    policy: dict[str, object] = reload_config().task_publish_retry_policy
     assert policy == {
         "max_retries": 10,
         "interval_start": 0.2,
@@ -101,7 +101,8 @@ def test_publish_retry_policy_is_patient(clean_env: pytest.MonkeyPatch) -> None:
         "interval_max": 3.0,
     }
     # Celery's default was max_retries=3 with intervals under 1 second.
-    assert policy["max_retries"] > 3
+    max_retries = policy["max_retries"]
+    assert isinstance(max_retries, int) and max_retries > 3
 
 
 def test_environment_overrides(clean_env: pytest.MonkeyPatch) -> None:
