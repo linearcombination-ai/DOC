@@ -133,7 +133,7 @@ ENV PYTHONPATH=/app/backend:/app/tests
 RUN mypy --strict --install-types --non-interactive backend/doc/**/*.py
 RUN mypy --strict --install-types --non-interactive backend/stet/**/*.py
 RUN mypy --strict --install-types --non-interactive backend/passages/**/*.py
-RUN mypy --strict --install-types --non-interactive tests/**/*.py
+RUN mypy --strict --install-types --non-interactive tests
 
 # Change ownership of app specific directories to the non-root user
 RUN chown -R appuser:appgroup /app /home/appuser/calibre-bin

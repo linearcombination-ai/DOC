@@ -644,51 +644,6 @@ def test_fr_ulb_rev_fr_tn_rev_fr_tq_rev_fr_tw_rev_fr_f10_rev_by_book_1c_docx() -
 
 
 @pytest.mark.docx
-def test_fr_ulb_rev_fr_tn_rev_fr_tq_rev_fr_tw_rev_fr_f10_rev_by_book_1c_docx() -> None:
-    with TestClient(app=app, base_url=settings.api_test_url()) as client:
-        response = client.post(
-            "/documents_docx",
-            json={
-                "email_address": settings.TO_EMAIL_ADDRESS,
-                "assembly_strategy_kind": model.AssemblyStrategyEnum.INTERLEAVE_BY_BOOK,
-                "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
-                "layout_for_print": False,
-                "generate_pdf": False,
-                "generate_epub": False,
-                "generate_docx": True,
-                "resource_requests": [
-                    {
-                        "lang_code": "fr",
-                        "resource_type": "ulb",
-                        "book_code": "rev",
-                    },
-                    {
-                        "lang_code": "fr",
-                        "resource_type": "tn",
-                        "book_code": "rev",
-                    },
-                    {
-                        "lang_code": "fr",
-                        "resource_type": "tq",
-                        "book_code": "rev",
-                    },
-                    {
-                        "lang_code": "fr",
-                        "resource_type": "tw",
-                        "book_code": "rev",
-                    },
-                    {
-                        "lang_code": "fr",
-                        "resource_type": "f10",
-                        "book_code": "rev",
-                    },
-                ],
-            },
-        )
-        check_result(response, suffix="docx")
-
-
-@pytest.mark.docx
 def test_fr_ulb_rev_fr_tq_rev_fr_tw_rev_fr_f10_rev_by_book_1c_docx() -> None:
     with TestClient(app=app, base_url=settings.api_test_url()) as client:
         response = client.post(
