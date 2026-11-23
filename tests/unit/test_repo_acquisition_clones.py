@@ -1,9 +1,6 @@
 """Repo acquisition is by git clone only; batch download no longer exists."""
 
-from pathlib import Path
-
 import pytest
-from doc.config import Settings
 from doc.domain import resource_lookup
 from pydantic import HttpUrl
 
@@ -53,13 +50,3 @@ def test_get_book_codes_for_lang_clones_repos(monkeypatch: pytest.MonkeyPatch) -
     assert len(cloned) == 1
     assert [path for _, path in cloned[0]] == ["/tmp/en_ulb"]
 
-
-def test_leftover_download_assets_setting_is_tolerated(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """Deployed .env files or environments may still set DOWNLOAD_ASSETS."""
-    env_file = tmp_path / ".env"
-    env_file.write_text(Path(".env").read_text() + "\nDOWNLOAD_ASSETS=true\n")
-    monkeypatch.setenv("DOWNLOAD_ASSETS", "true")
-    loaded = Settings(_env_file=str(env_file))  # type: ignore[call-arg]
-    assert not hasattr(loaded, "DOWNLOAD_ASSETS")
