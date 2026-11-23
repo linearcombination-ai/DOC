@@ -33,7 +33,6 @@ from doc.domain.model import (
     SourceData,
 )
 from doc.utils.file_utils import (
-    delete_tree,
     file_needs_update,
 )
 from doc.utils.list_utils import unique_tuples, unique_book_codes
@@ -372,7 +371,6 @@ def resource_types(
     lang_code: str,
     book_codes_str: str,
     book_names: Mapping[str, str] = BOOK_NAMES,
-    download_assets: bool = settings.DOWNLOAD_ASSETS,
 ) -> Sequence[tuple[str, str]]:
     """
     Fetches and processes available resource types for the given language and book codes.
@@ -404,71 +402,12 @@ def resource_types(
             for url, path, resource_type_ in repo_clone_list
             if "rg" != resource_type_
         ]
-        if download_assets:
-            batch_download_repos(repos_to_clone_)
-        else:
-            batch_clone_git_repos(repos_to_clone_)
+        batch_clone_git_repos(repos_to_clone_)
         resource_types_ = get_resource_types(repo_clone_list, book_codes)
     except Exception:
         logger.exception("Failed due to the following exception.")
     unique_values = unique_tuples(resource_types_)
     return sorted(unique_values, key=lambda value: value[1])
-
-
-# We found that there are fewer downloads available than clonable repos,
-# so we don't currently have the system configured to use this.
-def batch_download_repos(
-    repos: list[tuple[HttpUrl, str]],
-    base_url: HttpUrl = HttpUrl("https://content.bibletranslationtools.org/"),
-    base_url_replacement: HttpUrl = HttpUrl(
-        "https://content.bibletranslationtools.org/api/v1/repos/"
-    ),
-    resource_assets_dir: str = settings.RESOURCE_ASSETS_DIR,
-    user_agent_str: str = settings.USER_AGENT_STR,
-    x_requested_with_value: str = settings.X_REQUESTED_WITH_VALUE,
-) -> None:
-    """Batch download repos and then batch unzip repos."""
-    download_commands = []
-    zip_file_paths = []
-    for url, resource_filepath in repos:
-        zip_file_path = Path(f"{resource_filepath}.zip")
-        if isdir(resource_filepath):
-            # Instead of checking the directory which was created from
-            # a zip with timestamps current when the zip file was created (which
-            # would likely be quite old), we instead check the zip file itself.
-            if file_needs_update(zip_file_path):
-                logger.info(
-                    f"Removing stale, incomplete, or corrupt repository: {resource_filepath} and zip file: {zip_file_path}"
-                )
-                if zip_file_path.is_file():
-                    zip_file_path.unlink()
-                delete_tree(resource_filepath)
-            else:
-                logger.info(f"Skipping download: {resource_filepath} already exists.")
-                continue
-        zip_url_base = re.sub(str(base_url), str(base_url_replacement), str(url))
-        zip_url = f"{zip_url_base}/archive/master.zip"
-        download_commands.append(
-            f"curl -A {user_agent_str} -H 'X-Requested-With: {x_requested_with_value}' -X 'GET' {zip_url} -H 'accept: application/json' --output {zip_file_path} --parallel"
-        )
-        zip_file_paths.append(zip_file_path)
-    download_command = " && ".join(download_commands)
-    logger.info(f"Downloading repos with command: {download_command}")
-    try:
-        subprocess.check_call(download_command, shell=True)
-        unzip_commands = [
-            f"unzip -q -o {zip_file_path} -d {resource_assets_dir}"
-            for zip_file_path in zip_file_paths
-        ]
-        unzip_command = " && ".join(unzip_commands)
-        logger.info(f"Unzipping downloaded files with command: {unzip_command}")
-        subprocess.check_call(unzip_command, shell=True)
-    except subprocess.CalledProcessError:
-        logger.error("Batch download or unzip failed!")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Download of repo master.zip failed",
-        )
 
 
 # @worker.app.task
@@ -789,7 +728,6 @@ def add_data_not_supplied_by_data_api(repos_info: list[RepoEntry]) -> list[RepoE
 def get_book_codes_for_lang(
     lang_code: str,
     usfm_only: bool = False,
-    download_assets: bool = settings.DOWNLOAD_ASSETS,
 ) -> Sequence[tuple[str, str]]:
     data = fetch_source_data()
     if data is None:
@@ -805,10 +743,7 @@ def get_book_codes_for_lang(
             for url, path, resource_type in repo_clone_list
             if "rg" != resource_type
         ]
-        if download_assets:
-            batch_download_repos(repos_to_clone_)
-        else:
-            batch_clone_git_repos(repos_to_clone_)
+        batch_clone_git_repos(repos_to_clone_)
         book_codes_and_names = get_book_codes_for_lang_(
             repo_clone_list,
             lang_code,

@@ -28,8 +28,6 @@ class Settings(BaseSettings):
 
     LINK_RATHER_THAN_INCLUDE_TW_DEFINITIONS: bool = True
 
-    DOWNLOAD_ASSETS: bool = False  # If true then download assets, else clone assets
-
     LOCK_TIMEOUT_SECONDS: int
 
     USER_AGENT_STR: str
@@ -104,7 +102,9 @@ class Settings(BaseSettings):
     # Used by docker
     IMAGE_TAG: str
 
-    model_config = SettingsConfigDict(env_file=".env", case_sensitive=True, frozen=True)
+    model_config = SettingsConfigDict(
+        env_file=".env", case_sensitive=True, frozen=True, extra="ignore"
+    )
 
 
 # mypy with pydantic v2 doesn't understand that defaults will be
