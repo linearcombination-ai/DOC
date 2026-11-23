@@ -197,7 +197,7 @@ mypy: checkvenv
 	mypy --strict --install-types --non-interactive backend/doc/**/*.py
 	mypy --strict --install-types --non-interactive backend/stet/**/*.py
 	mypy --strict --install-types --non-interactive backend/passages/**/*.py
-	mypy --strict --install-types --non-interactive tests/**/*.py
+	mypy --strict --install-types --non-interactive tests
 
 .PHONY: mypyc
 mypyc:
