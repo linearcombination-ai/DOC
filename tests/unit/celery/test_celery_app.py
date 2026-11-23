@@ -24,7 +24,13 @@ EXPECTED_TASK_NAMES = {
 
 def test_all_tasks_are_registered_by_the_configured_imports() -> None:
     load_task_modules(worker.app)
-    registered = {name for name in worker.app.tasks if not name.startswith("celery.")}
+    # The celery and pytest-celery packages register their own tasks
+    # (pytest-celery is a dev dependency); only DOC's tasks are of interest.
+    registered = {
+        name
+        for name in worker.app.tasks
+        if not name.startswith(("celery.", "pytest_celery."))
+    }
     assert registered == EXPECTED_TASK_NAMES
 
 
