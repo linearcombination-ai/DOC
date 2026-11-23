@@ -17,6 +17,13 @@ AcceptedSuffixes = Union[
 ]
 
 
+# Upper bound on how long check_result waits for a task to reach a
+# terminal state. It is deliberately below the 20 minute CI step timeout
+# so that a lost task fails with a clear message instead of being killed
+# by the CI runner with none.
+DEFAULT_TASK_TIMEOUT_SECONDS: float = 15 * 60
+
+
 def check_result(
     response: httpx._models.Response,
     suffix: AcceptedSuffixes,
@@ -24,12 +31,24 @@ def check_result(
     status_url_fmt_str: str = "/task_status/{}",
     success_state: str = "SUCCESS",
     failure_state: str = "FAILURE",
+    revoked_state: str = "REVOKED",
+    timeout_seconds: float = DEFAULT_TASK_TIMEOUT_SECONDS,
 ) -> str:
+    """
+    Poll the task status endpoint until the Celery task reaches a
+    terminal state and return the finished document request key.
+
+    Raises an exception, rather than polling forever, if the task
+    fails, is revoked, or has not reached a terminal state within
+    timeout_seconds (for instance because the task was lost).
+    """
     logger.debug("response.json(): {}".format(response.json()))
     task_id = response.json()["task_id"]
     assert task_id
     logger.debug("task_id: %s", task_id)
     finished_document_request_key: str
+    deadline = time.monotonic() + timeout_seconds
+    last_state: str | None = None
     while True:
         with TestClient(app=app, base_url=settings.api_test_url()) as client:
             response2 = client.get(
@@ -37,6 +56,7 @@ def check_result(
             )
             json_data = response2.json()
             logger.debug("json task status data: {}".format(json_data))
+            last_state = json_data["state"]
             if json_data["state"] == success_state:
                 finished_document_request_key = json_data["result"]
                 finished_document_path = os.path.join(
@@ -56,7 +76,26 @@ def check_result(
                 raise Exception(
                     "Received celery FAILURE state therefore e2e test failed"
                 )
-            time.sleep(poll_duration)
+            elif json_data["state"] == revoked_state:
+                raise Exception(
+                    "Received celery REVOKED state for task {} therefore e2e test failed".format(
+                        task_id
+                    )
+                )
+        if time.monotonic() >= deadline:
+            raise TimeoutError(
+                "Celery task {} did not reach a terminal state ({}, {} or {}) "
+                "within {} seconds; last observed state: {}. The task was "
+                "probably lost (is a worker running and consuming the queue?)".format(
+                    task_id,
+                    success_state,
+                    failure_state,
+                    revoked_state,
+                    timeout_seconds,
+                    last_state,
+                )
+            )
+        time.sleep(poll_duration)
     return finished_document_request_key
 
 
