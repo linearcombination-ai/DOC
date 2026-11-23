@@ -8,7 +8,7 @@ from tests.shared.utils import (
 )
 from doc.entrypoints.app import app
 from doc.config import settings
-from docx import Document  # type: ignore
+from docx import Document
 
 
 @pytest.mark.stet

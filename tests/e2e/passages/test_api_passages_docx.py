@@ -4,7 +4,7 @@ from fastapi.testclient import TestClient
 from tests.shared.utils import check_result
 from doc.entrypoints.app import app
 from doc.config import settings
-from passages.domain.model import BibleReference
+from passages.reviewers_guide.model import BibleReference
 
 
 # passage_references JSON is not correct, skipping for now as this is
@@ -24,43 +24,55 @@ def test_en_passages_docx() -> None:
                             lang_code="en",
                             book_code="mat",
                             book_name="Matthew",
-                            chapter_num=2,
-                            verse_reference="1-12",
+                            start_chapter=2,
+                            start_chapter_verse_ref="1-12",
+                            end_chapter=None,
+                            end_chapter_verse_ref=None,
                         ).model_dump(),
                         BibleReference(
                             lang_code="en",
                             book_code="mat",
                             book_name="Matthew",
-                            chapter_num=3,
-                            verse_reference="13-17",
+                            start_chapter=3,
+                            start_chapter_verse_ref="13-17",
+                            end_chapter=None,
+                            end_chapter_verse_ref=None,
                         ).model_dump(),
                         BibleReference(
                             lang_code="en",
                             book_code="mat",
                             book_name="Matthew",
-                            chapter_num=4,
-                            verse_reference="1-11",
+                            start_chapter=4,
+                            start_chapter_verse_ref="1-11",
+                            end_chapter=None,
+                            end_chapter_verse_ref=None,
                         ).model_dump(),
                         BibleReference(
                             lang_code="en",
                             book_code="mat",
                             book_name="Matthew",
-                            chapter_num=26,
-                            verse_reference="3,7-10",
+                            start_chapter=26,
+                            start_chapter_verse_ref="3,7-10",
+                            end_chapter=None,
+                            end_chapter_verse_ref=None,
                         ).model_dump(),
                         BibleReference(
                             lang_code="en",
                             book_code="gen",
                             book_name="Genesis",
-                            chapter_num=1,
-                            verse_reference="1,3-4,12",
+                            start_chapter=1,
+                            start_chapter_verse_ref="1,3-4,12",
+                            end_chapter=None,
+                            end_chapter_verse_ref=None,
                         ).model_dump(),
                         BibleReference(
                             lang_code="en",
                             book_code="exo",
                             book_name="Exodus",
-                            chapter_num=3,
-                            verse_reference="5",
+                            start_chapter=3,
+                            start_chapter_verse_ref="5",
+                            end_chapter=None,
+                            end_chapter_verse_ref=None,
                         ).model_dump(),
                     ]
                 ),
