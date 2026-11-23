@@ -1,9 +1,8 @@
 import os
 import re
 import time
-from typing import Literal, Union
+from typing import Literal, Protocol, Union
 
-import httpx
 from doc.config import settings
 from doc.entrypoints.app import app
 from fastapi.testclient import TestClient
@@ -17,8 +16,18 @@ AcceptedSuffixes = Union[
 ]
 
 
+class JsonResponse(Protocol):
+    """
+    The subset of a test client response that these helpers use. Starlette
+    versions differ in whether TestClient returns an httpx.Response or an
+    httpx2.Response, so depend on the shape rather than either class.
+    """
+
+    def json(self) -> dict[str, str]: ...
+
+
 def check_result(
-    response: httpx._models.Response,
+    response: JsonResponse,
     suffix: AcceptedSuffixes,
     poll_duration: int = 4,
     status_url_fmt_str: str = "/task_status/{}",
@@ -82,7 +91,7 @@ def document_contains_substring(
 
 
 def check_finished_document_with_verses_success(
-    response: httpx._models.Response,
+    response: JsonResponse,
     suffix: AcceptedSuffixes = "html",
     poll_duration: int = 4,
 ) -> None:
@@ -104,7 +113,7 @@ def check_finished_document_with_verses_success(
 
 
 def check_finished_document_without_verses_success(
-    response: httpx._models.Response,
+    response: JsonResponse,
     suffix: AcceptedSuffixes = "html",
     poll_duration: int = 4,
 ) -> None:
@@ -126,7 +135,7 @@ def check_finished_document_without_verses_success(
 
 
 def check_finished_document_with_body_success(
-    response: httpx._models.Response,
+    response: JsonResponse,
     suffix: AcceptedSuffixes = "html",
     poll_duration: int = 4,
 ) -> None:
