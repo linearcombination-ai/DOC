@@ -18,6 +18,7 @@ Task.apply(args=(...)) instead.
 
 import dataclasses
 import json
+import os
 import smtplib
 import subprocess
 from collections.abc import Iterator, Mapping, Sequence
@@ -41,6 +42,7 @@ EAGER_SETTINGS: dict[str, Union[str, bool]] = {
     "task_eager_propagates": True,
 }
 
+CELERY_ENV_PREFIX = "CELERY_"
 USFM_PARSER_URL_MARKER = "/api/converter/convert"
 
 
@@ -49,13 +51,29 @@ def eager_celery_config(app: Celery) -> Iterator[Celery]:
     """
     Configure app for in-process eager execution with in-memory broker
     and result backend, and restore its previous configuration on exit.
+
+    Celery lets CELERY_* environment variables (CELERY_BROKER_URL and
+    CELERY_RESULT_BACKEND, which the compose files set) take precedence
+    over values set with conf.update, so they are removed from the
+    environment for the duration and restored afterwards. That keeps
+    the tests independent of where they run.
     """
     previous = {key: app.conf[key] for key in EAGER_SETTINGS}
+    masked_env = {
+        name: value
+        for name, value in os.environ.items()
+        if name.startswith(CELERY_ENV_PREFIX)
+    }
+    for name in masked_env:
+        del os.environ[name]
     app.conf.update(EAGER_SETTINGS)
     try:
         yield app
     finally:
         app.conf.update(previous)
+        for name in [n for n in os.environ if n.startswith(CELERY_ENV_PREFIX)]:
+            del os.environ[name]
+        os.environ.update(masked_env)
 
 
 def load_task_modules(app: Celery = worker.app) -> None:

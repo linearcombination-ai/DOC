@@ -1,5 +1,7 @@
 """Tests of the DOC Celery app itself: registration and the scaffold."""
 
+import os
+
 import pytest
 from celery import Celery
 from doc.domain import celeryconfig, worker
@@ -73,3 +75,18 @@ def test_eager_config_is_restored_after_an_error() -> None:
         with eager_celery_config(worker.app):
             raise RuntimeError("boom")
     assert {key: worker.app.conf[key] for key in EAGER_SETTINGS} == before
+
+
+def test_celery_environment_variables_do_not_mask_the_eager_settings(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # The compose files set these; Celery would otherwise prefer them
+    # over the in-memory settings applied with conf.update.
+    monkeypatch.setenv("CELERY_BROKER_URL", "redis://redis:6379/0")
+    monkeypatch.setenv("CELERY_RESULT_BACKEND", "redis://redis:6379/0")
+    with eager_celery_config(worker.app) as app:
+        assert app.conf.broker_url == "memory://"
+        assert app.conf.result_backend == "cache+memory://"
+        assert "CELERY_BROKER_URL" not in os.environ
+    assert os.environ["CELERY_BROKER_URL"] == "redis://redis:6379/0"
+    assert os.environ["CELERY_RESULT_BACKEND"] == "redis://redis:6379/0"
