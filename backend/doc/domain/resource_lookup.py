@@ -7,6 +7,7 @@ assets.
 import re
 import shutil
 import subprocess
+import time
 from datetime import datetime, timedelta
 from os import scandir, stat
 from os.path import exists, isdir, join
@@ -58,6 +59,35 @@ fetch_non_primary_source_data_cache: TTLCache[str, SourceData] = TTLCache(
 )
 
 
+DATA_API_POST_ATTEMPTS = 3
+DATA_API_POST_RETRY_DELAY_SECONDS = 1.0
+
+
+def _post_to_data_api(
+    url: str, query_json: dict[str, str], headers: dict[str, str]
+) -> requests.Response:
+    """
+    POST a query to the data API, retrying transient connection errors and
+    5xx responses. A failure here is otherwise cached as an empty result for
+    the cache TTL, which makes one network blip look like missing resources.
+    """
+    for attempt in range(1, DATA_API_POST_ATTEMPTS + 1):
+        try:
+            response = requests.post(url, json=query_json, headers=headers)
+            if response.status_code < 500 or attempt == DATA_API_POST_ATTEMPTS:
+                return response
+        except requests.RequestException:
+            if attempt == DATA_API_POST_ATTEMPTS:
+                raise
+        logger.warning(
+            "Data API request attempt %d/%d failed, retrying",
+            attempt,
+            DATA_API_POST_ATTEMPTS,
+        )
+        time.sleep(DATA_API_POST_RETRY_DELAY_SECONDS * attempt)
+    raise AssertionError("unreachable")
+
+
 @cached(fetch_source_data_cache)
 def fetch_source_data(
     data_api_url: HttpUrl = settings.DATA_API_URL,
@@ -94,7 +124,7 @@ query MyQuery {
     query_json = {"query": graphql_query}
     headers = {"User-Agent": user_agent_str, "X-Requested-With": x_requested_with_value}
     try:
-        response = requests.post(str(data_api_url), json=query_json, headers=headers)
+        response = _post_to_data_api(str(data_api_url), query_json, headers)
         if response.status_code == 200:
             data_payload = response.json().get("data", {})
             if "git_repo" in data_payload:
@@ -165,7 +195,7 @@ query MyQuery {
     query_json = {"query": graphql_query}
     headers = {"User-Agent": user_agent_str, "X-Requested-With": x_requested_with_value}
     try:
-        response = requests.post(str(data_api_url), json=query_json, headers=headers)
+        response = _post_to_data_api(str(data_api_url), query_json, headers)
         if response.status_code == 200:
             data_payload = response.json().get("data", {})
             if "git_repo" in data_payload:
