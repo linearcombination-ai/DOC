@@ -6,6 +6,7 @@ and eventually a final document produced.
 import re
 import subprocess
 import time
+from copy import deepcopy
 from datetime import datetime
 from os.path import exists
 from typing import Mapping, Optional, Sequence, TypeAlias, cast
@@ -54,8 +55,12 @@ from doc.domain.model import (
 )
 from doc.utils.docx_util import (
     add_internal_docx_links,
+    add_styles_from_default_template,
     generate_docx_toc,
+    has_internal_link_markers,
     override_and_clean_hyperlinks,
+    renumber_bookmarks_and_drawing_ids,
+    restart_first_list_numbering,
     style_superscripts,
 )
 from doc.utils.file_utils import (
@@ -76,6 +81,7 @@ from doc.utils.tw_utils import (
 from docx import Document
 from docx.document import Document as DocxDocument
 from docx.enum.section import WD_SECTION
+from docx.oxml.ns import qn
 from docx.shared import RGBColor
 from docxcompose.composer import Composer  # type: ignore
 from docxtpl import DocxTemplate  # type: ignore
@@ -723,12 +729,16 @@ def convert_html_to_epub(
 
 def compose_docx_document(
     document_parts: list[DocumentPart],
+    doc: DocxDocument | None = None,
 ) -> DocxDocument:
     """
     Convert a sequence of HTML parts into one DOCX Document,
-    performing preprocessing and optional separators.
+    performing preprocessing and optional separators. The parts are
+    added to doc if given (after whatever it already contains), otherwise
+    to a new python-docx default document.
     """
-    doc = Document()
+    doc = doc if doc is not None else Document()
+    first_paragraph = len(doc.paragraphs)
     parser = HtmlToDocx(
         tag_style_overrides={
             "h1": "Title",
@@ -748,7 +758,9 @@ def compose_docx_document(
             add_full_width_hr(doc)
         if part.add_page_break:
             add_page_break(doc)
-    style_superscripts(doc, lift_half_points=2, color=None)
+    style_superscripts(
+        doc, lift_half_points=2, color=None, first_paragraph=first_paragraph
+    )
     # html4doc defeats normal use of hyperlink inline styling in Word
     # via a customized (otherwise standard) Hyperlink style, but
     # this handles it by doing a pass over the document after the fact
@@ -757,10 +769,65 @@ def compose_docx_document(
     # PlainHyperlinkChar is a character style we created in
     # template.docx, but its actual style ID is PlainHyperlinkChar0
     # under the hood.
-    override_and_clean_hyperlinks(doc, "PlainHyperlinkChar0")
+    override_and_clean_hyperlinks(doc, "PlainHyperlinkChar0", first_paragraph)
     t1 = time.time()
     logger.info("Time for converting HTML to Docx: %.2f seconds", t1 - t0)
     return doc
+
+
+def styles_needed_for(document_parts: list[DocumentPart]) -> list[str]:
+    """
+    Names of the paragraph styles html4docx will apply for these parts:
+    headings by tag (h1 is overridden to Title in compose_docx_document)
+    and, per list nesting level actually used, List Bullet / List Number.
+    """
+    needed: set[str] = set()
+    for part in document_parts:
+        depth = 0
+        for match in re.finditer(r"<(/?)(h[1-9]|ul|ol)\b", part.content):
+            closing, tag = match.groups()
+            if tag[0] == "h":
+                if not closing:
+                    needed.add("Title" if tag == "h1" else f"Heading {tag[1]}")
+            elif closing:
+                depth = max(depth - 1, 0)
+            else:
+                depth += 1
+                base = "List Bullet" if tag == "ul" else "List Number"
+                level = min(depth, 3)
+                needed.add(base if level == 1 else f"{base} {level}")
+    return sorted(needed)
+
+
+def build_docx_in_template(
+    doc: DocxDocument, document_parts: list[DocumentPart]
+) -> None:
+    """
+    Add the parts to the already rendered template document, in place.
+    Output is meant to match what merging a separate body document with
+    docxcompose produced (see tests/unit/test_docx_build_in_template.py).
+    """
+    body = doc.element.body
+    first_element = len(body)
+    section_breaks_before = len(body.xpath("w:p/w:pPr/w:sectPr"))
+    final_columns = deepcopy(body.find(qn("w:sectPr")).find(qn("w:cols")))
+    compose_docx_document(document_parts, doc)
+    # The old merge gave the body's sections python-docx's default page size
+    # and margins (1.25 inch left/right), and only the template's own
+    # sections, including the last one the final part lands in, theirs.
+    # Keep that (delete this loop and the next lines for uniform template
+    # margins).
+    default_sect_pr = Document().sections[0]._sectPr
+    for sect_pr in body.xpath("w:p/w:pPr/w:sectPr")[section_breaks_before:]:
+        for tag in ("w:pgSz", "w:pgMar", "w:docGrid"):
+            old, default = sect_pr.find(qn(tag)), default_sect_pr.find(qn(tag))
+            if old is not None and default is not None:
+                sect_pr.replace(old, deepcopy(default))
+    # ... and the final part always ended up in the template's one-column section.
+    final_sect_pr = body.find(qn("w:sectPr"))
+    final_sect_pr.replace(final_sect_pr.find(qn("w:cols")), final_columns)
+    restart_first_list_numbering(doc, first_element)
+    renumber_bookmarks_and_drawing_ids(doc)
 
 
 def compose_document(
@@ -811,11 +878,21 @@ def convert_html_to_docx(
     # Start new section for different column layout
     new_section = doc.add_section(WD_SECTION.CONTINUOUS)
     new_section.start_type
-    master = Composer(doc)
-    doc2 = compose_docx_document(document_parts)
-    add_internal_docx_links(doc2)
-    master.append(doc2)
-    master.save(docx_filepath)
+    has_markers = has_internal_link_markers(part.content for part in document_parts)
+    if add_styles_from_default_template(doc.docx, styles_needed_for(document_parts)):
+        build_docx_in_template(doc.docx, document_parts)
+        if has_markers:
+            add_internal_docx_links(doc.docx)
+        doc.save(docx_filepath)
+    else:
+        # A style html4docx needs exists nowhere we can copy it from: fall
+        # back to merging a separate body document into the template.
+        master = Composer(doc)
+        doc2 = compose_docx_document(document_parts)
+        if has_markers:
+            add_internal_docx_links(doc2)
+        master.append(doc2)
+        master.save(docx_filepath)
     t1 = time.time()
     logger.info("Time for converting HTML to Docx: %s", t1 - t0)
 
