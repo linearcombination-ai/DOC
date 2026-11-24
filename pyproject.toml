@@ -15,7 +15,6 @@ dependencies = [
   "celery-types",
   "docxtpl",
   "fastapi[all]",
-  "filelock",
   "flower",
   "html-for-docx",
   "html2docx",
