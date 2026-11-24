@@ -43,7 +43,6 @@ from doc.utils.url_utils import (
     book_codes_and_names_from_manifest,
 )
 from fastapi import HTTPException, status
-from filelock import FileLock
 from pydantic import HttpUrl, ValidationError
 
 logger = settings.logger(__name__)
@@ -408,73 +407,6 @@ def resource_types(
         logger.exception("Failed due to the following exception.")
     unique_values = unique_tuples(resource_types_)
     return sorted(unique_values, key=lambda value: value[1])
-
-
-# @worker.app.task
-# def batch_clone_git_repos(
-#     repos: list[tuple[HttpUrl, str]],
-#     asset_caching_enabled: bool = settings.ASSET_CACHING_ENABLED,
-#     asset_caching_period: int = settings.ASSET_CACHING_PERIOD,
-#     user_agent_str: str = settings.USER_AGENT_STR,
-#     x_requested_with_value: str = settings.X_REQUESTED_WITH_VALUE,
-#     lock_timeout_seconds: int = settings.LOCK_TIMEOUT_SECONDS,
-# ) -> None:
-#     """
-#     Celery-managed batch git clone with per-repository filesystem locking.
-#     Locking is per `resource_filepath` to prevent concurrent deletion/cloning
-#     races while still allowing parallel clones of distinct repositories.
-#     """
-#     clone_commands: list[str] = []
-#     for url, resource_filepath in repos:
-#         lock_path = resource_filepath + ".lock"
-#         lock = FileLock(
-#             lock_path, timeout=lock_timeout_seconds
-#         )  # prevent race condition possibility; timeout in case of process crash causing blocking
-#         with lock:
-#             if asset_caching_enabled:
-#                 try:
-#                     git_dir = join(resource_filepath, ".git")
-#                     stat_ = stat(git_dir)
-#                     mod_time = datetime.fromtimestamp(stat_.st_mtime)
-#                     expiry = timedelta(minutes=asset_caching_period)
-#                     if (
-#                         all(
-#                             exists(join(git_dir, filename))
-#                             for filename in ("config", "HEAD", "objects")
-#                         )
-#                         and any(scandir(resource_filepath))
-#                         and datetime.now() - mod_time <= expiry
-#                     ):
-#                         logger.info(
-#                             "Skipping clone: %s exists, valid, and not stale",
-#                             resource_filepath,
-#                         )
-#                         continue  # ✅ Reuse cached repo
-#                 except FileNotFoundError:
-#                     logger.warning("Git directory not found for %s", resource_filepath)
-#                 logger.info(
-#                     "Removing stale, incomplete, or corrupt repository: %s",
-#                     resource_filepath,
-#                 )
-#             else:
-#                 logger.info(
-#                     "Asset caching disabled: forcibly removing %s",
-#                     resource_filepath,
-#                 )
-#             if isdir(resource_filepath):
-#                 shutil.rmtree(resource_filepath)
-#             clone_command = (
-#                 f"git -c http.userAgent='{user_agent_str}' "
-#                 f"-c http.extraHeader='X-Requested-With:{x_requested_with_value}' "
-#                 f"clone --depth=1 --single-branch '{url}' '{resource_filepath}' || true"
-#             )
-#             clone_commands.append(clone_command)
-#     if clone_commands:
-#         full_command = " && ".join(clone_commands)
-#         try:
-#             subprocess.call(full_command, shell=True)
-#         except subprocess.SubprocessError:
-#             logger.error("Batch git clone failed!")
 
 
 # @worker.app.task

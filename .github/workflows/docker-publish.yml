@@ -154,31 +154,11 @@ jobs:
         timeout-minutes: 3
         run: docker compose -f docker-compose.yml -f docker-compose.frontend-test.yml logs --no-color --timestamps --tail=500
 
-  Check-Registry-Credentials:
-    name: Check Docker Hub credentials
-    runs-on: ubuntu-24.04
-    outputs:
-      available: ${{ steps.check.outputs.available }}
-    env:
-      DOCKER_HUB_USER: ${{ secrets.DOCKER_HUB_USER }}
-      DOCKER_HUB_TOKEN: ${{ secrets.DOCKER_HUB_TOKEN }}
-    steps:
-      - id: check
-        run: |
-          if [ -n "$DOCKER_HUB_USER" ] && [ -n "$DOCKER_HUB_TOKEN" ]; then
-            echo "available=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::Docker Hub credentials not configured; skipping image push."
-          fi
-
   Push-Images:
     name: Push images if this is a branch
     runs-on: ubuntu-24.04
-    needs: [Test-API-Image, Test-Frontend-Image, Check-Registry-Credentials]
-    # Skip (rather than fail) when Docker Hub credentials aren't configured,
-    # e.g. in forks or repos that don't hold the DOCKER_HUB_* secrets.
-    if: ${{ github.event_name == 'push' && needs.Check-Registry-Credentials.outputs.available == 'true' }}
+    needs: [Test-API-Image, Test-Frontend-Image]
+    if: ${{ github.event_name == 'push' }}
     steps:
       - uses: actions/checkout@v4
       - uses: FranzDiebold/github-env-vars-action@v2

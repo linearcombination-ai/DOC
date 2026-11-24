@@ -28,8 +28,6 @@ class Settings(BaseSettings):
 
     LINK_RATHER_THAN_INCLUDE_TW_DEFINITIONS: bool = True
 
-    LOCK_TIMEOUT_SECONDS: int
-
     USER_AGENT_STR: str
     X_REQUESTED_WITH_VALUE: str
 
