@@ -24,7 +24,6 @@ def test_en_ulb_col_en_tn_col_en_tq_col_en_tw_col_tl_ulb_col_tl_tn_col_tl_tq_col
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
                 "generate_pdf": False,
-                "generate_epub": False,
                 "generate_docx": False,
                 "resource_requests": [
                     {
@@ -90,7 +89,6 @@ def test_en_ulb_col_en_tn_col_en_tq_col_en_tw_col_tl_ulb_col_tl_tn_col_tl_tq_col
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN_COMPACT,
                 "layout_for_print": True,
                 "generate_pdf": False,
-                "generate_epub": False,
                 "generate_docx": False,
                 "resource_requests": [
                     {
@@ -161,7 +159,6 @@ def test_fr_ulb_rev_fr_tw_rev_fr_udb_rev_ndh_x_chindali_reg_mat_ndh_x_chindali_t
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
                 "generate_pdf": False,
-                "generate_epub": False,
                 "generate_docx": False,
                 "resource_requests": [
                     {
@@ -227,7 +224,6 @@ def test_fr_ulb_rev_fr_tw_rev_fr_udb_rev_ndh_x_chindali_reg_mat_ndh_x_chindali_t
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN_COMPACT,
                 "layout_for_print": True,
                 "generate_pdf": False,
-                "generate_epub": False,
                 "generate_docx": False,
                 "resource_requests": [
                     {
@@ -288,7 +284,6 @@ def test_ndh_x_chindali_reg_mat_ndh_x_chindali_tn_mat_ndh_x_chindali_tq_mat_ndh_
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
                 "generate_pdf": False,
-                "generate_epub": False,
                 "generate_docx": False,
                 "resource_requests": [
                     {

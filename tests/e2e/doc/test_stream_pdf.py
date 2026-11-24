@@ -18,7 +18,6 @@ def test_stream_pdf() -> None:
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN_COMPACT,
                 "layout_for_print": False,
                 "generate_pdf": True,
-                "generate_epub": False,
                 "generate_docx": False,
                 "resource_requests": [
                     {

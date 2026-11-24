@@ -20,7 +20,6 @@ def test_en_ulb_tn_jud_language_book_order_1c_use_prince() -> None:
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
                 "generate_pdf": True,
-                "generate_epub": False,
                 "generate_docx": False,
                 "use_prince": True,
                 "resource_requests": [

@@ -27,7 +27,6 @@ def test_en_ulb_col_en_tn_col_en_tq_col_en_tw_col_fr_f10_col_fr_tn_col_fr_tq_col
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN_COMPACT,
                 "layout_for_print": True,
                 "generate_pdf": False,
-                "generate_epub": False,
                 "generate_docx": False,
                 "resource_requests": [
                     {
@@ -90,7 +89,6 @@ def test_en_ulb_col_en_tn_col_en_tq_col_en_tw_col_pt_br_ulb_col_pt_br_tn_col_pt_
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
                 "generate_pdf": True,
-                "generate_epub": False,
                 "generate_docx": False,
                 "resource_requests": [
                     {

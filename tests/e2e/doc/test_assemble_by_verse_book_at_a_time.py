@@ -22,7 +22,6 @@ def test_en_ulb_col_by_verse_with_no_email_1c() -> None:
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
                 "generate_pdf": True,
-                "generate_epub": False,
                 "generate_docx": False,
                 "use_prince": True,
                 "resource_requests": [

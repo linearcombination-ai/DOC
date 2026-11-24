@@ -109,7 +109,6 @@ def test_document_request_key_ignores_delivery_settings() -> None:
     for overrides in (
         {"email_address": "someone@example.com"},
         {"generate_pdf": False},
-        {"generate_epub": True},
         {"document_request_source": model.DocumentRequestSourceEnum.UI},
     ):
         assert (

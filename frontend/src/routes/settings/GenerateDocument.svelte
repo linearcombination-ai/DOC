@@ -14,7 +14,6 @@
     assemblyStrategyKindStore,
     docTypeStore,
     generatePdfStore,
-    generateEpubStore,
     generateDocxStore,
     emailStore,
     documentRequestKeyStore,
@@ -81,7 +80,6 @@
       assembly_strategy_kind: $assemblyStrategyKindStore,
       layout_for_print: $layoutForPrintStore,
       generate_pdf: $generatePdfStore,
-      generate_epub: $generateEpubStore,
       generate_docx: $generateDocxStore,
       resource_requests: resourceRequests,
       document_request_source: 'ui',
@@ -171,15 +169,9 @@
   $: {
     if ($docTypeStore === 'pdf') {
       $generatePdfStore = true
-      $generateEpubStore = false
-      $generateDocxStore = false
-    } else if ($docTypeStore === 'epub') {
-      $generatePdfStore = false
-      $generateEpubStore = true
       $generateDocxStore = false
     } else if ($docTypeStore === 'docx') {
       $generatePdfStore = false
-      $generateEpubStore = false
       $generateDocxStore = true
     }
   }
@@ -187,8 +179,6 @@
   // Reactively set download URLs of generated documents
   let pdfDownloadUrl: string
   $: pdfDownloadUrl = `${fileServerUrl}/${$documentRequestKeyStore}.pdf`
-  let ePubDownloadUrl: string
-  $: ePubDownloadUrl = `${fileServerUrl}/${$documentRequestKeyStore}.epub`
   let docxDownloadUrl: string
   $: docxDownloadUrl = `${fileServerUrl}/${$documentRequestKeyStore}.docx`
   let htmlDownloadUrl: string
@@ -249,11 +239,6 @@
         {#if $generatePdfStore}
           <div class="m-auto mt-4">
             <DownloadButton buttonText="View PDF" linkText="Download PDF" url={pdfDownloadUrl} />
-          </div>
-        {/if}
-        {#if $generateEpubStore}
-          <div class="m-auto mt-4">
-            <DownloadButton buttonText="View ePub" linkText="Download ePub" url={ePubDownloadUrl} />
           </div>
         {/if}
         {#if $generateDocxStore}

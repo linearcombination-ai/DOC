@@ -12,9 +12,7 @@ from docx.document import Document as DocxDocument
 
 logger = settings.logger(__name__)
 
-AcceptedSuffixes = Union[
-    Literal["html"], Literal["pdf"], Literal["epub"], Literal["docx"]
-]
+AcceptedSuffixes = Union[Literal["html"], Literal["pdf"], Literal["docx"]]
 
 
 def check_result(

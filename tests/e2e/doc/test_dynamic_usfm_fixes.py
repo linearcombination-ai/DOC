@@ -75,7 +75,6 @@ def test_all_usfm_books_for_language(lang_code: str) -> None:
                     "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                     "layout_for_print": False,
                     "generate_pdf": True,
-                    "generate_epub": False,
                     "generate_docx": False,
                     "resource_requests": [
                         {
@@ -106,7 +105,6 @@ def test_known_defective_usfm_cases(
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
                 "generate_pdf": True,
-                "generate_epub": False,
                 "generate_docx": False,
                 "resource_requests": [
                     {

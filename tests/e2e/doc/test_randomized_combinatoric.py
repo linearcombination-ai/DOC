@@ -74,7 +74,6 @@ def test_random_non_english_document_request(
             assembly_layout_kind=model.AssemblyLayoutEnum.ONE_COLUMN,
             layout_for_print=False,
             generate_pdf=True,
-            generate_epub=False,
             generate_docx=False,
             resource_requests=resource_requests,
         )
@@ -132,7 +131,6 @@ def test_non_english_usfm_only_document_request(
                     "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                     "layout_for_print": False,
                     "generate_pdf": True,
-                    "generate_epub": False,
                     "generate_docx": False,
                     "resource_requests": [
                         {
@@ -227,7 +225,6 @@ def test_all_non_english_document_request(non_english_lang_code: str) -> None:
                 assembly_layout_kind=model.AssemblyLayoutEnum.ONE_COLUMN,
                 layout_for_print=False,
                 generate_pdf=True,
-                generate_epub=False,
                 generate_docx=False,
                 resource_requests=resource_requests,
             )

@@ -30,7 +30,6 @@ def test_en_ulb_col_en_tn_col_language_book_order_with_no_email_1c_docx() -> Non
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
                 "generate_pdf": False,
-                "generate_epub": False,
                 "generate_docx": True,
                 "resource_requests": [
                     {
@@ -59,7 +58,6 @@ def test_fr_ulb_col_fr_tn_col_language_book_order_with_no_email_1c_c() -> None:
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN_COMPACT,
                 "layout_for_print": True,
                 "generate_pdf": True,
-                "generate_epub": False,
                 "generate_docx": False,
                 "use_prince": True,
                 "resource_requests": [
@@ -89,7 +87,6 @@ def test_fr_ulb_wa_col_en_fr_wa_col_fr_tq_wa_col_language_book_order_1c() -> Non
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
                 "generate_pdf": True,
-                "generate_epub": False,
                 "generate_docx": False,
                 "use_prince": True,
                 "resource_requests": [
@@ -124,7 +121,6 @@ def test_fr_ulb_col_fr_tn_col_fr_tq_col_language_book_order_1c_c() -> None:
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN_COMPACT,
                 "layout_for_print": True,
                 "generate_pdf": True,
-                "generate_epub": False,
                 "generate_docx": False,
                 "use_prince": True,
                 "resource_requests": [
@@ -160,7 +156,6 @@ def test_en_ulb_tn_jud_language_book_order_1c() -> None:
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
                 "generate_pdf": True,
-                "generate_epub": False,
                 "generate_docx": False,
                 "resource_requests": [
                     {
@@ -190,7 +185,6 @@ def test_en_ulb_tn_jud_language_book_order_1c_c() -> None:
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN_COMPACT,
                 "layout_for_print": True,
                 "generate_pdf": True,
-                "generate_epub": False,
                 "generate_docx": False,
                 "resource_requests": [
                     {
@@ -219,7 +213,6 @@ def test_en_ulb_tn_condensed_jud_language_book_order_1c() -> None:
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
                 "generate_pdf": True,
-                "generate_epub": False,
                 "generate_docx": False,
                 "resource_requests": [
                     {
@@ -248,7 +241,6 @@ def test_pt_br_ulb_gen_pt_br_tn_gen_language_book_order_1c() -> None:
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
                 "generate_pdf": True,
-                "generate_epub": False,
                 "generate_docx": False,
                 "use_prince": True,
                 "resource_requests": [
@@ -278,7 +270,6 @@ def test_pt_br_ulb_tn_language_book_order_1c_c() -> None:
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN_COMPACT,
                 "layout_for_print": True,
                 "generate_pdf": True,
-                "generate_epub": False,
                 "generate_docx": False,
                 "use_prince": True,
                 "resource_requests": [
@@ -308,7 +299,6 @@ def test_pt_br_ulb_tn_en_ulb_tn_luk_language_book_order_1c() -> None:
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
                 "generate_pdf": True,
-                "generate_epub": False,
                 "generate_docx": False,
                 "use_prince": True,
                 "resource_requests": [
@@ -348,7 +338,6 @@ def test_pt_br_ulb_tn_en_ulb_tn_luk_language_book_order_1c_c() -> None:
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN_COMPACT,
                 "layout_for_print": True,
                 "generate_pdf": True,
-                "generate_epub": False,
                 "generate_docx": False,
                 "use_prince": True,
                 "resource_requests": [
@@ -388,7 +377,6 @@ def test_pt_br_ulb_tn_luk_en_ulb_tn_luk_sw_ulb_tn_col_language_book_order_1c() -
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
                 "generate_pdf": True,
-                "generate_epub": False,
                 "generate_docx": False,
                 "use_prince": True,
                 "resource_requests": [
@@ -440,7 +428,6 @@ def test_pt_br_ulb_tn_luk_en_ulb_tn_luk_sw_ulb_tn_col_language_book_order_1c_c()
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN_COMPACT,
                 "layout_for_print": True,
                 "generate_pdf": True,
-                "generate_epub": False,
                 "generate_docx": False,
                 "resource_requests": [
                     {
@@ -492,7 +479,6 @@ def test_en_ulb_col_en_tn_col_en_tq_col_en_tw_col_sw_ulb_col_sw_tn_col_sw_tq_col
                 "assembly_layout_kind": None,
                 "layout_for_print": False,
                 "generate_pdf": True,
-                "generate_epub": False,
                 "generate_docx": False,
                 "resource_requests": [
                     {
@@ -569,7 +555,6 @@ def test_en_ulb_col_en_tn_col_en_tq_col_en_tw_col_sw_ulb_col_sw_tn_col_sw_tq_col
                 "assembly_layout_kind": None,
                 "layout_for_print": True,
                 "generate_pdf": True,
-                "generate_epub": False,
                 "generate_docx": False,
                 "resource_requests": [
                     {
@@ -646,7 +631,6 @@ def test_en_ulb_col_en_tn_col_en_tw_col_sw_ulb_col_sw_tn_col_sw_tw_col_sw_ulb_ti
                 "assembly_layout_kind": None,
                 "layout_for_print": False,
                 "generate_pdf": True,
-                "generate_epub": False,
                 "generate_docx": False,
                 "resource_requests": [
                     {
@@ -713,7 +697,6 @@ def test_en_ulb_col_en_tn_col_en_tw_col_sw_ulb_col_sw_tn_col_sw_tw_col_sw_ulb_ti
                 "assembly_layout_kind": None,
                 "layout_for_print": True,
                 "generate_pdf": True,
-                "generate_epub": False,
                 "generate_docx": False,
                 "resource_requests": [
                     {
@@ -794,7 +777,6 @@ def test_en_ulb_col_en_tw_col_sw_ulb_col_sw_tw_col_sw_ulb_tit_sw_tw_tit_language
                 "assembly_layout_kind": None,
                 "layout_for_print": False,
                 "generate_pdf": True,
-                "generate_epub": False,
                 "generate_docx": False,
                 "resource_requests": [
                     {
@@ -856,7 +838,6 @@ def test_en_ulb_col_en_tw_col_sw_ulb_col_sw_tw_col_sw_ulb_tit_sw_tw_tit_language
                 "assembly_layout_kind": None,
                 "layout_for_print": True,
                 "generate_pdf": True,
-                "generate_epub": False,
                 "generate_docx": False,
                 "resource_requests": [
                     {
@@ -918,7 +899,6 @@ def test_en_ulb_col_en_tq_col_en_tw_col_sw_ulb_col_sw_tq_col_sw_tw_col_sw_ulb_ti
                 "assembly_layout_kind": None,
                 "layout_for_print": False,
                 "generate_pdf": True,
-                "generate_epub": False,
                 "generate_docx": False,
                 "resource_requests": [
                     {
@@ -995,7 +975,6 @@ def test_en_ulb_col_en_tq_col_en_tw_col_sw_ulb_col_sw_tq_col_sw_tw_col_sw_ulb_ti
                 "assembly_layout_kind": None,
                 "layout_for_print": True,
                 "generate_pdf": True,
-                "generate_epub": False,
                 "generate_docx": False,
                 "resource_requests": [
                     {
@@ -1078,7 +1057,6 @@ def test_en_ulb_col_en_tq_col_en_tw_col_sw_ulb_col_sw_tq_col_sw_tw_col_zh_cuv_ti
                 "assembly_layout_kind": None,
                 "layout_for_print": False,
                 "generate_pdf": True,
-                "generate_epub": False,
                 "generate_docx": False,
                 "resource_requests": [
                     {
@@ -1144,7 +1122,6 @@ def test_en_ulb_col_en_tq_col_en_tw_col_sw_ulb_col_sw_tq_col_sw_tw_col_zh_cuv_ti
                 "assembly_layout_kind": None,
                 "layout_for_print": True,
                 "generate_pdf": True,
-                "generate_epub": False,
                 "generate_docx": False,
                 "resource_requests": [
                     {
@@ -1217,7 +1194,6 @@ def test_zh_cuv_jol_zh_tn_jol_language_book_order_1c() -> None:
                 "assembly_layout_kind": None,
                 "layout_for_print": False,
                 "generate_pdf": True,
-                "generate_epub": False,
                 "generate_docx": False,
                 "resource_requests": [
                     {
@@ -1248,7 +1224,6 @@ def test_zh_cuv_jol_zh_tn_jol_language_book_order_1c_c() -> None:
                 "assembly_layout_kind": None,
                 "layout_for_print": True,
                 "generate_pdf": True,
-                "generate_epub": False,
                 "generate_docx": False,
                 "resource_requests": [
                     {
@@ -1280,7 +1255,6 @@ def test_zh_cuv_jol_zh_tn_jol_zh_tq_jol_zh_tw_jol_language_book_order_1c() -> No
                 "assembly_layout_kind": None,
                 "layout_for_print": False,
                 "generate_pdf": True,
-                "generate_epub": False,
                 "generate_docx": False,
                 "resource_requests": [
                     {
@@ -1323,7 +1297,6 @@ def test_zh_cuv_jol_zh_tn_jol_zh_tq_jol_zh_tw_jol_language_book_order_1c_docx() 
                 "assembly_layout_kind": None,
                 "layout_for_print": False,
                 "generate_pdf": False,
-                "generate_epub": False,
                 "generate_docx": True,
                 "resource_requests": [
                     {
@@ -1364,7 +1337,6 @@ def test_zh_cuv_jol_zh_tn_jol_zh_tq_jol_zh_tw_jol_language_book_order_1c_c() -> 
                 "assembly_layout_kind": None,
                 "layout_for_print": True,
                 "generate_pdf": True,
-                "generate_epub": False,
                 "generate_docx": False,
                 "resource_requests": [
                     {
@@ -1403,7 +1375,6 @@ def test_pt_br_ulb_luk_pt_br_tn_luk_language_book_order_1c() -> None:
                 "assembly_layout_kind": None,
                 "layout_for_print": False,
                 "generate_pdf": True,
-                "generate_epub": False,
                 "generate_docx": False,
                 "resource_requests": [
                     {
@@ -1433,7 +1404,6 @@ def test_pt_br_ulb_luk_pt_br_tn_luk_language_book_order_1c_c() -> None:
                 "assembly_layout_kind": None,
                 "layout_for_print": True,
                 "generate_pdf": True,
-                "generate_epub": False,
                 "generate_docx": False,
                 "resource_requests": [
                     {
@@ -1474,7 +1444,6 @@ def test_fa_ulb_tn_lbo_1c_chapter() -> None:
                 "assembly_layout_kind": None,
                 "layout_for_print": False,
                 "generate_pdf": False,
-                "generate_epub": False,
                 "generate_docx": True,
                 "resource_requests": [
                     {
@@ -1504,7 +1473,6 @@ def test_or_tn_mat_lbo_1c_chapter() -> None:
                 "assembly_layout_kind": None,
                 "layout_for_print": True,
                 "generate_pdf": True,
-                "generate_epub": False,
                 "generate_docx": False,
                 "resource_requests": [
                     {
@@ -1530,7 +1498,6 @@ def test_nyk_x_nyanehumbe_reg_1pe_lbo_1c_chapter() -> None:
                 "assembly_layout_kind": None,
                 "layout_for_print": False,
                 "generate_pdf": True,
-                "generate_epub": False,
                 "generate_docx": False,
                 "resource_requests": [
                     {
@@ -1554,7 +1521,6 @@ def test_bjz_reg_eph_lbo_1c_chapter() -> None:
                 "assembly_layout_kind": None,
                 "layout_for_print": False,
                 "generate_pdf": True,
-                "generate_epub": False,
                 "generate_docx": False,
                 "resource_requests": [
                     {
@@ -1578,7 +1544,6 @@ def test_bys_reg_col_lbo_1c_chapter() -> None:
                 "assembly_layout_kind": None,
                 "layout_for_print": False,
                 "generate_pdf": True,
-                "generate_epub": False,
                 "generate_docx": False,
                 "resource_requests": [
                     {
@@ -1602,7 +1567,6 @@ def test_en_ulb_col_bys_reg_col_blo_1c_chapter() -> None:
                 "assembly_layout_kind": None,
                 "layout_for_print": False,
                 "generate_pdf": True,
-                "generate_epub": False,
                 "generate_docx": False,
                 "resource_requests": [
                     {
@@ -1631,7 +1595,6 @@ def test_en_ulb_col_bjz_reg_col_blo_1c_chapter() -> None:
                 "assembly_layout_kind": None,
                 "layout_for_print": False,
                 "generate_pdf": True,
-                "generate_epub": False,
                 "generate_docx": False,
                 "resource_requests": [
                     {
@@ -1660,7 +1623,6 @@ def test_en_ulb_eph_bys_reg_eph_blo_1c_chapter_docx() -> None:
                 "assembly_layout_kind": None,
                 "layout_for_print": False,
                 "generate_pdf": False,
-                "generate_epub": False,
                 "generate_docx": True,
                 "resource_requests": [
                     {
@@ -1690,7 +1652,6 @@ def test_en_bc_col_language_book_order_with_no_email_1c_docx() -> None:
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
                 "generate_pdf": False,
-                "generate_epub": False,
                 "generate_docx": True,
                 "resource_requests": [
                     {
@@ -1714,7 +1675,6 @@ def test_en_bc_col_language_book_order_with_no_email_1c() -> None:
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
                 "generate_pdf": True,
-                "generate_epub": False,
                 "generate_docx": False,
                 "resource_requests": [
                     {
@@ -1739,7 +1699,6 @@ def test_en_ulb_1jn_en_ulb_3jn_language_book_order_with_no_email_1c() -> None:
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
                 "generate_pdf": False,
-                "generate_epub": False,
                 "generate_docx": False,
                 "resource_requests": [
                     {
@@ -1783,7 +1742,6 @@ def test_en_tn_mat_with_book_intro() -> None:
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
                 "generate_pdf": False,
-                "generate_epub": False,
                 "generate_docx": False,
                 "resource_requests": [
                     {

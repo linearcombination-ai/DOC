@@ -19,7 +19,6 @@ def test_gu_ulb_mrk_gu_tn_mrk_gu_tq_mrk_gu_tw_mrk_gu_udb_mrk_by_book_1c_docx() -
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
                 "generate_pdf": False,
-                "generate_epub": False,
                 "generate_docx": True,
                 "resource_requests": [
                     {
@@ -64,7 +63,6 @@ def test_mr_ulb_mrk_mr_tn_mrk_mr_tq_mrk_mr_udb_mrk_by_book_1c_docx() -> None:
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
                 "generate_pdf": False,
-                "generate_epub": False,
                 "generate_docx": True,
                 "resource_requests": [
                     {
@@ -104,7 +102,6 @@ def test_mr_ulb_mrk_mr_tn_mrk_mr_tw_mrk_mr_udb_mrk_by_book_1c_docx() -> None:
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
                 "generate_pdf": False,
-                "generate_epub": False,
                 "generate_docx": True,
                 "resource_requests": [
                     {
@@ -144,7 +141,6 @@ def test_mr_ulb_mrk_mr_tn_mrk_mr_udb_mrk_by_book_1c_docx() -> None:
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
                 "generate_pdf": False,
-                "generate_epub": False,
                 "generate_docx": True,
                 "resource_requests": [
                     {
@@ -179,7 +175,6 @@ def test_mr_ulb_mrk_mr_tq_mrk_mr_udb_mrk_by_book_1c_docx() -> None:
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
                 "generate_pdf": False,
-                "generate_epub": False,
                 "generate_docx": True,
                 "resource_requests": [
                     {
@@ -214,7 +209,6 @@ def test_tl_ulb_gen_tl_udb_gen_by_book_1c_docx() -> None:
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
                 "generate_pdf": False,
-                "generate_epub": False,
                 "generate_docx": True,
                 "resource_requests": [
                     {
@@ -244,7 +238,6 @@ def test_gu_tn_mat_gu_tq_mat_gu_tw_mat_gu_udb_mat_by_book_1c_docx() -> None:
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
                 "generate_pdf": False,
-                "generate_epub": False,
                 "generate_docx": True,
                 "resource_requests": [
                     {
@@ -284,7 +277,6 @@ def test_gu_tn_mat_gu_tq_mat_gu_udb_mat_by_book_1c_docx() -> None:
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
                 "generate_pdf": False,
-                "generate_epub": False,
                 "generate_docx": True,
                 "resource_requests": [
                     {
@@ -319,7 +311,6 @@ def test_tl_tn_gen_tl_tw_gen_tl_udb_gen_by_book_1c_docx() -> None:
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
                 "generate_pdf": False,
-                "generate_epub": False,
                 "generate_docx": True,
                 "resource_requests": [
                     {
@@ -354,7 +345,6 @@ def test_tl_tq_gen_tl_udb_gen_by_book_1c_docx() -> None:
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
                 "generate_pdf": False,
-                "generate_epub": False,
                 "generate_docx": True,
                 "resource_requests": [
                     {
@@ -384,7 +374,6 @@ def test_tl_tw_gen_tl_udb_gen_by_book_1c_docx() -> None:
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
                 "generate_pdf": False,
-                "generate_epub": False,
                 "generate_docx": True,
                 "resource_requests": [
                     {
@@ -414,7 +403,6 @@ def test_tl_udb_gen_by_book_1c_docx() -> None:
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
                 "generate_pdf": False,
-                "generate_epub": False,
                 "generate_docx": True,
                 "resource_requests": [
                     {

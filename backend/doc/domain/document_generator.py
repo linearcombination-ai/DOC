@@ -60,7 +60,6 @@ from doc.utils.docx_util import (
 )
 from doc.utils.file_utils import (
     docx_filepath,
-    epub_filepath,
     file_needs_update,
     html_filepath,
     pdf_filepath,
@@ -264,7 +263,7 @@ def generate_document(
     """
     This is the main entry point for this module for non-docx generation.
     >>> from doc.domain import document_generator
-    >>> document_request_json = '{"email_address":null,"assembly_strategy_kind":"lbo","assembly_layout_kind":"1c","layout_for_print":false,"resource_requests":[{"lang_code":"es-419","resource_type":"ulb","book_code":"mat"}],"generate_pdf":true,"generate_epub":false,"generate_docx":false,"chunk_size":"chapter","limit_words":false,"show_tn_book_intro":false,"document_request_source":"ui"}'
+    >>> document_request_json = '{"email_address":null,"assembly_strategy_kind":"lbo","assembly_layout_kind":"1c","layout_for_print":false,"resource_requests":[{"lang_code":"es-419","resource_type":"ulb","book_code":"mat"}],"generate_pdf":true,"generate_docx":false,"chunk_size":"chapter","limit_words":false,"show_tn_book_intro":false,"document_request_source":"ui"}'
     >>> document_generator.generate_document(document_request_json)
     """
     current_task.update_state(state="Receiving request")
@@ -273,7 +272,6 @@ def generate_document(
     )
     html_filepath_ = html_filepath(document_request_key_)
     pdf_filepath_ = pdf_filepath(document_request_key_)
-    epub_filepath_ = epub_filepath(document_request_key_)
     if file_needs_update(html_filepath_):
         (
             found_resource_lookup_dtos,
@@ -317,21 +315,6 @@ def generate_document(
         if should_send_email(document_request.email_address):
             attachments = [
                 Attachment(filepath=pdf_filepath_, mime_type=("application", "pdf"))
-            ]
-            current_task.update_state(state="Sending email")
-            send_email_with_attachment(
-                document_request.email_address,
-                attachments,
-                document_request_key_,
-            )
-    if document_request.generate_epub and file_needs_update(epub_filepath_):
-        current_task.update_state(state="Converting to ePub")
-        convert_html_to_epub(html_filepath_, epub_filepath_, document_request_key_)
-        if should_send_email(document_request.email_address):
-            attachments = [
-                Attachment(
-                    filepath=epub_filepath_, mime_type=("application", "epub+zip")
-                )
             ]
             current_task.update_state(state="Sending email")
             send_email_with_attachment(
@@ -662,8 +645,7 @@ def assemble_content(
 # pagedjs-cli (does a really nice job, but is really slow - uses puppeteer underneath),
 # electron-pdf (similar speed to wkhtmltopdf) which uses chrome underneath the hood,
 # gotenburg which uses chrome under the hood and provides a nice api in Docker (untested),
-# raw chrome headless (works well and is about the same speed as weasyprint),
-# ebook-convert (faster than weasyprint, but does arbitrary page breaks in formatting and can't do headers and footers)
+# raw chrome headless (works well and is about the same speed as weasyprint).
 def convert_html_to_pdf(
     html_filepath: str,
     pdf_filepath: str,
@@ -695,30 +677,6 @@ def convert_html_to_pdf(
     )
     t1 = time.time()
     logger.info("Time for converting HTML to PDF: %s", t1 - t0)
-
-
-# HTML to ePub converters:
-# pandoc (this doesn't respect two column),
-# html-to-epub which is written in go (this doesn't respect two column),
-# ebook-convert (this respects two column).
-def convert_html_to_epub(
-    html_filepath: str,
-    epub_filepath: str,
-    document_request_key: str,
-) -> None:
-    """Generate ePub from HTML and copy it to output directory."""
-    assert exists(html_filepath)
-    command = [
-        "ebook-convert",
-        html_filepath,
-        epub_filepath,
-        "--no-default-epub-cover",
-    ]
-    logger.info("Generate ePub command: %s", " ".join(command))
-    t0 = time.time()
-    subprocess.run(command, check=True, text=True)
-    t1 = time.time()
-    logger.info("Time for converting HTML to ePub: %s", t1 - t0)
 
 
 def compose_docx_document(

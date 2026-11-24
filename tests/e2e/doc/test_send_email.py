@@ -24,7 +24,6 @@ def test_send_email_with_es_419_ulb_jud_pdf() -> None:
                 "assembly_layout_kind": model.AssemblyLayoutEnum.ONE_COLUMN,
                 "layout_for_print": False,
                 "generate_pdf": True,
-                "generate_epub": False,
                 "generate_docx": False,
                 "resource_requests": [
                     {

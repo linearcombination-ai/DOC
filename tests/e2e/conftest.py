@@ -109,11 +109,6 @@ def generate_pdf() -> bool:
 
 
 @pytest.fixture
-def generate_epub() -> bool:
-    return random.choice([True, False])
-
-
-@pytest.fixture
 def generate_docx() -> bool:
     return random.choice([True, False])
 
@@ -274,7 +269,6 @@ def english_document_request(
     assembly_layout_kind: model.AssemblyLayoutEnum,
     layout_for_print: bool,
     generate_pdf: bool,
-    generate_epub: bool,
     generate_docx: bool,
     english_resource_requests: Sequence[model.ResourceRequest],
 ) -> model.DocumentRequest:
@@ -285,7 +279,6 @@ def english_document_request(
         assembly_layout_kind=assembly_layout_kind,
         layout_for_print=layout_for_print,
         generate_pdf=generate_pdf,
-        generate_epub=generate_epub,
         generate_docx=generate_docx,
         resource_requests=english_resource_requests,
     )
@@ -297,7 +290,6 @@ def english_document_request(
 #     assembly_layout_kind: model.AssemblyLayoutEnum,
 #     layout_for_print: bool,
 #     generate_pdf: bool,
-#     generate_epub: bool,
 #     generate_docx: bool,
 #     random_non_english_resource_requests: Sequence[model.ResourceRequest],
 # ) -> model.DocumentRequest:
@@ -320,7 +312,6 @@ def english_document_request(
 #         assembly_layout_kind=assembly_layout_kind,
 #         layout_for_print=layout_for_print,
 #         generate_pdf=generate_pdf,
-#         generate_epub=generate_epub,
 #         generate_docx=generate_docx,
 #         resource_requests=random_non_english_resource_requests,
 #     )
@@ -335,7 +326,6 @@ def random_english_and_non_english_document_request(
     assembly_layout_kind: model.AssemblyLayoutEnum,
     layout_for_print: bool,
     generate_pdf: bool,
-    generate_epub: bool,
     generate_docx: bool,
     english_lang_code: str,
     random_non_english_lang_code: str,
@@ -408,7 +398,6 @@ def random_english_and_non_english_document_request(
         assembly_layout_kind=assembly_layout_kind,
         layout_for_print=layout_for_print,
         generate_pdf=generate_pdf,
-        generate_epub=generate_epub,
         generate_docx=generate_docx,
         resource_requests=resource_requests,
     )
@@ -420,7 +409,6 @@ def random_two_non_english_languages_document_request(
     assembly_layout_kind: model.AssemblyLayoutEnum,
     layout_for_print: bool,
     generate_pdf: bool,
-    generate_epub: bool,
     generate_docx: bool,
     random_non_english_lang_code: str,
     random_non_english_lang_code2: str,
@@ -500,7 +488,6 @@ def random_two_non_english_languages_document_request(
         assembly_layout_kind=assembly_layout_kind,
         layout_for_print=layout_for_print,
         generate_pdf=generate_pdf,
-        generate_epub=generate_epub,
         generate_docx=generate_docx,
         resource_requests=resource_requests,
     )

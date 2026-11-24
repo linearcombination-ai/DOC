@@ -126,7 +126,6 @@ list-pytest-markers:
 .PHONY: clean-local-docker-output-dir
 clean-local-docker-output-dir:
 	find docker_document_output/ -type f -name "*.pdf" -exec rm -- {} +
-	find docker_document_output/ -type f -name "*.epub" -exec rm -- {} +
 	find docker_document_output/ -type f -name "*.docx" -exec rm -- {} +
 	find docker_document_output/ -type f -name "*.html" -exec rm -- {} +
 

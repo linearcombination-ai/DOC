@@ -55,7 +55,6 @@ export function resetStores(storeGroup: StoreGroup) {
     // layoutForPrintStore.set(false)
     // assemblyStrategyKindStore.set(languageBookOrder)
     // generatePdfStore.set(true)
-    // generateEpubStore.set(false)
     // generateDocxStore.set(false)
     documentRequestKeyStore.set('')
     // twResourceRequestedStore.set(false)

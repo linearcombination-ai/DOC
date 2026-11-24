@@ -132,13 +132,6 @@ def pdf_filepath(
     return join(output_dir, "{}.pdf".format(document_request_key))
 
 
-def epub_filepath(
-    document_request_key: str, output_dir: str = settings.DOCUMENT_OUTPUT_DIR
-) -> str:
-    """Given document_request_key, return the ePub output file path."""
-    return join(output_dir, "{}.epub".format(document_request_key))
-
-
 def docx_filepath(
     document_request_key: str,
     prefix: str = "",

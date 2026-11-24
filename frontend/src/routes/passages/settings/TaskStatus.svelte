@@ -36,7 +36,7 @@
     <div class="h-1 w-1/2 bg-[#F2F3F5]">
       <div class="h-1 blue-gradient-bar" style="width: 65%" />
     </div>
-  {:else if $taskStateStore === 'Converting to PDF' || $taskStateStore === 'Converting to ePub' || $taskStateStore === 'Converting to Docx'}
+  {:else if $taskStateStore === 'Converting to PDF' || $taskStateStore === 'Converting to Docx'}
     <div class="h-1 w-1/2 bg-[#F2F3F5]">
       <div class="h-1 blue-gradient-bar" style="width: 70%" />
     </div>

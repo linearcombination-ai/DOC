@@ -12,16 +12,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     texlive-fonts-recommended \
     # For cython
     gcc \
-    # For ebook-convert HTML to ePub
-    xz-utils \
-    libopengl0 \
-    libegl1 \
-    libopengl0 \
-    libxcb-cursor0 \
-    libxcb-xinerama0 \
-    libxkbcommon0 \
-    libglx0 \
-    libnss3 \
     libdeflate0 \
     # For weasyprint
     pango1.0-tools \
@@ -72,16 +62,6 @@ RUN cd /tmp \
 # Refresh system font cache.
 RUN fc-cache -f -v
 
-
-# Get and install calibre for use of its ebook-convert binary for HTML to ePub conversion.
-RUN wget -nv -O- https://download.calibre-ebook.com/linux-installer.sh | sh /dev/stdin install_dir=/home/appuser/calibre-bin isolated=y
-
-
-# Add calibre to PATH
-ENV PATH="/home/appuser/calibre-bin/calibre:${PATH}"
-
-# Test the installation
-RUN ebook-convert --version
 
 WORKDIR /app
 
@@ -136,7 +116,7 @@ RUN mypy --strict --install-types --non-interactive backend/passages/**/*.py
 RUN mypy --strict --install-types --non-interactive tests/**/*.py
 
 # Change ownership of app specific directories to the non-root user
-RUN chown -R appuser:appgroup /app /home/appuser/calibre-bin
+RUN chown -R appuser:appgroup /app
 
 # Switch to the non-root user
 USER appuser

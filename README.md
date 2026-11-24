@@ -6,7 +6,7 @@ to fetch assets associated with each Resource and interleaves said
 assets according to the assembly strategy chosen. It also builds
 interlinking between assets within the document as appropriate and
 then translates the assets into an HTML document. Finally the API
-generates a PDF, ePub, or Docx from the HTML document if requested.
+generates a PDF or Docx from the HTML document if requested.
 
 Each Resource is composed of lang_code, resource_type, and
 book_code.

@@ -207,8 +207,6 @@ class DocumentRequest(CacheKeyedModel):
     resource_requests: Annotated[Sequence[ResourceRequest], Hashed()]
     # Indicate whether PDF should be generated.
     generate_pdf: Annotated[bool, Ignored()] = True
-    # Indicate whether ePub should be generated.
-    generate_epub: Annotated[bool, Ignored()] = False
     # Indicate whether Docx should be generated.
     generate_docx: Annotated[bool, Hashed()] = False
     # Indicate whether translation words, TW, should be limited to
