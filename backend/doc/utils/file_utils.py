@@ -3,7 +3,6 @@
 import codecs
 import json
 import os
-import shutil
 import zipfile
 from datetime import datetime, timedelta
 from os.path import join
@@ -20,17 +19,6 @@ logger = settings.logger(__name__)
 USER_AGENT: str = (
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.64 Safari/537.11"
 )
-
-
-def delete_tree(dir: str) -> None:
-    try:
-        shutil.rmtree(dir)
-    except OSError:
-        logger.debug(
-            "Directory %s was not removed due to an error.",
-            dir,
-        )
-        logger.exception("Caught exception: ")
 
 
 def unzip(source_file: str, destination_dir: str) -> None:

@@ -6,7 +6,6 @@ celery-types
 docxcompose3
 docxtpl
 fastapi[all]
-filelock
 flower
 gunicorn
 html-for-docx
