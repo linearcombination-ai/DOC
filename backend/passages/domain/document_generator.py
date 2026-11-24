@@ -9,6 +9,7 @@ from doc.domain.constants import (
     USFM_RESOURCE_TYPES,
 )
 from doc.domain import worker
+from doc.domain.task_limits import fail_cleanly_on_soft_time_limit
 from doc.domain.bible_books import BOOK_NAMES
 from doc.domain.email_utils import send_email_with_attachment, should_send_email
 from doc.domain.model import Attachment, USFMBook
@@ -524,34 +525,36 @@ def generate_passages_docx_document(
     )
     docx_filepath_ = f"{docx_filepath(document_request_key_, docx_filepath_prefix)}"
     logger.debug("docx_filepath_: %s", docx_filepath_)
-    if file_needs_update(docx_filepath_):
-        generate_docx_document(
-            lang0_code,
-            lang0_name,
-            lang1_code,
-            lang1_name,
-            passage_reference_dtos,
-            document_request_key_,
-            docx_filepath_,
-        )
-        if should_send_email(email_address):
-            attachments = [
-                Attachment(
-                    filepath=docx_filepath_,
-                    mime_type=(
-                        "application",
-                        "vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    ),
-                )
-            ]
-            current_task.update_state(state="Sending email")
-            send_email_with_attachment(
-                email_address,
-                attachments,
+    with fail_cleanly_on_soft_time_limit([docx_filepath_]) as guard:
+        if file_needs_update(docx_filepath_):
+            generate_docx_document(
+                lang0_code,
+                lang0_name,
+                lang1_code,
+                lang1_name,
+                passage_reference_dtos,
                 document_request_key_,
+                docx_filepath_,
             )
-    else:
-        logger.debug("Cache hit for %s", docx_filepath_)
+            guard.mark_complete(docx_filepath_)
+            if should_send_email(email_address):
+                attachments = [
+                    Attachment(
+                        filepath=docx_filepath_,
+                        mime_type=(
+                            "application",
+                            "vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        ),
+                    )
+                ]
+                current_task.update_state(state="Sending email")
+                send_email_with_attachment(
+                    email_address,
+                    attachments,
+                    document_request_key_,
+                )
+        else:
+            logger.debug("Cache hit for %s", docx_filepath_)
     return document_request_key_
 
 

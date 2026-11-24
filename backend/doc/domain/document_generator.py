@@ -11,6 +11,7 @@ from os.path import exists
 from typing import Mapping, Optional, Sequence, TypeAlias, cast
 
 from celery import current_task
+from doc.domain.task_limits import fail_cleanly_on_soft_time_limit
 from doc.config import settings
 from doc.domain.constants import USFM_RESOURCE_TYPES
 from doc.domain import parsing, resource_lookup, worker
@@ -274,71 +275,79 @@ def generate_document(
     html_filepath_ = html_filepath(document_request_key_)
     pdf_filepath_ = pdf_filepath(document_request_key_)
     epub_filepath_ = epub_filepath(document_request_key_)
-    if file_needs_update(html_filepath_):
-        (
-            found_resource_lookup_dtos,
-            usfm_books,
-            tn_books,
-            tnc_books,
-            tq_books,
-            tw_books,
-            bc_books,
-        ) = locate_acquire_and_build_resource_objects(document_request)
-        current_task.update_state(state="Assembling content")
-        document_parts = assemble_content(
-            document_request_key_,
-            document_request,
-            usfm_books,
-            tn_books,
-            tnc_books,
-            tq_books,
-            tw_books,
-            bc_books,
-        )
-        content_str = compose_document(document_parts)
-        if usfm_books:
-            content_str = check_content_for_issues(content_str)
-        content_str = create_title_page_and_wrap_in_template(
-            content_str, document_request, found_resource_lookup_dtos, usfm_books
-        )
-        write_html_content_to_file(content_str, html_filepath_)
-    else:
-        logger.info("Cache hit for %s", html_filepath_)
-    # Immediately return pre-built PDF if the document has previously been
-    # generated and is fresh enough.
-    if document_request.generate_pdf and file_needs_update(pdf_filepath_):
-        current_task.update_state(state="Converting to PDF")
-        convert_html_to_pdf(
-            html_filepath_,
-            pdf_filepath_,
-            document_request_key_,
-            document_request.use_prince,
-        )
-        if should_send_email(document_request.email_address):
-            attachments = [
-                Attachment(filepath=pdf_filepath_, mime_type=("application", "pdf"))
-            ]
-            current_task.update_state(state="Sending email")
-            send_email_with_attachment(
-                document_request.email_address,
-                attachments,
+    with fail_cleanly_on_soft_time_limit(
+        [html_filepath_]
+        + ([pdf_filepath_] if document_request.generate_pdf else [])
+        + ([epub_filepath_] if document_request.generate_epub else [])
+    ) as guard:
+        if file_needs_update(html_filepath_):
+            (
+                found_resource_lookup_dtos,
+                usfm_books,
+                tn_books,
+                tnc_books,
+                tq_books,
+                tw_books,
+                bc_books,
+            ) = locate_acquire_and_build_resource_objects(document_request)
+            current_task.update_state(state="Assembling content")
+            document_parts = assemble_content(
                 document_request_key_,
+                document_request,
+                usfm_books,
+                tn_books,
+                tnc_books,
+                tq_books,
+                tw_books,
+                bc_books,
             )
-    if document_request.generate_epub and file_needs_update(epub_filepath_):
-        current_task.update_state(state="Converting to ePub")
-        convert_html_to_epub(html_filepath_, epub_filepath_, document_request_key_)
-        if should_send_email(document_request.email_address):
-            attachments = [
-                Attachment(
-                    filepath=epub_filepath_, mime_type=("application", "epub+zip")
+            content_str = compose_document(document_parts)
+            if usfm_books:
+                content_str = check_content_for_issues(content_str)
+            content_str = create_title_page_and_wrap_in_template(
+                content_str, document_request, found_resource_lookup_dtos, usfm_books
+            )
+            write_html_content_to_file(content_str, html_filepath_)
+            guard.mark_complete(html_filepath_)
+        else:
+            logger.info("Cache hit for %s", html_filepath_)
+        # Immediately return pre-built PDF if the document has previously been
+        # generated and is fresh enough.
+        if document_request.generate_pdf and file_needs_update(pdf_filepath_):
+            current_task.update_state(state="Converting to PDF")
+            convert_html_to_pdf(
+                html_filepath_,
+                pdf_filepath_,
+                document_request_key_,
+                document_request.use_prince,
+            )
+            guard.mark_complete(pdf_filepath_)
+            if should_send_email(document_request.email_address):
+                attachments = [
+                    Attachment(filepath=pdf_filepath_, mime_type=("application", "pdf"))
+                ]
+                current_task.update_state(state="Sending email")
+                send_email_with_attachment(
+                    document_request.email_address,
+                    attachments,
+                    document_request_key_,
                 )
-            ]
-            current_task.update_state(state="Sending email")
-            send_email_with_attachment(
-                document_request.email_address,
-                attachments,
-                document_request_key_,
-            )
+        if document_request.generate_epub and file_needs_update(epub_filepath_):
+            current_task.update_state(state="Converting to ePub")
+            convert_html_to_epub(html_filepath_, epub_filepath_, document_request_key_)
+            guard.mark_complete(epub_filepath_)
+            if should_send_email(document_request.email_address):
+                attachments = [
+                    Attachment(
+                        filepath=epub_filepath_, mime_type=("application", "epub+zip")
+                    )
+                ]
+                current_task.update_state(state="Sending email")
+                send_email_with_attachment(
+                    document_request.email_address,
+                    attachments,
+                    document_request_key_,
+                )
     return document_request_key_
 
 
@@ -355,57 +364,59 @@ def generate_docx_document(
     )
     html_filepath_ = html_filepath(document_request_key_)
     docx_filepath_ = docx_filepath(document_request_key_)
-    if document_request.generate_docx and file_needs_update(docx_filepath_):
-        (
-            found_resource_lookup_dtos,
-            usfm_books,
-            tn_books,
-            tnc_books,
-            tq_books,
-            tw_books,
-            bc_books,
-        ) = locate_acquire_and_build_resource_objects(document_request)
-        current_task.update_state(state="Assembling content")
-        document_parts = assemble_content(
-            document_request_key_,
-            document_request,
-            usfm_books,
-            tn_books,
-            tnc_books,
-            tq_books,
-            tw_books,
-            bc_books,
-        )
-        title1, title2 = get_languages_title_page_strings(
-            found_resource_lookup_dtos, usfm_books
-        )
-        current_task.update_state(state="Converting to Docx")
-        convert_html_to_docx(
-            html_filepath_,
-            docx_filepath_,
-            document_parts,
-            document_request.layout_for_print,
-            title1,
-            title2,
-        )
-        if should_send_email(document_request.email_address):
-            attachments = [
-                Attachment(
-                    filepath=docx_filepath_,
-                    mime_type=(
-                        "application",
-                        "vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    ),
-                )
-            ]
-            current_task.update_state(state="Sending email")
-            send_email_with_attachment(
-                document_request.email_address,
-                attachments,
+    with fail_cleanly_on_soft_time_limit([docx_filepath_]) as guard:
+        if document_request.generate_docx and file_needs_update(docx_filepath_):
+            (
+                found_resource_lookup_dtos,
+                usfm_books,
+                tn_books,
+                tnc_books,
+                tq_books,
+                tw_books,
+                bc_books,
+            ) = locate_acquire_and_build_resource_objects(document_request)
+            current_task.update_state(state="Assembling content")
+            document_parts = assemble_content(
                 document_request_key_,
+                document_request,
+                usfm_books,
+                tn_books,
+                tnc_books,
+                tq_books,
+                tw_books,
+                bc_books,
             )
-    else:
-        logger.info("Cache hit for %s", docx_filepath_)
+            title1, title2 = get_languages_title_page_strings(
+                found_resource_lookup_dtos, usfm_books
+            )
+            current_task.update_state(state="Converting to Docx")
+            convert_html_to_docx(
+                html_filepath_,
+                docx_filepath_,
+                document_parts,
+                document_request.layout_for_print,
+                title1,
+                title2,
+            )
+            guard.mark_complete(docx_filepath_)
+            if should_send_email(document_request.email_address):
+                attachments = [
+                    Attachment(
+                        filepath=docx_filepath_,
+                        mime_type=(
+                            "application",
+                            "vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        ),
+                    )
+                ]
+                current_task.update_state(state="Sending email")
+                send_email_with_attachment(
+                    document_request.email_address,
+                    attachments,
+                    document_request_key_,
+                )
+        else:
+            logger.info("Cache hit for %s", docx_filepath_)
     return document_request_key_
 
 
