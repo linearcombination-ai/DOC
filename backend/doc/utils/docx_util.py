@@ -1,10 +1,14 @@
 import re
+from collections.abc import Iterable
+from copy import deepcopy
 from pathlib import Path
+from typing import cast
 
 from docx import Document
 from docx.document import Document as DocxDocument
 from docx.enum.style import WD_STYLE_TYPE
-from docx.oxml import OxmlElement
+from docx.opc.constants import RELATIONSHIP_TYPE
+from docx.oxml import OxmlElement, parse_xml
 from docx.oxml.ns import qn
 from docx.shared import RGBColor
 from docx.text.paragraph import Paragraph
@@ -56,12 +60,15 @@ def _make_text_run(text: str) -> Element:
     return r
 
 
-def override_and_clean_hyperlinks(doc: DocxDocument, style_id: str) -> None:
+def override_and_clean_hyperlinks(
+    doc: DocxDocument, style_id: str, first_paragraph: int = 0
+) -> None:
     """
     Finds all hyperlinks, strips any forced inline formatting (like blue color),
     and applies the correct template character style ID using raw XML manipulation.
+    Paragraphs before index first_paragraph are left alone.
     """
-    for paragraph in doc.paragraphs:
+    for paragraph in doc.paragraphs[first_paragraph:]:
         hyperlinks = paragraph._p.findall(
             ".//{http://schemas.openxmlformats.org/wordprocessingml/2006/main}hyperlink"
         )
@@ -131,6 +138,15 @@ def _replace_runs(para: Paragraph, new_elems: list[Element]) -> None:
         para._p.append(elem)
 
 
+def has_internal_link_markers(contents: Iterable[str]) -> bool:
+    """
+    True if any HTML fragment contains a marker that add_internal_docx_links
+    would convert. Nothing in the backend emits these markers today, so
+    callers can skip that (slow) pass when this is False.
+    """
+    return any("{{BOOKMARK:" in c or "{{LINK_START:" in c for c in contents)
+
+
 def add_internal_docx_links(doc: DocxDocument) -> None:
     """
     Convert {{BOOKMARK:name}} markers into bookmarks, and
@@ -195,6 +211,7 @@ def style_superscripts(
     *,
     lift_half_points: int = 2,
     color: RGBColor | None = None,
+    first_paragraph: int = 0,
 ) -> None:
     """
     lift_half_points:
@@ -203,8 +220,11 @@ def style_superscripts(
         6 = +3pt
     color:
         RGBColor for superscripts (e.g. light gray) or None
+    first_paragraph:
+        index of the first paragraph to process; lets callers skip
+        paragraphs that were in the document before the content was added.
     """
-    for para in doc.paragraphs:
+    for para in doc.paragraphs[first_paragraph:]:
         runs = para.runs
         for i, run in enumerate(runs):
             if run.font.superscript:
@@ -276,3 +296,161 @@ def ensure_reference_styles(
         color=unavailable_color,
         italic=True,
     )
+
+
+_W_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+_WP_NS = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing"
+_PIC_NS = "http://schemas.openxmlformats.org/drawingml/2006/picture"
+
+
+def restart_first_list_numbering(doc: DocxDocument, first_element: int) -> None:
+    """
+    Make the first numbered paragraph of each list style (at or after body
+    element index first_element) restart at 1, and keep the paragraphs that
+    shared its numId on the restarted list. Same effect on the output as
+    docxcompose's Composer.restart_first_numbering, which the old
+    template-plus-body merge applied to the body.
+    """
+    numbering = doc.part.numbering_part.element
+    done: set[str] = set()
+    remapped: dict[str, str] = {}
+    for element in list(doc.element.body)[first_element:]:
+        p_pr = element.find(qn("w:pPr"))
+        if p_pr is None:
+            continue
+        local_el = p_pr.find(qn("w:numPr") + "/" + qn("w:numId"))
+        local = [local_el.get(qn("w:val"))] if local_el is not None else []
+        if local_el is not None and local[0] in remapped:
+            local = [remapped[local[0]]]
+            local_el.set(qn("w:val"), local[0])
+        style_el = p_pr.find(qn("w:pStyle"))
+        if style_el is None:
+            continue
+        style_id = cast(str, style_el.get(qn("w:val")))
+        if style_id in done:
+            continue
+        style = doc.styles.element.get_by_id(style_id)
+        if style is None or style.xpath(".//w:outlineLvl"):
+            continue  # headings never restart
+        style_nums = style.xpath(".//w:numId/@w:val")
+        num_id = local[0] if local else (style_nums[0] if style_nums else None)
+        if num_id is None:
+            continue
+        nums = numbering.xpath(f'.//w:num[@w:numId="{num_id}"]')
+        if not nums:
+            continue
+        abstract_id = nums[0].xpath(".//w:abstractNumId/@w:val")[0]
+        fmt = numbering.xpath(
+            f'.//w:abstractNum[@w:abstractNumId="{abstract_id}"]'
+            '//w:lvl[@w:ilvl="0"]/w:numFmt/@w:val'
+        )
+        if fmt and fmt[0] == "bullet":
+            continue
+        restarted = deepcopy(nums[0])
+        restarted.append(
+            parse_xml(
+                f'<w:lvlOverride xmlns:w="{_W_NS}" w:ilvl="0">'
+                '<w:startOverride w:val="1"/></w:lvlOverride>'
+            )
+        )
+        new_id = str(max(int(n) for n in numbering.xpath(".//w:num/@w:numId")) + 1)
+        restarted.set(qn("w:numId"), new_id)
+        last_num = numbering.xpath(".//w:num")[-1]
+        numbering.insert(numbering.index(last_num), restarted)
+        if local:
+            remapped[local[0]] = new_id
+            local_el.set(qn("w:val"), new_id)
+        else:
+            p_pr.append(
+                parse_xml(
+                    f'<w:numPr xmlns:w="{_W_NS}"><w:ilvl w:val="0"/>'
+                    f'<w:numId w:val="{new_id}"/></w:numPr>'
+                )
+            )
+        done.add(style_id)
+
+
+def renumber_bookmarks_and_drawing_ids(doc: DocxDocument) -> None:
+    """
+    Give bookmarks and drawings unique ids. html4docx restarts bookmark ids
+    at 0 for every HTML fragment, and the horizontal-rule drawings all use
+    the same id. Drawing ids continue into the header and footer parts, the
+    way docxcompose numbers them.
+    """
+    body = doc.element.body
+    for tag in ("w:bookmarkStart", "w:bookmarkEnd"):
+        for n, el in enumerate(body.iter(qn(tag))):
+            el.set(qn("w:id"), str(n))
+    header_footer_roots = [
+        rel.target_part.element
+        for rel in doc.part.rels.values()
+        if rel.reltype in (RELATIONSHIP_TYPE.HEADER, RELATIONSHIP_TYPE.FOOTER)
+    ]
+    for tag in (f"{{{_WP_NS}}}docPr", f"{{{_PIC_NS}}}cNvPr"):
+        next_id = 1
+        for root in [body, *header_footer_roots]:
+            for el in root.iter(tag):
+                el.set("id", str(next_id))
+                next_id += 1
+
+
+def add_styles_from_default_template(doc: DocxDocument, names: Iterable[str]) -> bool:
+    """
+    Add each named style that doc lacks by copying it, with its numbering
+    definition and linked character style, from python-docx's default
+    template (the one the old body document was built on). Returns False,
+    leaving doc untouched, if a style is in neither document.
+    """
+    missing = [name for name in names if name not in doc.styles]
+    default = Document()
+    if any(name not in default.styles for name in missing):
+        return False
+    for name in missing:
+        _copy_style(default, doc, default.styles[name].style_id)
+    return True
+
+
+def _copy_style(src: DocxDocument, dst: DocxDocument, style_id: str) -> None:
+    src_style = src.styles.element.get_by_id(style_id)
+    if src_style is None or dst.styles.element.get_by_id(style_id) is not None:
+        return
+    new_style = deepcopy(src_style)
+    dst.styles.element.append(new_style)
+    for num_id_el in new_style.xpath(".//w:numId"):
+        num_id_el.set(
+            qn("w:val"), _copy_numbering(src, dst, num_id_el.get(qn("w:val")))
+        )
+    for linked in new_style.xpath(".//w:link/@w:val"):
+        _copy_style(src, dst, linked)
+
+
+def _copy_numbering(src: DocxDocument, dst: DocxDocument, num_id: str) -> str:
+    """Copy one w:num and its w:abstractNum into dst; return the new numId."""
+    src_numbering = src.part.numbering_part.element
+    dst_numbering = dst.part.numbering_part.element
+    num = deepcopy(src_numbering.xpath(f'.//w:num[@w:numId="{num_id}"]')[0])
+    abstract_id = num.xpath(".//w:abstractNumId/@w:val")[0]
+    abstract = deepcopy(
+        src_numbering.xpath(f'.//w:abstractNum[@w:abstractNumId="{abstract_id}"]')[0]
+    )
+    new_abstract_id = 1 + max(
+        (int(n) for n in dst_numbering.xpath(".//w:abstractNum/@w:abstractNumId")),
+        default=-1,
+    )
+    new_num_id = 1 + max(
+        (int(n) for n in dst_numbering.xpath(".//w:num/@w:numId")), default=0
+    )
+    abstract.set(qn("w:abstractNumId"), str(new_abstract_id))
+    nsid = abstract.find(qn("w:nsid"))
+    if nsid is not None:  # a unique list id, so lists do not continue each other
+        nsid.set(qn("w:val"), f"{0x5A000000 + new_abstract_id:08X}")
+    num.set(qn("w:numId"), str(new_num_id))
+    num.find(qn("w:abstractNumId")).set(qn("w:val"), str(new_abstract_id))
+    nums = dst_numbering.xpath(".//w:num")
+    if nums:
+        dst_numbering.insert(dst_numbering.index(nums[0]), abstract)
+        dst_numbering.insert(dst_numbering.index(nums[-1]) + 1, num)
+    else:
+        dst_numbering.append(abstract)
+        dst_numbering.append(num)
+    return str(new_num_id)
