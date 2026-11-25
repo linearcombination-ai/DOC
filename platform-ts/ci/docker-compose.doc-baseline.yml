@@ -1,0 +1,29 @@
+# Override on top of DOC's own docker-compose.yml + docker-compose.api-test.yml for the BASELINE run (DOC's FastAPI + Celery stack, run from the
+# repository root so DOC's relative paths resolve):
+#   IMAGE_TAG=local docker compose -f docker-compose.yml -f docker-compose.api-test.yml -f platform-ts/ci/docker-compose.doc-baseline.yml run --rm -T test-runner
+# It changes only what the comparison needs: the tests run are tests/e2e/doc with the same marker expression and flags as DOC's CI, results go to
+# a junit file.
+services:
+  test-runner:
+    command:
+      - -vv
+      - --tb=short
+      - --log-cli-level=INFO
+      - -m
+      - not all and not randomized and not english_randomized
+      - -n
+      - ${PYTEST_WORKERS:-auto}
+      - --splits
+      - ${PYTEST_SPLITS:-1}
+      - --group
+      - ${PYTEST_GROUP:-1}
+      - --durations-path
+      - /app/tests/.test_durations
+      - --junitxml=/results/junit.xml
+      - -o
+      - junit_family=xunit2
+      - -p
+      - no:cacheprovider
+      - /app/tests/e2e/doc
+    volumes:
+      - ./e2e-results:/results

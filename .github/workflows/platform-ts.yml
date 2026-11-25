@@ -11,13 +11,15 @@ on:
   workflow_dispatch:
     inputs:
       jobs:
-        description: "Which jobs: all, static, unit, stack (build + smoke), e2e-api, e2e-ui, ops (a comma list also works)"
+        description: "Which jobs: all, static, unit, stack (build + smoke), e2e-api, e2e-ui, ops (a comma list also works). Note: workflow_dispatch only works for a workflow file on the default branch; on this branch use the commit-message markers instead"
         required: false
         default: all
 
+# A newer push cancels an older plain run on the same ref; a run that carries an end-to-end marker in its commit message is never cancelled by a later push
+# (it has its own group), because those runs take tens of minutes.
 concurrency:
-  group: platform-ts-${{ github.ref }}
-  cancel-in-progress: true
+  group: platform-ts-${{ github.ref }}-${{ contains(github.event.head_commit.message, '[e2e') && github.sha || 'plain' }}
+  cancel-in-progress: ${{ !contains(github.event.head_commit.message, '[e2e') }}
 
 permissions:
   contents: read
@@ -28,9 +30,45 @@ env:
   WASM_BINDGEN_VERSION: "0.2.130"
 
 jobs:
+  # Which jobs run. A push runs static, unit and stack (build + smoke). Markers in the head commit message add more: [e2e] the API end-to-end jobs on
+  # both stacks, [e2e-ui] the frontend tests, [ops] the operations scenarios, [all] everything. workflow_dispatch takes the `jobs` input instead.
+  plan:
+    name: Plan
+    runs-on: ubuntu-24.04
+    outputs:
+      static: ${{ steps.sel.outputs.static }}
+      unit: ${{ steps.sel.outputs.unit }}
+      stack: ${{ steps.sel.outputs.stack }}
+      e2e_api: ${{ steps.sel.outputs.e2e_api }}
+      e2e_ui: ${{ steps.sel.outputs.e2e_ui }}
+      ops: ${{ steps.sel.outputs.ops }}
+    steps:
+      - id: sel
+        env:
+          EVENT: ${{ github.event_name }}
+          INPUT: ${{ inputs.jobs }}
+          MSG: ${{ github.event.head_commit.message }}
+        run: |
+          if [ "$EVENT" = workflow_dispatch ]; then want="${INPUT:-all}"; else
+            want="static,unit,stack"
+            case "$MSG" in *"[all]"*) want="all";; esac
+            case "$MSG" in *"[e2e]"*) want="$want,e2e-api";; esac
+            case "$MSG" in *"[e2e-ui]"*) want="$want,e2e-ui";; esac
+            case "$MSG" in *"[ops]"*) want="$want,ops";; esac
+          fi
+          has() { case ",$want," in *,all,*|*,"$1",*) echo true;; *) echo false;; esac; }
+          # the stack job (build + smoke) is also needed by every end-to-end job
+          stack=$(has stack); [ "$(has e2e-api)" = true ] && stack=true; [ "$(has e2e-ui)" = true ] && stack=true; [ "$(has ops)" = true ] && stack=true
+          {
+            echo "static=$(has static)"; echo "unit=$(has unit)"; echo "stack=$stack"
+            echo "e2e_api=$(has e2e-api)"; echo "e2e_ui=$(has e2e-ui)"; echo "ops=$(has ops)"
+          } >> "$GITHUB_OUTPUT"
+          echo "selected: $want" | tee -a "$GITHUB_STEP_SUMMARY"
+
   static:
     name: Static checks
-    if: ${{ github.event_name == 'push' || inputs.jobs == 'all' || contains(inputs.jobs, 'static') }}
+    needs: [plan]
+    if: ${{ needs.plan.outputs.static == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
@@ -74,7 +112,8 @@ jobs:
 
   unit:
     name: Unit and integration tests (Valkey)
-    if: ${{ github.event_name == 'push' || inputs.jobs == 'all' || contains(inputs.jobs, 'unit') }}
+    needs: [plan]
+    if: ${{ needs.plan.outputs.unit == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
@@ -137,7 +176,8 @@ jobs:
 
   build:
     name: Build ${{ matrix.name }} image
-    if: ${{ github.event_name == 'push' || inputs.jobs == 'all' || contains(inputs.jobs, 'stack') || contains(inputs.jobs, 'e2e') || contains(inputs.jobs, 'ops') }}
+    needs: [plan]
+    if: ${{ needs.plan.outputs.stack == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     strategy:
@@ -199,8 +239,8 @@ jobs:
 
   smoke:
     name: Stack up, health checks, smoke test
-    needs: [build]
-    if: ${{ always() && needs.build.result == 'success' && (github.event_name == 'push' || inputs.jobs == 'all' || contains(inputs.jobs, 'stack')) }}
+    needs: [plan, build]
+    if: ${{ always() && needs.build.result == 'success' && needs.plan.outputs.stack == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     env:
@@ -249,3 +289,214 @@ jobs:
           name: smoke-results
           path: ci-out
           retention-days: 14
+
+  # ---------------------------------------------------------------------------------------------------------------------------------------------
+  # DOC's own end-to-end tests (tests/e2e/doc), on this build's stack and on DOC's FastAPI + Celery baseline, in the same run.
+  # ---------------------------------------------------------------------------------------------------------------------------------------------
+  build-baseline:
+    name: Build DOC ${{ matrix.name }} image (baseline and test runner)
+    needs: [plan]
+    if: ${{ needs.plan.outputs.e2e_api == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: api
+            context: .
+            file: generated
+            tag: wycliffeassociates/doc:local
+          - name: usfmparser
+            context: dotnet/USFMParserApi
+            file: dotnet/USFMParserApi/Dockerfile
+            tag: wycliffeassociates/doc-usfmparser:local
+          - name: fileserver
+            context: web
+            file: web/Dockerfile
+            tag: doc-fileserver:latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: DOC's Dockerfile without the Calibre step and the mypy lines
+        if: ${{ matrix.name == 'api' }}
+        run: bash platform-ts/ci/make-baseline-dockerfile.sh > "${{ runner.temp }}/Dockerfile.baseline"
+      - name: Start timer
+        run: echo "BUILD_START=$(date +%s)" >> "$GITHUB_ENV"
+      - name: Build ${{ matrix.name }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file == 'generated' && format('{0}/Dockerfile.baseline', runner.temp) || matrix.file }}
+          tags: ${{ matrix.tag }}
+          outputs: type=docker,dest=${{ runner.temp }}/doc-${{ matrix.name }}.tar
+          cache-from: type=gha,scope=doc-${{ matrix.name }}
+          cache-to: type=gha,scope=doc-${{ matrix.name }},mode=max
+      - name: Record build time and image size
+        run: |
+          end=$(date +%s)
+          docker load -i "${{ runner.temp }}/doc-${{ matrix.name }}.tar" >/dev/null
+          size=$(docker image inspect --format '{{.Size}}' "${{ matrix.tag }}")
+          mkdir -p build-info
+          printf '{"image":"doc-%s","build_seconds":%s,"size_bytes":%s}\n' "${{ matrix.name }}" "$((end - BUILD_START))" "$size" | tee "build-info/doc-${{ matrix.name }}.json"
+          echo "| doc-${{ matrix.name }} | $((end - BUILD_START)) s | $((size / 1048576)) MB |" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: docimage-${{ matrix.name }}
+          path: ${{ runner.temp }}/doc-${{ matrix.name }}.tar
+          retention-days: 1
+          compression-level: 1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build-info-doc-${{ matrix.name }}
+          path: build-info
+          retention-days: 14
+
+  e2e-api-ts:
+    name: DOC e2e on the TypeScript stack (group ${{ matrix.group }}/3)
+    needs: [plan, build, build-baseline]
+    if: ${{ always() && needs.build.result == 'success' && needs.build-baseline.result == 'success' && needs.plan.outputs.e2e_api == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [1, 2, 3]
+    env:
+      IMAGE_TAG: local
+      PYTEST_SPLITS: "3"
+      PYTEST_GROUP: ${{ matrix.group }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: "{image-*,docimage-api}"
+          path: ${{ runner.temp }}/images
+          merge-multiple: true
+      - name: Load images
+        run: for f in "${{ runner.temp }}"/images/*.tar; do docker load -i "$f"; done
+      - name: Retag the stack's images for compose (tag ${{ env.IMAGE_TAG }})
+        run: for i in api worker gateway frontend; do docker tag "doc-ts/$i:ci" "doc-ts/$i:local"; done
+      - name: Start the stack
+        working-directory: platform-ts
+        run: |
+          mkdir -p -m 0777 e2e-results ../ci-out
+          docker compose up -d --no-build valkey volume-init api worker gateway
+          bash ci/wait-healthy.sh 300 valkey api worker gateway
+          bash ci/stats-sampler.sh ../ci-out/stats.csv 5 &
+      - name: DOC's tests/e2e/doc against the TypeScript stack
+        working-directory: platform-ts
+        run: |
+          start=$(date +%s)
+          set +e
+          docker compose -f docker-compose.yml -f docker-compose.e2e.yml --profile e2e run --rm -T test-runner 2>&1 | tee ../ci-out/pytest.txt
+          code=${PIPESTATUS[0]}
+          echo "pytest_seconds=$(( $(date +%s) - start )) exit=$code" | tee ../ci-out/timing.txt "$GITHUB_STEP_SUMMARY"
+          exit "$code"
+      - name: Logs and state
+        if: always()
+        working-directory: platform-ts
+        run: |
+          mkdir -p ../ci-out
+          cp e2e-results/*.xml ../ci-out/ 2>/dev/null || true
+          docker compose ps -a > ../ci-out/compose-ps.txt
+          docker compose logs --no-color --timestamps > ../ci-out/compose-logs.txt 2>&1
+          docker run --rm -v platform-ts_output:/o:ro alpine sh -c 'ls /o | wc -l' > ../ci-out/documents-produced.txt 2>&1 || true
+      - name: Tear down
+        if: always()
+        working-directory: platform-ts
+        run: docker compose down -v
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-ts-${{ matrix.group }}
+          path: ci-out
+          retention-days: 14
+
+  e2e-api-doc:
+    name: DOC e2e on DOC's own FastAPI stack (group ${{ matrix.group }}/3)
+    needs: [plan, build-baseline]
+    if: ${{ always() && needs.build-baseline.result == 'success' && needs.plan.outputs.e2e_api == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        group: [1, 2, 3]
+    env:
+      IMAGE_TAG: local
+      PYTEST_SPLITS: "3"
+      PYTEST_GROUP: ${{ matrix.group }}
+      COMPOSE: docker compose -f docker-compose.yml -f docker-compose.api-test.yml -f platform-ts/ci/docker-compose.doc-baseline.yml
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: docimage-*
+          path: ${{ runner.temp }}/images
+          merge-multiple: true
+      - name: Load images
+        run: for f in "${{ runner.temp }}"/images/*.tar; do docker load -i "$f"; done
+      - name: Prepare DOC's compose stack
+        run: |
+          mkdir -p -m 0777 e2e-results ci-out
+          $COMPOSE up --no-start
+      - name: DOC's tests/e2e/doc against DOC's own stack
+        run: |
+          start=$(date +%s)
+          set +e
+          # `run` starts the test runner's dependencies (waiting for their health checks), runs pytest, leaves the stack up
+          ( bash platform-ts/ci/stats-sampler.sh ci-out/stats.csv 5 & echo $! > ci-out/sampler.pid )
+          $COMPOSE run --rm -T test-runner 2>&1 | tee ci-out/pytest.txt
+          code=${PIPESTATUS[0]}
+          echo "pytest_seconds=$(( $(date +%s) - start )) exit=$code" | tee ci-out/timing.txt "$GITHUB_STEP_SUMMARY"
+          exit "$code"
+      - name: Logs and state
+        if: always()
+        run: |
+          cp e2e-results/*.xml ci-out/ 2>/dev/null || true
+          $COMPOSE ps -a > ci-out/compose-ps.txt
+          $COMPOSE logs --no-color --timestamps --tail=2000 > ci-out/compose-logs.txt 2>&1
+      - name: Tear down
+        if: always()
+        run: $COMPOSE down -v
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-doc-${{ matrix.group }}
+          path: ci-out
+          retention-days: 14
+
+  e2e-report:
+    name: DOC e2e pass table
+    needs: [e2e-api-ts, e2e-api-doc]
+    if: ${{ always() && (needs.e2e-api-ts.result != 'skipped' || needs.e2e-api-doc.result != 'skipped') }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: e2e-*-*
+          path: results
+      - name: Pass table (TypeScript stack against DOC's FastAPI baseline)
+        run: |
+          mkdir -p ci-out
+          python3 - <<'PY'
+          import pathlib, subprocess, sys
+          root = pathlib.Path("results")
+          def gather(prefix: str, dest: pathlib.Path) -> None:
+              dest.mkdir(parents=True, exist_ok=True)
+              for d in sorted(root.glob(prefix + "-*")):
+                  for x in d.glob("junit*.xml"):
+                      (dest / f"{d.name}-{x.name}").write_bytes(x.read_bytes())
+          gather("e2e-ts", pathlib.Path("ts-xml"))
+          gather("e2e-doc", pathlib.Path("doc-xml"))
+          out = subprocess.run([sys.executable, "platform-ts/ci/e2e_table.py", "--ts", "ts-xml", "--doc", "doc-xml", "--out", "ci-out/e2e-table.md"], capture_output=True, text=True, check=False)
+          print(out.stdout[:200], out.stderr[:2000])
+          PY
+          cat ci-out/e2e-table.md | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: e2e-table
+          path: ci-out
+          retention-days: 30
