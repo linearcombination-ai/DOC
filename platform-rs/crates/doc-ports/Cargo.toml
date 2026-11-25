@@ -1,0 +1,13 @@
+[package]
+name = "doc-ports"
+description = "The ports the application layer needs (Catalog, Acquirer) with their error and result types. No I/O."
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+[lints]
+workspace = true
+[dependencies]
+doc-contract.workspace = true
+doc-lookup.workspace = true
+thiserror.workspace = true
+serde_json.workspace = true

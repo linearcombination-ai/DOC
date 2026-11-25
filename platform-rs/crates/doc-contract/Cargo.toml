@@ -1,0 +1,13 @@
+[package]
+name = "doc-contract"
+description = "The single source of truth for request and response shapes: wire types, validators, error bodies. Feeds runtime validation, the OpenAPI document and (through it) the frontend's TypeScript types."
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+[lints]
+workspace = true
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+utoipa.workspace = true
+thiserror.workspace = true

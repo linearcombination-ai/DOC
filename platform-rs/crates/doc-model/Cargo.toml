@@ -1,0 +1,11 @@
+[package]
+name = "doc-model"
+description = "Shared types, tables, Tree, name port and Python text semantics."
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+[lints]
+workspace = true
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+unicode-general-category = "1"

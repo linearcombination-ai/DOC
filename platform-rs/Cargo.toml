@@ -1,0 +1,68 @@
+# P4 (Rust shell) workspace. Layering, bottom to top:
+#   doc-contract   wire types, validators, error envelope, OpenAPI document (the single source of truth)
+#   doc-model      P3b core crate (tables, Tree, name port), two methods added to Tree
+#   doc-lookup     pure core: catalog parsing, languages, locator, book list, resource types (as_built | fixed)
+#   doc-ports      the two ports the application needs (Catalog, Acquirer) and their error types
+#   doc-flight     in-process single-flight
+#   doc-catalog    adapter: BIEL GraphQL client (timeouts, bounded retry, success TTL, no failure cache)
+#   doc-acquire    adapter: git CLI repository cache (atomic swap, single-flight, deadline, report)
+#   doc-kitchen    adapter: scripture-kitchen names (the only crate that names a kitchen type)
+#   doc-app        application layer: the seven use cases over the ports
+#   doc-shell      axum binary: config, routes, logging, graceful shutdown
+[workspace]
+resolver = "2"
+exclude = ["_exp", "scratch"]
+members = [
+    "crates/doc-contract", "crates/doc-model", "crates/doc-lookup", "crates/doc-ports",
+    "crates/doc-flight", "crates/doc-catalog", "crates/doc-acquire", "crates/doc-kitchen",
+    "crates/doc-app", "crates/doc-shell",
+    "crates/doc-request", "crates/doc-interleave", "crates/doc-md", "crates/doc-canon",
+    "crates/doc-jobs", "crates/doc-jobd",
+]
+
+[workspace.package]
+version = "0.0.4"
+edition = "2021"
+publish = false
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+thiserror = "2"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "process", "time", "sync", "signal", "fs", "net"] }
+futures = "0.3"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+fancy-regex = "0.20"
+yaml-rust2 = "0.13"
+utoipa = { version = "6", features = ["preserve_order"] }
+utoipa-axum = "0.3"
+axum = { version = "0.8", default-features = false, features = ["http1", "tokio", "json", "query"] }
+tower-http = { version = "0.7", features = ["trace"] }
+reqwest = { version = "0.13", default-features = false, features = ["rustls", "json", "gzip"] }
+sha2 = "0.11"
+rand = "0.10"
+doc-contract = { path = "crates/doc-contract" }
+doc-model = { path = "crates/doc-model" }
+doc-lookup = { path = "crates/doc-lookup" }
+doc-ports = { path = "crates/doc-ports" }
+doc-flight = { path = "crates/doc-flight" }
+doc-catalog = { path = "crates/doc-catalog" }
+doc-acquire = { path = "crates/doc-acquire" }
+doc-kitchen = { path = "crates/doc-kitchen" }
+doc-app = { path = "crates/doc-app" }
+
+[profile.release]
+opt-level = 3
+debug = false
+lto = "thin"
+codegen-units = 4
+

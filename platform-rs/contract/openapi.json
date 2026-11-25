@@ -1,0 +1,1538 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "DOC shell (Rust, P4)",
+    "description": "Endpoints 1 to 7 of the DOC stack report, behaviour-compatible with DOC's FastAPI in `as_built` mode.",
+    "license": {
+      "name": ""
+    },
+    "version": "0.0.4"
+  },
+  "paths": {
+    "/book_codes_for_lang/{lang_code}": {
+      "get": {
+        "tags": [
+          "books"
+        ],
+        "summary": "Books available for a language, with names as the resources provide them.",
+        "operationId": "book_codes_for_lang",
+        "parameters": [
+          {
+            "name": "lang_code",
+            "in": "path",
+            "description": "language code",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Doc-Mode",
+            "in": "header",
+            "description": "as_built (default) or fixed",
+            "required": false,
+            "schema": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/Mode"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "book code and name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BookEntry"
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "invalid path parameter (fixed mode)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "data API unavailable (fixed mode)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnavailableBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/book_codes_for_lang_from_usfm_only/{lang_code}": {
+      "get": {
+        "tags": [
+          "books"
+        ],
+        "summary": "As `book_codes_for_lang`, from USFM sources only.",
+        "operationId": "book_codes_for_lang_from_usfm_only",
+        "parameters": [
+          {
+            "name": "lang_code",
+            "in": "path",
+            "description": "language code",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Doc-Mode",
+            "in": "header",
+            "description": "as_built (default) or fixed",
+            "required": false,
+            "schema": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/Mode"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "book code and name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BookEntry"
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "invalid path parameter (fixed mode)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "data API unavailable (fixed mode)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnavailableBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/chapters_in_books": {
+      "get": {
+        "tags": [
+          "books"
+        ],
+        "summary": "Chapter numbers of every book, in canonical book order.",
+        "operationId": "chapters_in_books",
+        "responses": {
+          "200": {
+            "description": "book code to chapter numbers",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChaptersInBooks"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/documents": {
+      "post": {
+        "tags": [],
+        "operationId": "generate_document",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The task id (HTML output)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskCreated"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The body is larger than the limit"
+          },
+          "422": {
+            "description": "The request is not valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestValidationBody"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "PDF output is not implemented (generate_pdf=true)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Queue unavailable or disk space low; retry",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/documents_docx": {
+      "post": {
+        "tags": [],
+        "operationId": "generate_docx_document",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentRequestBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The task id; poll /task_status/{task_id}",
+            "headers": {
+              "X-Doc-Coalesced": {
+                "schema": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "description": "true when an identical request was already running"
+              },
+              "X-Request-Id": {
+                "schema": {
+                  "type": "string"
+                },
+                "description": "The request id"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskCreated"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The body is larger than the limit"
+          },
+          "422": {
+            "description": "The request is not valid",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestValidationBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Queue unavailable or disk space low; retry (see Retry-After)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/findings/book_codes_for_lang/{lang_code}": {
+      "get": {
+        "tags": [
+          "findings"
+        ],
+        "summary": "`book_codes_for_lang` with the findings the mode produced.",
+        "operationId": "findings_book_codes_for_lang",
+        "parameters": [
+          {
+            "name": "lang_code",
+            "in": "path",
+            "description": "language code",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Doc-Mode",
+            "in": "header",
+            "description": "as_built (default) or fixed",
+            "required": false,
+            "schema": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/Mode"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "books and findings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WithFindings_Vec_BookEntry"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "data API unavailable (fixed mode)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnavailableBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/findings/book_codes_for_lang_from_usfm_only/{lang_code}": {
+      "get": {
+        "tags": [
+          "findings"
+        ],
+        "summary": "`book_codes_for_lang_from_usfm_only` with findings.",
+        "operationId": "findings_book_codes_usfm_only",
+        "parameters": [
+          {
+            "name": "lang_code",
+            "in": "path",
+            "description": "language code",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Doc-Mode",
+            "in": "header",
+            "description": "as_built (default) or fixed",
+            "required": false,
+            "schema": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/Mode"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "books and findings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WithFindings_Vec_BookEntry"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "data API unavailable (fixed mode)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnavailableBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/findings/resource_types/{lang_code}/{book_codes}": {
+      "get": {
+        "tags": [
+          "findings"
+        ],
+        "summary": "`resource_types` with findings.",
+        "operationId": "findings_resource_types",
+        "parameters": [
+          {
+            "name": "lang_code",
+            "in": "path",
+            "description": "language code",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "book_codes",
+            "in": "path",
+            "description": "`all` or comma-separated book codes",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Doc-Mode",
+            "in": "header",
+            "description": "as_built (default) or fixed",
+            "required": false,
+            "schema": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/Mode"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "resource types and findings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WithFindings_Vec_ResourceTypeEntry"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "data API unavailable (fixed mode)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnavailableBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/findings/shared_book_codes/{lang0_code}/{lang1_code}": {
+      "get": {
+        "tags": [
+          "findings"
+        ],
+        "summary": "`shared_book_codes` with findings.",
+        "operationId": "findings_shared_book_codes",
+        "parameters": [
+          {
+            "name": "lang0_code",
+            "in": "path",
+            "description": "first language",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lang1_code",
+            "in": "path",
+            "description": "second language",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Doc-Mode",
+            "in": "header",
+            "description": "as_built (default) or fixed",
+            "required": false,
+            "schema": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/Mode"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "books and findings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WithFindings_Vec_BookEntry"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "data API unavailable (fixed mode)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnavailableBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health/status": {
+      "get": {
+        "tags": [],
+        "operationId": "health_status",
+        "responses": {
+          "200": {
+            "description": "Liveness (status) and readiness (ready, problems)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobsHealthResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/language_codes_and_names": {
+      "get": {
+        "tags": [
+          "languages"
+        ],
+        "summary": "All languages: `[code, \"national (english)\", is_gateway]`, sorted by display name.",
+        "operationId": "language_codes_and_names",
+        "parameters": [
+          {
+            "name": "X-Doc-Mode",
+            "in": "header",
+            "description": "as_built (default) or fixed",
+            "required": false,
+            "schema": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/Mode"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "languages",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LanguageEntry"
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "invalid header value",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "data API unavailable (fixed mode)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnavailableBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/metrics": {
+      "get": {
+        "tags": [],
+        "operationId": "metrics",
+        "responses": {
+          "200": {
+            "description": "Prometheus text exposition 0.0.4",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/resource_types/{lang_code}/{book_codes}": {
+      "get": {
+        "tags": [
+          "resources"
+        ],
+        "summary": "Resource types a language offers for the given books (`all` or a comma-separated list).",
+        "operationId": "resource_types",
+        "parameters": [
+          {
+            "name": "lang_code",
+            "in": "path",
+            "description": "language code",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "book_codes",
+            "in": "path",
+            "description": "`all` or comma-separated book codes",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Doc-Mode",
+            "in": "header",
+            "description": "as_built (default) or fixed",
+            "required": false,
+            "schema": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/Mode"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "resource type code and name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ResourceTypeEntry"
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "invalid path parameter (fixed mode)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "data API unavailable (fixed mode)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnavailableBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/shared_book_codes/{lang0_code}/{lang1_code}": {
+      "get": {
+        "tags": [
+          "books"
+        ],
+        "summary": "Books both languages have, in the first language's order and names.",
+        "operationId": "shared_book_codes",
+        "parameters": [
+          {
+            "name": "lang0_code",
+            "in": "path",
+            "description": "first language",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "lang1_code",
+            "in": "path",
+            "description": "second language",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Doc-Mode",
+            "in": "header",
+            "description": "as_built (default) or fixed",
+            "required": false,
+            "schema": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/Mode"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "book code and name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BookEntry"
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "invalid path parameter (fixed mode)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "data API unavailable (fixed mode)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnavailableBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/task_status/{task_id}": {
+      "get": {
+        "tags": [],
+        "operationId": "task_status",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "description": "The id from POST /documents(_docx)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The task's state; an unknown id is PENDING, as with Celery",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskStatusBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Queue unavailable; keep polling",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiProblem"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ApiProblem": {
+        "type": "object",
+        "description": "A typed, retryable (or not) refusal: 501 (a feature not built), 503 (queue down, disk full).",
+        "required": [
+          "detail",
+          "code",
+          "retryable"
+        ],
+        "properties": {
+          "detail": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "retryable": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AssemblyLayout": {
+        "type": "string",
+        "enum": [
+          "1c",
+          "1c_c",
+          "2c_sl_sr",
+          "2c_sl_sr_c",
+          "stet"
+        ]
+      },
+      "AssemblyStrategy": {
+        "type": "string",
+        "enum": [
+          "lbo",
+          "blo",
+          "lvo",
+          "bvo",
+          "stet"
+        ]
+      },
+      "BookEntry": {
+        "type": "array",
+        "items": false,
+        "prefixItems": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "string"
+          }
+        ],
+        "description": "`[book code, book name]`",
+        "maxItems": 2,
+        "minItems": 2
+      },
+      "ChaptersInBooks": {
+        "type": "object",
+        "description": "`{book: [1..N]}` in canonical book order (an object, but the key order is part of the\nbehaviour: DOC's dict keeps insertion order and the UI iterates it).",
+        "additionalProperties": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          }
+        },
+        "propertyNames": {
+          "type": "string"
+        }
+      },
+      "DetailBody": {
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "properties": {
+          "detail": {
+            "type": "string"
+          }
+        }
+      },
+      "DocumentRequestBody": {
+        "type": "object",
+        "required": [
+          "assembly_strategy_kind",
+          "resource_requests"
+        ],
+        "properties": {
+          "email_address": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "assembly_strategy_kind": {
+            "$ref": "#/components/schemas/AssemblyStrategy"
+          },
+          "assembly_layout_kind": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/AssemblyLayout"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "layout_for_print": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "resource_requests": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResourceRequestBody"
+            },
+            "description": "At most 100."
+          },
+          "generate_pdf": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "generate_epub": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "generate_docx": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "limit_words": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "use_chapter_labels": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "use_prince": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "use_two_column_layout_for_tn_notes": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "use_two_column_layout_for_tq_notes": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "use_section_visual_separator": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "show_tn_book_intro": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "show_bc_book_intro": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "show_tn_chapter_intro": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "show_bc_chapter_commentary": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "document_request_source": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/DocumentRequestSource"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "DocumentRequestSource": {
+        "type": "string",
+        "enum": [
+          "ui",
+          "test",
+          "biel_ui"
+        ]
+      },
+      "ErrorKind": {
+        "type": "string",
+        "enum": [
+          "catalog_unavailable",
+          "catalog_malformed",
+          "deadline_exceeded"
+        ]
+      },
+      "Finding": {
+        "type": "object",
+        "required": [
+          "code",
+          "severity",
+          "detail"
+        ],
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/FindingCode"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/Severity"
+          },
+          "lang": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "repo": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "book": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "detail": {
+            "type": "string"
+          }
+        }
+      },
+      "FindingCode": {
+        "type": "string",
+        "enum": [
+          "catalog_row_invalid",
+          "catalog_served_stale",
+          "repo_unavailable",
+          "repo_served_stale",
+          "repo_unreadable",
+          "unknown_book_code",
+          "owner_prefix_stripped",
+          "name_from_kitchen",
+          "name_fell_back_to_english",
+          "name_looks_english",
+          "title_file_multiline",
+          "manifest_unreadable",
+          "name_normalisation_would_change"
+        ]
+      },
+      "HealthDetail": {
+        "type": "object",
+        "description": "`{\"status\":\"ok\"}`.",
+        "required": [
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string"
+          }
+        }
+      },
+      "HealthResponse": {
+        "type": "array",
+        "items": false,
+        "prefixItems": [
+          {
+            "type": "object",
+            "required": [
+              "status"
+            ],
+            "properties": {
+              "status": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "type": "integer",
+            "maximum": 599,
+            "minimum": 100
+          }
+        ],
+        "description": "`[{\"status\": \"ok\"}, 200]`: DOC returns a Python tuple, which FastAPI serialises as an array",
+        "maxItems": 2,
+        "minItems": 2
+      },
+      "JobFailureBody": {
+        "type": "object",
+        "description": "The failure result added to `FAILURE` (the legacy answer has no `result` there).",
+        "required": [
+          "code",
+          "message",
+          "retryable"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "retryable": {
+            "type": "boolean"
+          }
+        }
+      },
+      "JobsHealthResponse": {
+        "type": "array",
+        "items": false,
+        "prefixItems": [
+          {
+            "type": "object",
+            "required": [
+              "status",
+              "ready",
+              "problems"
+            ],
+            "properties": {
+              "status": {
+                "type": "string"
+              },
+              "ready": {
+                "type": "boolean"
+              },
+              "problems": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "queue": {
+                "type": "object",
+                "description": "ok, store, ping_ms, queued, running, delayed, oldest_entry_age_ms, lag_s, stalled_recovered_total"
+              },
+              "redis": {
+                "type": "object",
+                "description": "ok, ping_ms"
+              },
+              "processes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "description": "one process: id, role, age_ms, alive, docx pool, catalog"
+                }
+              },
+              "catalog": {
+                "type": "object",
+                "description": "last_success_unix_s, age_s"
+              },
+              "disk": {
+                "type": "object",
+                "description": "free_mb, min_free_mb, ok"
+              },
+              "uptime_s": {
+                "type": "integer"
+              }
+            }
+          },
+          {
+            "type": "integer",
+            "maximum": 599,
+            "minimum": 100
+          }
+        ],
+        "maxItems": 2,
+        "minItems": 2
+      },
+      "LanguageEntry": {
+        "type": "array",
+        "items": false,
+        "prefixItems": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "string"
+          },
+          {
+            "type": "boolean"
+          }
+        ],
+        "description": "`[language code, \"national (english)\", is_gateway]`",
+        "maxItems": 3,
+        "minItems": 3
+      },
+      "LocItem": {
+        "oneOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          }
+        ]
+      },
+      "Mode": {
+        "type": "string",
+        "description": "`as_built` reproduces DOC's FastAPI responses including its defects; `fixed` repairs the\ndefects the earlier reports found. Both stay until the content team rules.",
+        "enum": [
+          "as_built",
+          "fixed"
+        ]
+      },
+      "RequestProblem": {
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "properties": {
+          "loc": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LocItem"
+            }
+          },
+          "msg": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        }
+      },
+      "RequestValidationBody": {
+        "type": "object",
+        "description": "FastAPI's own 422 shape (`{\"detail\": [...]}`) for a bad document request.",
+        "required": [
+          "detail"
+        ],
+        "properties": {
+          "detail": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RequestProblem"
+            }
+          }
+        }
+      },
+      "ResourceRequestBody": {
+        "type": "object",
+        "required": [
+          "lang_code",
+          "resource_type",
+          "book_code"
+        ],
+        "properties": {
+          "lang_code": {
+            "type": "string",
+            "description": "1 to 35 letters, digits or hyphens."
+          },
+          "resource_type": {
+            "type": "string"
+          },
+          "book_code": {
+            "type": "string"
+          }
+        }
+      },
+      "ResourceTypeEntry": {
+        "type": "array",
+        "items": false,
+        "prefixItems": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "string"
+          }
+        ],
+        "description": "`[resource type code, resource type name]`",
+        "maxItems": 2,
+        "minItems": 2
+      },
+      "Severity": {
+        "type": "string",
+        "enum": [
+          "info",
+          "warning",
+          "error"
+        ]
+      },
+      "TaskCreated": {
+        "type": "object",
+        "description": "`{\"task_id\": \"...\"}`; the header `X-Doc-Coalesced: true` marks a request that joined one already running.",
+        "required": [
+          "task_id"
+        ],
+        "properties": {
+          "task_id": {
+            "type": "string"
+          }
+        }
+      },
+      "TaskResult": {
+        "oneOf": [
+          {
+            "type": "string",
+            "description": "On `SUCCESS`: the document request key (the file name stem)."
+          },
+          {
+            "$ref": "#/components/schemas/JobFailureBody",
+            "description": "On `FAILURE`: why."
+          }
+        ]
+      },
+      "TaskStatusBody": {
+        "type": "object",
+        "description": "`{\"state\": ...}`: `PENDING`, then the progress strings the UI matches literally (`Receiving request`,\n`Locating assets`, `Provisioning asset files`, `Parsing asset files`, `Assembling content`,\n`Converting to Docx`, `Sending email`), then `SUCCESS` (with `result`) or `FAILURE` (with `result`).",
+        "required": [
+          "state"
+        ],
+        "properties": {
+          "state": {
+            "type": "string"
+          },
+          "result": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/TaskResult"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "UnavailableBody": {
+        "type": "object",
+        "required": [
+          "kind",
+          "message",
+          "retryable"
+        ],
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/ErrorKind"
+          },
+          "message": {
+            "type": "string"
+          },
+          "retryable": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ValidationBody": {
+        "type": "object",
+        "description": "DOC's 422 envelope. `status_code` is the application code 10422, not the HTTP status.",
+        "required": [
+          "status_code",
+          "message"
+        ],
+        "properties": {
+          "status_code": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "WithFindings_Vec_BookEntry": {
+        "type": "object",
+        "description": "A list endpoint's answer with the findings the fixed mode returns (the `/findings/...` routes).",
+        "required": [
+          "data",
+          "findings",
+          "mode"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": false,
+              "prefixItems": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "description": "`[book code, book name]`",
+              "maxItems": 2,
+              "minItems": 2
+            }
+          },
+          "findings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Finding"
+            }
+          },
+          "mode": {
+            "$ref": "#/components/schemas/Mode"
+          }
+        }
+      },
+      "WithFindings_Vec_ResourceTypeEntry": {
+        "type": "object",
+        "description": "A list endpoint's answer with the findings the fixed mode returns (the `/findings/...` routes).",
+        "required": [
+          "data",
+          "findings",
+          "mode"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": false,
+              "prefixItems": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "string"
+                }
+              ],
+              "description": "`[resource type code, resource type name]`",
+              "maxItems": 2,
+              "minItems": 2
+            }
+          },
+          "findings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Finding"
+            }
+          },
+          "mode": {
+            "$ref": "#/components/schemas/Mode"
+          }
+        }
+      }
+    }
+  }
+}

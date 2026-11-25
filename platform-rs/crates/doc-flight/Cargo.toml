@@ -1,0 +1,11 @@
+[package]
+name = "doc-flight"
+description = "In-process single-flight: concurrent identical lookups share one execution, which runs to completion even when every waiter gives up."
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+[lints]
+workspace = true
+[dependencies]
+tokio.workspace = true
+futures.workspace = true

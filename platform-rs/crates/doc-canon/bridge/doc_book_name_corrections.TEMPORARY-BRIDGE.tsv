@@ -1,0 +1,14 @@
+# TEMPORARY BRIDGE: NOT a permanent DOC file.
+# DOC's hand corrections (backend/doc/utils/text_utils.py BOOK_NAME_CORRECTION_TABLE, DOC commit
+# 50de21cd) re-keyed from "raw name seen" to (language, book code) so that they can be offered to
+# scripture-kitchen for review and upstreaming (captain, 2026-11-25: names come from kitchen, the
+# aim is parity on localization). When kitchen's canon carries these names the file is deleted and
+# `Overrides` goes with it. Every line is a PROPOSAL TO KITCHEN, not a ruling.
+# lang <TAB> book <TAB> corrected name <TAB> DOC's raw name that triggered it
+es-419	1jn	1 Juan	I juan
+fr	eph	Éphésiens	Ephésiens
+pt-br	1co	1 Coríntios	1 Corintios
+rmp	gal	Galasians	(a whole verse of text had been typed into the name field)
+sw	act	Matendo ya Mitume	Matendo ya mitume
+sw	luk	Luka	Luke
+sw	jas	Yakobo	Waraka wa yakobo

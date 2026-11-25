@@ -1,0 +1,207 @@
+dublin_core:
+  conformsto: 'rc0.2'
+  contributor:
+  - 'Wycliffe Associates Staff'
+  - 'Drew Curley, M.A. in Theological Studies; M.S. in Applied Linguistics; M.Div in Pastoral Preaching; Ph.D. in Bible and Theology'
+  - 'John Hutchins, B.A. in Bible and Theology; M.A. in New Testament; M.A. in Biblical Languages'
+  - 'Morris E. Anderson, M.Div. Bethel Theological Seminary; Th.M. Bethel Theological Seminary'
+  - 'Rev. Carolyn D. Baker, B.A. In Bible/Theology, Luther Rice Seminary; M.Div., Assemblies of God Theological Seminary; D. Min., in Christian Education and Leadership,  Conservative Baptist Theological Seminary; 
+M.A. in Literary Analysis/Linguistics, University of North Dakota; Ph. D. in Early American Literature, Bible as Literature, and Historical Criticism, University of North Dakota'
+  - 'Lloyd Clifton Box III, B.A. Criswell College; M.A. Dallas Baptist University; Post Grad at University Of Texas at Arlington and University of Southern Mississippi'
+  - 'Larry T. Brooks, M.Div., Assemblies of God Theological Seminary'
+  - 'Troy Dowden, M.A. in Israel Studies, Baptists for Israel Institute'
+  - 'Nils Friberg, PhD, professor emeritus of pastoral care, Bethel Theological Seminary'
+  - 'Octavio Gama, BTh. Seminario Bíblico Juan Wesley; MDiv. Fuller Theological Seminary; DMin. Drew University'
+  - 'Robert W. Johnson'
+  - 'Jean Kringle, B.A. in Religious Education, Crown College'
+  - 'Olivia Laney'
+  - 'Susan R. Quigley, M.A. in Linguistics, University of North Dakota'
+  creator: 'Wycliffe Associates Staff'
+  description: 'Open-licensed exegetical commentary designed to provide translators with historical, cultural, and linguistic information essential to proper understanding of the New Testament.'
+  format: 'text/markdown'
+  identifier: 'bc'
+  issued: '2020-03-29'
+  language:
+    direction: 'ltr'
+    identifier: 'en'
+    title: 'English'
+  modified: '2020-03-29'
+  publisher: 'Wycliffe Associates'
+  relation:
+  - 'en/ulb'
+  rights: 'CC BY-SA 4.0'
+  source:
+  - identifier: 'bc'
+    language: 'en'
+    version: '01'
+  subject: 'Bible Commentary'
+  title: 'Bible Commentary'
+  type: 'help'
+  version: '11'
+
+checking:
+  checking_entity:
+  - 'Wycliffe Associates'
+  checking_level: '3'
+projects:
+  -
+    identifier: mat
+    title: Matthew
+    sort: 41
+    path: 41-mat
+
+  -
+    identifier: mrk
+    title: Mark
+    sort: 42
+    path: 42-mrk
+
+  -
+    identifier: luk
+    title: Luke
+    sort: 43
+    path: 43-luk
+
+  -
+    identifier: jhn
+    title: John
+    sort: 44
+    path: 44-jhn
+
+  -
+    identifier: act
+    title: Acts
+    sort: 45
+    path: 45-act
+
+  -
+    identifier: rom
+    title: Romans
+    sort: 46
+    path: 46-rom
+
+  -
+    identifier: 1co
+    title: 1 Corinthians
+    sort: 47
+    path: 47-1co
+
+  -
+    identifier: 2co
+    title: 2 Corinthians
+    sort: 48
+    path: 48-2co
+
+  -
+    identifier: gal
+    title: Galatians
+    sort: 49
+    path: 49-gal
+
+  -
+    identifier: eph
+    title: Ephesians
+    sort: 50
+    path: 50-eph
+
+  -
+    identifier: php
+    title: Philippians
+    sort: 51
+    path: 51-php
+
+  -
+    identifier: col
+    title: Colossians
+    sort: 52
+    path: 52-col
+
+  -
+    identifier: 1th
+    title: 1 Thessalonians
+    sort: 53
+    path: 53-1th
+
+  -
+    identifier: 2th
+    title: 2 Thessalonians
+    sort: 54
+    path: 54-2th
+
+  -
+    identifier: 1ti
+    title: 1 Timothy
+    sort: 55
+    path: 55-1ti
+
+  -
+    identifier: 2ti
+    title: 2 Timothy
+    sort: 56
+    path: 56-2ti
+
+  -
+    identifier: tit
+    title: Titus
+    sort: 57
+    path: 57-tit
+
+  -
+    identifier: phm
+    title: Philemon
+    sort: 58
+    path: 58-phm
+
+  -
+    identifier: heb
+    title: Hebrews
+    sort: 59
+    path: 59-heb
+
+  -
+    identifier: jas
+    title: James
+    sort: 60
+    path: 60-jas
+
+  -
+    identifier: 1pe
+    title: 1 Peter
+    sort: 61
+    path: 61-1pe
+
+  -
+    identifier: 2pe
+    title: 2 Peter
+    sort: 62
+    path: 62-2pe
+
+  -
+    identifier: 1jn
+    title: 1 John
+    sort: 63
+    path: 63-1jn
+
+  -
+    identifier: 2jn
+    title: 2 John
+    sort: 64
+    path: 64-2jn
+
+  -
+    identifier: 3jn
+    title: 3 John
+    sort: 65
+    path: 65-3jn
+
+  -
+    identifier: jud
+    title: Jude
+    sort: 66
+    path: 66-jud
+
+  -
+    identifier: rev
+    title: Revelation
+    sort: 67
+    path: 67-rev

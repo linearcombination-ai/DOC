@@ -1,0 +1,566 @@
+dublin_core:
+  conformsto: 'rc0.2'
+  contributor:
+    - "Ada Gonzalez"
+    - "Amara Enid Lebrón Navarro"
+    - "Ana Molina"
+    - "Ashley M. Rivera Alicea"
+    - "Audrey Ordonez"
+    - "AudreyO13"
+    - "Blanca Del Valle"
+    - "Blanca N Machado"
+    - "Carmelo Arbona"
+    - "Charlene TC"
+    - "Dennise Amara Lebron Gemelka"
+    - "Francisco Corichi"
+    - "Génesis Cruz Maurás"
+    - "Genesis Mercado Morales"
+    - "Guillermo Ortiz Avevedo"
+    - "Herbert"
+    - "Herbert Padua"
+    - "Hermes Sánchez"
+    - "Irene"
+    - "Jamin Carrasquillo"
+    - "Janice"
+    - "Jeffrey Feliciano"
+    - "JoAnne Blanca Machado"
+    - "Johny Herbert Padua"
+    - "Josué D. Medina Sánchez"
+    - "Laura Negrón"
+    - "Lucy Rios"
+    - "Luis Matias"
+    - "Margarita Benitez"
+    - "Margarita Gonzalez"
+    - "Margie Oyola"
+    - "Merari C. Díaz Lugoviñas"
+    - "Mileidy Zafiro Díaz Cabello"
+    - "Milka Ayala"
+    - "Miriam"
+    - "Nereida Mateo"
+    - "Noemi Gonzalez"
+    - "Nyilonka"
+    - "Olga Aryam"
+    - "Rafael Amill"
+    - "Rosa Torres"
+    - "Roselyn Latorre"
+    - "Tania Alicia"
+    - "Tanya M.Valentín Quiñones"
+    - "Trina Calderón"
+    - "Wanda Quiñones"
+    - "Wendy Colon"
+    - "Yarimar Ruíz Rivera"
+    - "Zahir"
+    - "Zoraida Serrano"
+  creator: 'Door43 World Missions Community'
+  description: 'Comprehension and theological questions for each chapter of the Bible. It enables translators and translation checkers to confirm that the intended meaning of their translations is clearly communicated to the speakers of that language.'
+  format: 'text/markdown'
+  identifier: 'tq'
+  issued: '2021-05-04'
+  language:
+    identifier: 'es-419'
+    title: 'Español Latinoamérica'
+    direction: 'ltr'
+  modified: '2021-05-04'
+  publisher: 'Door43'
+  relation:
+    - 'es-419/ulb'
+    - 'es-419/ta'
+    - 'es-419/tn'
+    - 'es-419/tw'
+    - 'es-419/obs'
+    - 'es-419/obs-tn'
+  rights: 'CC BY-SA 4.0'
+  source:
+  - identifier: 'tq'
+    language: 'en'
+    version: '22'
+  subject: 'Translation Questions'
+  title: 'translationQuestions'
+  type: 'help'
+  version: '22.1'
+
+checking:
+  checking_entity:
+    - "Laura Negrón Nieves-Seminary teacher - Iglesia Fuente de Luz Del Poblado Rosario"
+    - "Pastor José A. Torres Rodríguez-Wesleyan Church in Rio Grande"
+    - "Pastor David Sánchez- Iglesia Senda de Amor, Dorado"
+    - "Pastor Víctor M. Vázquez Colón-Iglesia Bautista de Palmer, Rio Grande"
+    - "Pastor Reinaldo Santana Rabell- Primera Iglesia Cristiana Discípulos de Cristo, Vega Alta"
+    - "Pastor Fidelita Lozada- Iglesia Senda de Amor, Dorado"
+    - "Margarita Benitez Rivera-La Iglesia de Dios, Seminary graduated (Insituto Biblico Hispano) and translators studies from Traducción Bíblica México"
+    - "Pastor David Bachmanm-Iglesia Bautista Antioquia, Brasil- Insituto Bíblico Palabra de Vida Ana"
+    - "Ana Gloria Molina Escuté- Iglesia Catacumba 3-Seminary graduated student"
+    - "Edixa Collazo-Iglesia Senda de Amor, Dorado- MIP Church of God Min. to the Military"
+    - "Rev. Carmelo Arbona- Iglesia Roble de Justicia-Seminary Professor- Seminario Teologico del Caribe"
+    - "Pastor Marilyn Rodriguez- Iglesia Ciudad del Reino, Gurabo-M.D. Theology"
+    - "Margarita Gonzalez- Iglesia Pentecostal de Jesucristo, MI"
+    - "Juana Diaz-Seminary Graduated Student AIC"
+    - "Chaplain Tania Alicea- Primera Iglesia Cristiana Discípulos de Cristo"
+    - "Vega Alta-Biblical Institute Graduated, Church Leader"
+    - "Rafael Amill- Primera Iglesia Cristiana Discípulos de Cristo"
+    - "Teacher Roselyn Latorre- Calvary Chapel of Puerto Rico, San Lorenzo-MD Translation- Biblical Institute Bethelem-Chaplain"
+  checking_level: '3'
+
+projects:
+  -
+    title: 'Genesis translationQuestions'
+    versification: ''
+    identifier: 'gen'
+    sort: 1
+    path: './gen'
+    categories: []
+  -
+    title: 'Exodus translationQuestions'
+    versification: ''
+    identifier: 'exo'
+    sort: 2
+    path: './exo'
+    categories: []
+  -
+    title: 'Leviticus translationQuestions'
+    versification: ''
+    identifier: 'lev'
+    sort: 3
+    path: './lev'
+    categories: []
+  -
+    title: 'Numbers translationQuestions'
+    versification: ''
+    identifier: 'num'
+    sort: 4
+    path: './num'
+    categories: []
+  -
+    title: 'Deuteronomy translationQuestions'
+    versification: ''
+    identifier: 'deu'
+    sort: 5
+    path: './deu'
+    categories: []
+  -
+    title: 'Joshua translationQuestions'
+    versification: ''
+    identifier: 'jos'
+    sort: 6
+    path: './jos'
+    categories: []
+  -
+    title: 'Judges translationQuestions'
+    versification: ''
+    identifier: 'jdg'
+    sort: 7
+    path: './jdg'
+    categories: []
+  -
+    title: 'Ruth translationQuestions'
+    versification: ''
+    identifier: 'rut'
+    sort: 8
+    path: './rut'
+    categories: []
+  -
+    title: '1 Samuel translationQuestions'
+    versification: ''
+    identifier: '1sa'
+    sort: 9
+    path: './1sa'
+    categories: []
+  -
+    title: '2 Samuel translationQuestions'
+    versification: ''
+    identifier: '2sa'
+    sort: 10
+    path: './2sa'
+    categories: []
+  -
+    title: '1 Kings translationQuestions'
+    versification: ''
+    identifier: '1ki'
+    sort: 11
+    path: './1ki'
+    categories: []
+  -
+    title: '2 Kings translationQuestions'
+    versification: ''
+    identifier: '2ki'
+    sort: 12
+    path: './2ki'
+    categories: []
+  -
+    title: '1 Chronicles translationQuestions'
+    versification: ''
+    identifier: '1ch'
+    sort: 13
+    path: './1ch'
+    categories: []
+  -
+    title: '2 Chronicles translationQuestions'
+    versification: ''
+    identifier: '2ch'
+    sort: 14
+    path: './2ch'
+    categories: []
+  -
+    title: 'Ezra translationQuestions'
+    versification: ''
+    identifier: 'ezr'
+    sort: 15
+    path: './ezr'
+    categories: []
+  -
+    title: 'Nehemiah translationQuestions'
+    versification: ''
+    identifier: 'neh'
+    sort: 16
+    path: './neh'
+    categories: []
+  -
+    title: 'Esther translationQuestions'
+    versification: ''
+    identifier: 'est'
+    sort: 17
+    path: './est'
+    categories: []
+  -
+    title: 'Job translationQuestions'
+    versification: ''
+    identifier: 'job'
+    sort: 18
+    path: './job'
+    categories: []
+  -
+    title: 'Psalms translationQuestions'
+    versification: ''
+    identifier: 'psa'
+    sort: 19
+    path: './psa'
+    categories: []
+  -
+    title: 'Proverbs translationQuestions'
+    versification: ''
+    identifier: 'pro'
+    sort: 20
+    path: './pro'
+    categories: []
+  -
+    title: 'Ecclesiastes translationQuestions'
+    versification: ''
+    identifier: 'ecc'
+    sort: 21
+    path: './ecc'
+    categories: []
+  -
+    title: 'Song of Songs translationQuestions'
+    versification: ''
+    identifier: 'sng'
+    sort: 22
+    path: './sng'
+    categories: []
+  -
+    title: 'Isaiah translationQuestions'
+    versification: ''
+    identifier: 'isa'
+    sort: 23
+    path: './isa'
+    categories: []
+  -
+    title: 'Jeremiah translationQuestions'
+    versification: ''
+    identifier: 'jer'
+    sort: 24
+    path: './jer'
+    categories: []
+  -
+    title: 'Lamentations translationQuestions'
+    versification: ''
+    identifier: 'lam'
+    sort: 25
+    path: './lam'
+    categories: []
+  -
+    title: 'Ezekiel translationQuestions'
+    versification: ''
+    identifier: 'ezk'
+    sort: 26
+    path: './ezk'
+    categories: []
+  -
+    title: 'Daniel translationQuestions'
+    versification: ''
+    identifier: 'dan'
+    sort: 27
+    path: './dan'
+    categories: []
+  -
+    title: 'Hosea translationQuestions'
+    versification: ''
+    identifier: 'hos'
+    sort: 28
+    path: './hos'
+    categories: []
+  -
+    title: 'Joel translationQuestions'
+    versification: ''
+    identifier: 'jol'
+    sort: 29
+    path: './jol'
+    categories: []
+  -
+    title: 'Amos translationQuestions'
+    versification: ''
+    identifier: 'amo'
+    sort: 30
+    path: './amo'
+    categories: []
+  -
+    title: 'Obadiah translationQuestions'
+    versification: ''
+    identifier: 'oba'
+    sort: 31
+    path: './oba'
+    categories: []
+  -
+    title: 'Jonah translationQuestions'
+    versification: ''
+    identifier: 'jon'
+    sort: 32
+    path: './jon'
+    categories: []
+  -
+    title: 'Micah translationQuestions'
+    versification: ''
+    identifier: 'mic'
+    sort: 33
+    path: './mic'
+    categories: []
+  -
+    title: 'Nahum translationQuestions'
+    versification: ''
+    identifier: 'nam'
+    sort: 34
+    path: './nam'
+    categories: []
+  -
+    title: 'Habakkuk translationQuestions'
+    versification: ''
+    identifier: 'hab'
+    sort: 35
+    path: './hab'
+    categories: []
+  -
+    title: 'Zephaniah translationQuestions'
+    versification: ''
+    identifier: 'zep'
+    sort: 36
+    path: './zep'
+    categories: []
+  -
+    title: 'Haggai translationQuestions'
+    versification: ''
+    identifier: 'hag'
+    sort: 37
+    path: './hag'
+    categories: []
+  -
+    title: 'Zechariah translationQuestions'
+    versification: ''
+    identifier: 'zec'
+    sort: 38
+    path: './zec'
+    categories: []
+  -
+    title: 'Malachi translationQuestions'
+    versification: ''
+    identifier: 'mal'
+    sort: 39
+    path: './mal'
+    categories: []
+  -
+    title: 'Matthew translationQuestions'
+    versification: ''
+    identifier: 'mat'
+    sort: 40
+    path: './mat'
+    categories: []
+  -
+    title: 'Mark translationQuestions'
+    versification: ''
+    identifier: 'mrk'
+    sort: 41
+    path: './mrk'
+    categories: []
+  -
+    title: 'Luke translationQuestions'
+    versification: ''
+    identifier: 'luk'
+    sort: 42
+    path: './luk'
+    categories: []
+  -
+    title: 'John translationQuestions'
+    versification: ''
+    identifier: 'jhn'
+    sort: 43
+    path: './jhn'
+    categories: []
+  -
+    title: 'Acts translationQuestions'
+    versification: ''
+    identifier: 'act'
+    sort: 44
+    path: './act'
+    categories: []
+  -
+    title: 'Romans translationQuestions'
+    versification: ''
+    identifier: 'rom'
+    sort: 45
+    path: './rom'
+    categories: []
+  -
+    title: '1 Corinthians translationQuestions'
+    versification: ''
+    identifier: '1co'
+    sort: 46
+    path: './1co'
+    categories: []
+  -
+    title: '2 Corinthians translationQuestions'
+    versification: ''
+    identifier: '2co'
+    sort: 47
+    path: './2co'
+    categories: []
+  -
+    title: 'Galatians translationQuestions'
+    versification: ''
+    identifier: 'gal'
+    sort: 48
+    path: './gal'
+    categories: []
+  -
+    title: 'Ephesians translationQuestions'
+    versification: ''
+    identifier: 'eph'
+    sort: 49
+    path: './eph'
+    categories: []
+  -
+    title: 'Philippians translationQuestions'
+    versification: ''
+    identifier: 'php'
+    sort: 50
+    path: './php'
+    categories: []
+  -
+    title: 'Colossians translationQuestions'
+    versification: ''
+    identifier: 'col'
+    sort: 51
+    path: './col'
+    categories: []
+  -
+    title: '1 Thessalonians translationQuestions'
+    versification: ''
+    identifier: '1th'
+    sort: 52
+    path: './1th'
+    categories: []
+  -
+    title: '2 Thessalonians translationQuestions'
+    versification: ''
+    identifier: '2th'
+    sort: 53
+    path: './2th'
+    categories: []
+  -
+    title: '1 Timothy translationQuestions'
+    versification: ''
+    identifier: '1ti'
+    sort: 54
+    path: './1ti'
+    categories: []
+  -
+    title: '2 Timothy translationQuestions'
+    versification: ''
+    identifier: '2ti'
+    sort: 55
+    path: './2ti'
+    categories: []
+  -
+    title: 'Titus translationQuestions'
+    versification: ''
+    identifier: 'tit'
+    sort: 56
+    path: './tit'
+    categories: []
+  -
+    title: 'Philemon translationQuestions'
+    versification: ''
+    identifier: 'phm'
+    sort: 57
+    path: './phm'
+    categories: []
+  -
+    title: 'Hebrews translationQuestions'
+    versification: ''
+    identifier: 'heb'
+    sort: 58
+    path: './heb'
+    categories: []
+  -
+    title: 'James translationQuestions'
+    versification: ''
+    identifier: 'jas'
+    sort: 59
+    path: './jas'
+    categories: []
+  -
+    title: '1 Peter translationQuestions'
+    versification: ''
+    identifier: '1pe'
+    sort: 60
+    path: './1pe'
+    categories: []
+  -
+    title: '2 Peter translationQuestions'
+    versification: ''
+    identifier: '2pe'
+    sort: 61
+    path: './2pe'
+    categories: []
+  -
+    title: '1 John translationQuestions'
+    versification: ''
+    identifier: '1jn'
+    sort: 62
+    path: './1jn'
+    categories: []
+  -
+    title: '2 John translationQuestions'
+    versification: ''
+    identifier: '2jn'
+    sort: 63
+    path: './2jn'
+    categories: []
+  -
+    title: '3 John translationQuestions'
+    versification: ''
+    identifier: '3jn'
+    sort: 64
+    path: './3jn'
+    categories: []
+  -
+    title: 'Jude translationQuestions'
+    versification: ''
+    identifier: 'jud'
+    sort: 65
+    path: './jud'
+    categories: []
+  -
+    title: 'Revelation translationQuestions'
+    versification: ''
+    identifier: 'rev'
+    sort: 66
+    path: './rev'
+    categories: []

@@ -1,0 +1,16 @@
+[package]
+name = "doc-lookup"
+description = "Pure core of the list endpoints: catalog parsing, language list, repository locator, book list, resource types. as_built reproduces DOC (including its defects); fixed returns findings instead. No I/O: file access goes through the RepoReader port."
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+[lints]
+workspace = true
+[dependencies]
+doc-contract.workspace = true
+doc-model.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+fancy-regex.workspace = true
+yaml-rust2.workspace = true
+url = "2"

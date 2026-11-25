@@ -1,0 +1,635 @@
+dublin_core:
+  conformsto: 'rc0.2'
+  contributor:
+    - "Abigail Gonzalez"
+    - "Ada Arroyo"
+    - "Ada Gonzalez"
+    - "Alexandra Afanador Giovanni"
+    - "Amara Enid Lebrón Navarro"
+    - "Ana Gloria Molina Escute"
+    - "Andrea López"
+    - "Andrea Zoe"
+    - "Anellys Ledesma Leon"
+    - "Aquile Sanchez"
+    - "Ashley M. Rivera"
+    - "Blanca Nilda Machado Andujar"
+    - "Camille J. Ortiz Navarro"
+    - "Carlos Colón"
+    - "Carmelo Arbona"
+    - "Celma Barros"
+    - "Cristhian A. Vicente"
+    - "Daihana Cornet"
+    - "Daniel Recalde"
+    - "Deborah Armoa"
+    - "Delia Enid Carrasquillo" 
+    - "Diego A. Carreira"
+    - "Eliezer Adorno"
+    - "Elisa Abigail Medina"
+    - "Elvin W. Díaz Morales"
+    - "Esteban Velez"
+    - "Esther Cedeño"
+    - "Evelyn Cedeño"
+    - "Feliciano Javier Sanchez"
+    - "Figueroa"
+    - "Gabriel Neufeld"
+    - "Génesis Cruz Maurás"
+    - "Genesis Mercado Morales"
+    - "Gerardo Rodriguez"
+    - "Gery Rodriguez"
+    - "Gileisy M. Torres"
+    - "Giovanni Feliciano"
+    - "Gretchen Rivera Alicea"
+    - "Guillermo Ortiz Avevedo"
+    - "Hermes J. Sánchez Guzmán "
+    - "Isabel Rodriguez"
+    - "Ivana Nicole Sanchez"
+    - "Ivette Rivera Castro"
+    - "Ivonne M. Rosa Fernandez"
+    - "Javier A. Sanchez Navarro"
+    - "Jean Frank Brito Calleja"
+    - "Jeanmark N. Rodriguez Colon"
+    - "Jeffrey Feliciano Soto"
+    - "Jorge Hang"
+    - "Josema Oviedo"
+    - "Josué D. Medina Sánchez"
+    - "Kailena A. Marquez"
+    - "Karen Cierra"
+    - "Karina Bogarin"
+    - "Karina Cotto Chevere"
+    - "Kenneth Rosa Rosales"
+    - "Laura Noemí Rosario Negrón"
+    - "Lucia Martinez"
+    - "Lucia"
+    - "Lucy Rios"
+    - "Luis Amarilla"
+    - "Luis Tec."
+    - "Luismatias"
+    - "Luz E. Rios"
+    - "Margarita Benitez-Rivera"
+    - "Margie Rubio"
+    - "Margie"
+    - "Maria Julia Navarro Gonzalez"
+    - "Maria M. Toro"
+    - "Maria Silvia Eizmendi"
+    - "Mariaeiz"
+    - "Marilyn Garcia"
+    - "Mayra E. Torres"
+    - "Melisa Milagros Moroni"
+    - "Merari C. Díaz Lugoviñas"
+    - "Michael A. Rodriguez"
+    - "Miguel Contreras"
+    - "Mileidy Zafiro Díaz Cabello"
+    - "Milka Ayala"
+    - "Miriam Otero"
+    - "Nadia Meza Gonzalez"
+    - "Nadia Salguedolce"
+    - "Nadia Valiente"
+    - "Nadiasal"
+    - "Nancy Oyola"
+    - "Nancy"
+    - "Natalia A. Rodriguez Colon"
+    - "Natalia Vargas"
+    - "Nayelli Lebron Navarro"
+    - "Nereida Mateo"
+    - "Nichole Y. Colon Alvarado"
+    - "Nilda Machado Andujar"
+    - "Nora Duarte"
+    - "Norma I. Navarro"
+    - "Rafael Amill"
+    - "Rivera"
+    - "Rocío Ortiz"
+    - "Rosa Navarro"
+    - "Rosa Torres"
+    - "Sandra Alvarado"
+    - "Sonia N. Diaz"
+    - "Soravel Llanos"
+    - "Tania Alicea Vazquez"
+    - "Tanya M. Valentín Quiñones"
+    - "Trina Calderon"
+    - "Victor Ivan Velez Arzuaga"
+    - "Victor M. Vazquez"
+    - "Victor Vazquez Colon"
+    - "Vivian Del Hoyo"
+    - "Wanda Quinones Santiago"
+    - "Wendy Colon"
+    - "Yanielys Hernández"
+    - "Yari"
+    - "Yarimar Ruíz Rivera"
+    - "Yeni Vicente Francisco"
+    - "Yolanda Davila Hernandez"
+    - "Zahir"
+  creator: 'Door43 World Missions Community'
+  description: 'Open-licensed exegetical notes that provide historical, cultural, and linguistic information for translators. It provides translators and checkers with pertinent, just-in-time information to help them make the best possible translation decisions.'
+  format: 'text/markdown'
+  identifier: 'tn'
+  issued: '2021-05-24'
+  modified: '2021-05-24'
+  language:
+    identifier: 'es-419'
+    title: "Español Latinoamérica"
+    direction: 'ltr'
+  publisher: 'Wycliffe Associates'
+  relation:
+    - 'es-419/ulb'
+    - 'es-419/ta'
+    - 'es-419/tq'
+    - 'es-419/tw'
+    - 'es-419/obs'
+    - 'es-419/obs-tn'
+  rights: 'CC BY-SA 4.0'
+  source:
+    -
+      identifier: 'tn'
+      language: 'en'
+      version: '8'
+  subject: 'Translation Notes'
+  title: 'translationNotes'
+  type: 'help'
+  version: '8.4'
+
+checking:
+  checking_entity:
+    - "Ana Gloria Molina Escuté- Iglesia Catacumba 3-Seminary graduated student"
+    - "Asambleas de Dios Pastor David Sánchez - Iglesia Senda de Amor"
+    - "Tania Alicea- Primera Iglesia Cristiana Discípulos de Cristo, Vega Alta-Biblical Institute Graduated"
+    - "Dorado Margarita Benitez Rivera-La Iglesia de Dios, Seminary graduated (Insituto Biblico Hispano) and translators studies from Traducción Bíblica México"
+    - "Dorado- MIP Church of God Min. to the Military Rev. Carmelo Arbona- Iglesia Roble de Justicia-Seminary Professor- Seminario Teologico del Caribe"
+    - "Dorado Pastor Víctor M. Vázquez Colón-Iglesia Bautista de Palmer"
+    - "Edixa Collazo-Iglesia Senda de Amor"
+    - "Juana Diaz-Seminary Graduated Student AIC"
+    - "Laura Negrón Nieves-Seminary teacher - Iglesia Fuente de Luz Del Poblado Rosario"
+    - "Margarita Benitez Rivera-La Iglesia de Dios, Seminary graduated (Insituto Biblico Hispano) and translators studies from Traducción Bíblica México"
+    - "Margarita Gonzalez- Iglesia Pentecostal de Jesucristo, MI, Juana Diaz-Seminary Graduated Student AIC"
+    - "Pastor Marilyn Rodriguez- Iglesia Ciudad del Reino, Gurabo-M.D. Theology Margarita Gonzalez- Iglesia Pentecostal de Jesucristo, MI"
+    - "Pastor Víctor M. Vázquez Colón-Iglesia Bautista de Palmer, Rio Grande"
+    - "Rafael Amill- Primera Iglesia Cristiana Discípulos de Cristo"
+    - "Rev. Carmelo Arbona- Iglesia Roble de Justicia-Seminary Professor- Seminario Teologico del Caribe"
+    - "Rio Grande Pastor Fidelita Lozada- Iglesia Senda de Amor"
+    - "Roselyn Latorre- Calvary Chapel of Puerto Rico, San Lorenzo-MD Translation- Biblical Institute Bethelem-Chaplain"
+    - "San Lorenzo-MD Translation- Biblical Institute Bethelem-Chaplain"
+    - "Vega Alta Roselyn Latorre- Calvary Chapel of Puerto Rico"
+  checking_level: '3'
+
+projects:
+  -
+    title: 'Genesis translationNotes'
+    versification: ''
+    identifier: 'gen'
+    sort: 1
+    path: './gen'
+    categories: []
+  -
+    title: 'Exodus translationNotes'
+    versification: ''
+    identifier: 'exo'
+    sort: 2
+    path: './exo'
+    categories: []
+  -
+    title: 'Leviticus translationNotes'
+    versification: ''
+    identifier: 'lev'
+    sort: 3
+    path: './lev'
+    categories: []
+  -
+    title: 'Numbers translationNotes'
+    versification: ''
+    identifier: 'num'
+    sort: 4
+    path: './num'
+    categories: []
+  -
+    title: 'Deuteronomy translationNotes'
+    versification: ''
+    identifier: 'deu'
+    sort: 5
+    path: './deu'
+    categories: []
+  -
+    title: 'Joshua translationNotes'
+    versification: ''
+    identifier: 'jos'
+    sort: 6
+    path: './jos'
+    categories: []
+  -
+    title: 'Judges translationNotes'
+    versification: ''
+    identifier: 'jdg'
+    sort: 7
+    path: './jdg'
+    categories: []
+  -
+    title: 'Ruth translationNotes'
+    versification: ''
+    identifier: 'rut'
+    sort: 8
+    path: './rut'
+    categories: []
+  -
+    title: '1 Samuel translationNotes'
+    versification: ''
+    identifier: '1sa'
+    sort: 9
+    path: './1sa'
+    categories: []
+  -
+    title: '2 Samuel translationNotes'
+    versification: ''
+    identifier: '2sa'
+    sort: 10
+    path: './2sa'
+    categories: []
+  -
+    title: '1 Kings translationNotes'
+    versification: ''
+    identifier: '1ki'
+    sort: 11
+    path: './1ki'
+    categories: []
+  -
+    title: '2 Kings translationNotes'
+    versification: ''
+    identifier: '2ki'
+    sort: 12
+    path: './2ki'
+    categories: []
+  -
+    title: '1 Chronicles translationNotes'
+    versification: ''
+    identifier: '1ch'
+    sort: 13
+    path: './1ch'
+    categories: []
+  -
+    title: '2 Chronicles translationNotes'
+    versification: ''
+    identifier: '2ch'
+    sort: 14
+    path: './2ch'
+    categories: []
+  -
+    title: 'Ezra translationNotes'
+    versification: ''
+    identifier: 'ezr'
+    sort: 15
+    path: './ezr'
+    categories: []
+  -
+    title: 'Nehemiah translationNotes'
+    versification: ''
+    identifier: 'neh'
+    sort: 16
+    path: './neh'
+    categories: []
+  -
+    title: 'Esther translationNotes'
+    versification: ''
+    identifier: 'est'
+    sort: 17
+    path: './est'
+    categories: []
+  -
+    title: 'Job translationNotes'
+    versification: ''
+    identifier: 'job'
+    sort: 18
+    path: './job'
+    categories: []
+  -
+    title: 'Psalms translationNotes'
+    versification: ''
+    identifier: 'psa'
+    sort: 19
+    path: './psa'
+    categories: []
+  -
+    title: 'Proverbs translationNotes'
+    versification: ''
+    identifier: 'pro'
+    sort: 20
+    path: './pro'
+    categories: []
+  -
+    title: 'Ecclesiastes translationNotes'
+    versification: ''
+    identifier: 'ecc'
+    sort: 21
+    path: './ecc'
+    categories: []
+  -
+    title: 'Song of Songs translationNotes'
+    versification: ''
+    identifier: 'sng'
+    sort: 22
+    path: './sng'
+    categories: []
+  -
+    title: 'Isaiah translationNotes'
+    versification: ''
+    identifier: 'isa'
+    sort: 23
+    path: './isa'
+    categories: []
+  -
+    title: 'Jeremiah translationNotes'
+    versification: ''
+    identifier: 'jer'
+    sort: 24
+    path: './jer'
+    categories: []
+  -
+    title: 'Lamentations translationNotes'
+    versification: ''
+    identifier: 'lam'
+    sort: 25
+    path: './lam'
+    categories: []
+  -
+    title: 'Ezekiel translationNotes'
+    versification: ''
+    identifier: 'ezk'
+    sort: 26
+    path: './ezk'
+    categories: []
+  -
+    title: 'Daniel translationNotes'
+    versification: ''
+    identifier: 'dan'
+    sort: 27
+    path: './dan'
+    categories: []
+  -
+    title: 'Hosea translationNotes'
+    versification: ''
+    identifier: 'hos'
+    sort: 28
+    path: './hos'
+    categories: []
+  -
+    title: 'Joel translationNotes'
+    versification: ''
+    identifier: 'jol'
+    sort: 29
+    path: './jol'
+    categories: []
+  -
+    title: 'Amos translationNotes'
+    versification: ''
+    identifier: 'amo'
+    sort: 30
+    path: './amo'
+    categories: []
+  -
+    title: 'Obadiah translationNotes'
+    versification: ''
+    identifier: 'oba'
+    sort: 31
+    path: './oba'
+    categories: []
+  -
+    title: 'Jonah translationNotes'
+    versification: ''
+    identifier: 'jon'
+    sort: 32
+    path: './jon'
+    categories: []
+  -
+    title: 'Micah translationNotes'
+    versification: ''
+    identifier: 'mic'
+    sort: 33
+    path: './mic'
+    categories: []
+  -
+    title: 'Nahum translationNotes'
+    versification: ''
+    identifier: 'nam'
+    sort: 34
+    path: './nam'
+    categories: []
+  -
+    title: 'Habakkuk translationNotes'
+    versification: ''
+    identifier: 'hab'
+    sort: 35
+    path: './hab'
+    categories: []
+  -
+    title: 'Zephaniah translationNotes'
+    versification: ''
+    identifier: 'zep'
+    sort: 36
+    path: './zep'
+    categories: []
+  -
+    title: 'Haggai translationNotes'
+    versification: ''
+    identifier: 'hag'
+    sort: 37
+    path: './hag'
+    categories: []
+  -
+    title: 'Zechariah translationNotes'
+    versification: ''
+    identifier: 'zec'
+    sort: 38
+    path: './zec'
+    categories: []
+  -
+    title: 'Malachi translationNotes'
+    versification: ''
+    identifier: 'mal'
+    sort: 39
+    path: './mal'
+    categories: []
+  -
+    title: 'Matthew translationNotes'
+    versification: ''
+    identifier: 'mat'
+    sort: 40
+    path: './mat'
+    categories: []
+  -
+    title: 'Mark translationNotes'
+    versification: ''
+    identifier: 'mrk'
+    sort: 41
+    path: './mrk'
+    categories: []
+  -
+    title: 'Luke translationNotes'
+    versification: ''
+    identifier: 'luk'
+    sort: 42
+    path: './luk'
+    categories: []
+  -
+    title: 'John translationNotes'
+    versification: ''
+    identifier: 'jhn'
+    sort: 43
+    path: './jhn'
+    categories: []
+  -
+    title: 'Acts translationNotes'
+    versification: ''
+    identifier: 'act'
+    sort: 44
+    path: './act'
+    categories: []
+  -
+    title: 'Romans translationNotes'
+    versification: ''
+    identifier: 'rom'
+    sort: 45
+    path: './rom'
+    categories: []
+  -
+    title: '1 Corinthians translationNotes'
+    versification: ''
+    identifier: '1co'
+    sort: 46
+    path: './1co'
+    categories: []
+  -
+    title: '2 Corinthians translationNotes'
+    versification: ''
+    identifier: '2co'
+    sort: 47
+    path: './2co'
+    categories: []
+  -
+    title: 'Galatians translationNotes'
+    versification: ''
+    identifier: 'gal'
+    sort: 48
+    path: './gal'
+    categories: []
+  -
+    title: 'Ephesians translationNotes'
+    versification: ''
+    identifier: 'eph'
+    sort: 49
+    path: './eph'
+    categories: []
+  -
+    title: 'Philippians translationNotes'
+    versification: ''
+    identifier: 'php'
+    sort: 50
+    path: './php'
+    categories: []
+  -
+    title: 'Colossians translationNotes'
+    versification: ''
+    identifier: 'col'
+    sort: 51
+    path: './col'
+    categories: []
+  -
+    title: '1 Thessalonians translationNotes'
+    versification: ''
+    identifier: '1th'
+    sort: 52
+    path: './1th'
+    categories: []
+  -
+    title: '2 Thessalonians translationNotes'
+    versification: ''
+    identifier: '2th'
+    sort: 53
+    path: './2th'
+    categories: []
+  -
+    title: '1 Timothy translationNotes'
+    versification: ''
+    identifier: '1ti'
+    sort: 54
+    path: './1ti'
+    categories: []
+  -
+    title: '2 Timothy translationNotes'
+    versification: ''
+    identifier: '2ti'
+    sort: 55
+    path: './2ti'
+    categories: []
+  -
+    title: 'Titus translationNotes'
+    versification: ''
+    identifier: 'tit'
+    sort: 56
+    path: './tit'
+    categories: []
+  -
+    title: 'Philemon translationNotes'
+    versification: ''
+    identifier: 'phm'
+    sort: 57
+    path: './phm'
+    categories: []
+  -
+    title: 'Hebrews translationNotes'
+    versification: ''
+    identifier: 'heb'
+    sort: 58
+    path: './heb'
+    categories: []
+  -
+    title: 'James translationNotes'
+    versification: ''
+    identifier: 'jas'
+    sort: 59
+    path: './jas'
+    categories: []
+  -
+    title: '1 Peter translationNotes'
+    versification: ''
+    identifier: '1pe'
+    sort: 60
+    path: './1pe'
+    categories: []
+  -
+    title: '2 Peter translationNotes'
+    versification: ''
+    identifier: '2pe'
+    sort: 61
+    path: './2pe'
+    categories: []
+  -
+    title: '1 John translationNotes'
+    versification: ''
+    identifier: '1jn'
+    sort: 62
+    path: './1jn'
+    categories: []
+  -
+    title: '2 John translationNotes'
+    versification: ''
+    identifier: '2jn'
+    sort: 63
+    path: './2jn'
+    categories: []
+  -
+    title: '3 John translationNotes'
+    versification: ''
+    identifier: '3jn'
+    sort: 64
+    path: './3jn'
+    categories: []
+  -
+    title: 'Jude translationNotes'
+    versification: ''
+    identifier: 'jud'
+    sort: 65
+    path: './jud'
+    categories: []
+  -
+    title: 'Revelation translationNotes'
+    versification: ''
+    identifier: 'rev'
+    sort: 66
+    path: './rev'
+    categories: []

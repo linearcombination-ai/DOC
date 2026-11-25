@@ -1,0 +1,19 @@
+[package]
+name = "doc-app"
+description = "Application layer: the seven use cases over the Catalog and Acquirer ports and the pure core."
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+[lints]
+workspace = true
+[dependencies]
+doc-contract.workspace = true
+doc-lookup.workspace = true
+doc-model.workspace = true
+doc-ports.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+thiserror.workspace = true
+serde_json.workspace = true
+[dev-dependencies]
+doc-acquire.workspace = true

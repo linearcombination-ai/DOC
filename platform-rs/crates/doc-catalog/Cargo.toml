@@ -1,0 +1,19 @@
+[package]
+name = "doc-catalog"
+description = "Adapter: the BIEL GraphQL data API client. Timeouts, bounded retry with backoff and jitter, no cached failures, a success TTL, single-flight, stale-if-error, structured logs."
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+[lints]
+workspace = true
+[dependencies]
+doc-ports.workspace = true
+doc-lookup.workspace = true
+doc-flight.workspace = true
+doc-contract.workspace = true
+reqwest.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+rand.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true

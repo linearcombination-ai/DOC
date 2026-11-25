@@ -1,0 +1,15 @@
+[package]
+name = "doc-kitchen"
+description = "The thin adapter to scripture-kitchen: the only crate that names a kitchen type. Names only in P4 (the USFM model and stitching belong to P5)."
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+[lints]
+workspace = true
+
+# kitchen is public (https://github.com/WycliffeAssociates/scripture-kitchen), read from a read-only
+# clone at 0090c0beb19cfbd8e08b963a48ae2caeeb339821 (tag v0.1.24). `canon` depends only on `mise`.
+# The pinned forms DOC would use are a git tag or a vendored subtree (the fork seam).
+[dependencies]
+canon = { path = "../../_exp/kitchen/canon" }
+doc-model.workspace = true
