@@ -1,0 +1,12 @@
+[package]
+name = "doc-kitchen"
+description = "The only crate that imports scripture-kitchen: a NameProvider over canon (names, locale_for, fold)."
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+[lints]
+workspace = true
+# Path dependency on a read-only clone; DOC would pin a git tag or vendor a subtree (the fork seam).
+[dependencies]
+canon = { path = "../../../vendor/kitchen/canon" }
+doc-model = { path = "../doc-model" }

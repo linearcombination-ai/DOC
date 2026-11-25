@@ -1,0 +1,794 @@
+dublin_core:
+  conformsto: 'rc0.2'
+  contributor:
+  - 'Door43 World Missions Community'
+  - 'Wycliffe Associates Staff'
+  - 'Aaron Fenlason'
+  - 'Abner Bauman'
+  - 'Adam Van Goor'
+  - 'Alan Bird'
+  - 'Alan Borkenhagen'
+  - 'Alfred Van Dellen'
+  - 'Alice Wright'
+  - 'Allen Bair'
+  - 'Allyson Presswood Nance'
+  - 'Amanda Adams'
+  - 'Andrew Belcher'
+  - 'Andrew Johnson'
+  - 'Andrew Rice'
+  - 'Angelo Palo'
+  - 'Anita Moreau'
+  - 'April Linton'
+  - 'Aurora Lee'
+  - 'Barbara Summers'
+  - 'Barbara White'
+  - 'Becky Hancock'
+  - 'Beryl Carpenter'
+  - 'Bethany Fenlason'
+  - 'Betty Forbes'
+  - 'Bianca Elliott'
+  - 'Bill Cleveland'
+  - 'Bill Pruett'
+  - 'Bob Britting'
+  - 'Bram van den Heuvel'
+  - 'Brian Metzger'
+  - 'Bruce Bridges'
+  - 'Bruce Collier'
+  - 'Bruce Smith'
+  - 'Caleb Worgess'
+  - 'Carlyle Kilmore'
+  - 'Carol Pace'
+  - 'Carol Heim'
+  - 'Caroline Crawford'
+  - 'Caroline Fleming'
+  - 'Caroline S Wong'
+  - 'Carol Lee'
+  - 'Carol Moyer'
+  - 'Carolyn Lafferty'
+  - 'Catherine C Newton'
+  - 'Charese Jackson'
+  - 'Charlotte Gibson'
+  - 'Charlotte Hobbs'
+  - 'Cheryl A Chojnacki'
+  - 'Cheryl Stieben'
+  - 'Cheryl Warren'
+  - 'Christian Berry'
+  - 'Christine Harrison'
+  - 'Clairmene Pascal'
+  - 'Connie Bryan'
+  - 'Connie Goss'
+  - 'Craig Balden'
+  - 'Craig Lins'
+  - 'Craig Scott'
+  - 'Cynthia J Puckett'
+  - 'Dale Hahs'
+  - 'Dale Masser'
+  - 'Daniel Lauk'
+  - 'Daniel Summers'
+  - 'Darlene M Hopkins'
+  - 'Darlene Silas'
+  - 'David Boerschlein'
+  - 'David F Withee'
+  - 'David Glover'
+  - 'David J Forbes'
+  - 'David Mullen'
+  - 'David N Hanley'
+  - 'David Sandlin'
+  - 'David Shortess'
+  - 'David Smith'
+  - 'David Whisler'
+  - 'Debbie Nispel'
+  - 'Debbie Piper'
+  - 'Deborah Bartow'
+  - 'Deborah Bush'
+  - 'Deborah Miniard'
+  - 'Dennis Jackson'
+  - 'Dianne Forrest'
+  - 'Donna Borkenhagen'
+  - 'Donna Mullis'
+  - 'Douglas Hayes'
+  - 'Drew Curley'
+  - 'Ed Davis'
+  - 'Edgar Navera'
+  - 'Edward Kosky'
+  - 'Edward Quigley'
+  - 'Elaine VanRegenmorter'
+  - 'Elizabeth Nataly Silvestre Herbas'
+  - 'Ellen Lee'
+  - 'Emeline Thermidor'
+  - 'Emily Lee'
+  - 'Esther Roman'
+  - 'Esther Trew'
+  - 'Esther Zirk'
+  - 'Ethel Lynn Baker'
+  - 'Evangeline Puen'
+  - 'Evelyn Wildgust'
+  - 'Fletcher Coleman'
+  - 'Forest Deal'
+  - 'Freda Dibble'
+  - 'Gail Spell'
+  - 'Gary Greer'
+  - 'Gary Shogren'
+  - 'Gay Ellen Stulp'
+  - 'Gene Gossman'
+  - 'George Arlyn Briggs'
+  - 'Gerald L. Naughton'
+  - 'Glen Tallent'
+  - 'Grace Balwit'
+  - 'Grace Bird'
+  - 'Greg Stoffregen'
+  - 'Gretchen Stencil'
+  - 'Hallie Miller'
+  - 'Harry Harriss'
+  - 'Heather Hicks'
+  - 'Helen Morse'
+  - 'Hendrik deVries'
+  - 'Henry Bult'
+  - 'Henry Whitney'
+  - "Hilary O'Sullivan"
+  - 'Ibrahim Audu'
+  - 'Ines Gipson'
+  - 'Irene J Dodson'
+  - 'Jackie Jones'
+  - 'Jacqueline Bartley'
+  - 'James Giddens'
+  - 'James Pedersen'
+  - 'James Pohlig'
+  - 'James Roe'
+  - "Janet O'Herron"
+  - 'Janice Connor'
+  - 'Jaqueline Rotruck'
+  - 'Jeanette Friesen'
+  - 'Jeff Graf'
+  - 'Jeff Kennedy'
+  - 'Jeff Martin'
+  - 'Jennifer Cunneen'
+  - 'Jenny Thomas'
+  - 'Jerry Lund'
+  - 'Jessica Lauk'
+  - 'Jim Frederick'
+  - 'Jim Lee'
+  - 'Jimmy Warren'
+  - 'Jim Rotruck'
+  - 'Jim Swartzentruber'
+  - 'Jody Garcia'
+  - 'Joe Chater'
+  - 'Joel Bryan'
+  - 'Joey Howell'
+  - 'John Anderson'
+  - 'John Geddis'
+  - 'John D Rogers'
+  - 'John Hutchins'
+  - 'John Luton'
+  - 'John Pace'
+  - 'John P Tornifolio'
+  - 'Jolene Valeu'
+  - 'Jon Haahr'
+  - 'Joseph Fithian'
+  - 'Joseph Greene'
+  - 'Joseph Wharton'
+  - 'Joshua Berkowitz'
+  - 'Joshua Calhoun'
+  - 'Joshua Rister'
+  - 'Josh Wondra'
+  - 'Joy Anderson'
+  - 'Joyce Jacobs'
+  - 'Joyce Pedersen'
+  - 'JT Crowder'
+  - 'Judi Brodeen'
+  - 'Judith Cline'
+  - 'Judith C Yon'
+  - 'Julia N Bult'
+  - 'Patty Li'
+  - 'Julie Susanto'
+  - 'Kahar Barat'
+  - 'Kannahi Sellers'
+  - 'Kara Anderson'
+  - 'Karen Davie'
+  - 'Karen Dreesen'
+  - 'Karen Fabean'
+  - 'Karen Riecks'
+  - 'Karen Smith'
+  - 'Karen Turner'
+  - 'Kathleen Glover'
+  - 'Kathryn Hendrix'
+  - 'Kathy Mentink'
+  - 'Katrina Geurink'
+  - 'Kay Myers'
+  - 'Kelly Strong'
+  - 'Ken Haugh'
+  - 'Kim Puterbaugh'
+  - 'Kristin Butts Page'
+  - 'Kristin Rinne'
+  - 'Kwesi Opoku-debrah'
+  - 'Langston Spell'
+  - 'Larry Sallee'
+  - 'Lawrence Lipe'
+  - 'Lee Sipe'
+  - 'Leonard Smith'
+  - 'Lester Harper'
+  - 'Lia Hadley'
+  - 'Linda Buckman'
+  - 'Linda Dale Barton'
+  - 'Linda Havemeier'
+  - 'Linda Homer'
+  - 'Linda Lee Sebastien'
+  - 'Linn Peterson'
+  - 'Liz Dakota'
+  - 'Lloyd Box'
+  - 'Luis Keelin'
+  - 'Madeline Kilmore'
+  - 'Maggie D Paul'
+  - 'Marc Nelson'
+  - 'Mardi Welo'
+  - 'Margo Hoffman'
+  - 'Marilyn Cook'
+  - 'Marjean Swann'
+  - 'Marjorie Francis'
+  - 'Mark Albertini'
+  - 'Mark Chapman'
+  - 'Mark Thomas'
+  - 'Marselene Norton'
+  - 'Mary Jane Davis'
+  - 'Mary Jean Stout'
+  - 'Mary Landon'
+  - 'Mary Scarborough'
+  - 'Megan Kidwell'
+  - 'Melissa Roe'
+  - 'Merton Dibble'
+  - 'Meseret Abraham-Zemede'
+  - 'Michael Bush'
+  - 'Michael Connor'
+  - 'Michael Francis'
+  - 'Michael Geurink'
+  - 'Mike Tisdell'
+  - 'Mickey White'
+  - 'Miel Horrilleno'
+  - 'Monique Greer'
+  - 'Morgan Mellette'
+  - 'Morris Anderson'
+  - 'Nancy C. Naughton'
+  - 'Nancy Neu'
+  - 'Nancy VanCott'
+  - 'Neal Snook'
+  - 'Nicholas Scovil'
+  - 'Nick Dettman'
+  - 'Nils Friberg'
+  - 'Noah Crabtree'
+  - 'Pamela B Johnston'
+  - 'Pamela Nungesser'
+  - 'Pamela Roberts'
+  - 'Pam Gullifer'
+  - 'Pat Ankney'
+  - 'Pat Giddens'
+  - 'Patricia Brougher'
+  - 'Patricia Carson'
+  - 'Patricia Cleveland'
+  - 'Patricia Foster'
+  - 'Patricia Middlebrooks'
+  - 'Paul Mellema'
+  - 'Paula Carlson'
+  - 'Paula Oestreich'
+  - 'Paul Holloway'
+  - 'Paul Nungesser'
+  - 'Peggy Anderson'
+  - 'Peggyrose Swartzentruber'
+  - 'Peter Polloni'
+  - 'Phillip Harms'
+  - 'Phyllis Mortensen'
+  - 'Priscilla Enggren'
+  - 'Rachel Agheyisi'
+  - 'Rachel Ropp'
+  - 'Raif Turner'
+  - 'Ray Puen'
+  - 'Reina Y Mora'
+  - 'Rene Bahrenfuss'
+  - 'Renee Triplett'
+  - 'Rhonda Bartels'
+  - 'Richard Beatty'
+  - 'Richard Moreau'
+  - 'Richard Rutter'
+  - 'Richard Stevens'
+  - 'Rick Keaton'
+  - 'Robby Little'
+  - 'Robert W Johnson'
+  - 'Rochelle Hook'
+  - 'Rodney White'
+  - 'Rolaine Franz'
+  - 'Ronald D Hook'
+  - 'Rosario Baria'
+  - 'Roxann Carey'
+  - 'Roxanne Pittard'
+  - 'Ruben Michael Garay'
+  - 'Russell Isham'
+  - 'Russ Perry'
+  - 'Ruth Calo'
+  - 'Ruth E Withee'
+  - 'Ruth Montgomery'
+  - 'Ryan Blizek'
+  - 'Sam Todd'
+  - 'Samuel Njuguna'
+  - 'Sandy Anderson'
+  - 'Sandy Blanes'
+  - 'Sara Giesmann'
+  - 'Sara Van Cott (Barnes)'
+  - 'Sharon Johnson'
+  - 'Sharon Peterson'
+  - 'Sharon Shortess'
+  - 'Shelly Harms'
+  - 'Sherie Nelson'
+  - 'Sherman Sebastien'
+  - 'Sherry Mosher'
+  - 'Stacey Swanson'
+  - 'Steve Gibbs'
+  - 'Steve Mercier'
+  - 'Susan Langohr'
+  - 'Susan Quigley'
+  - 'Susan Snook'
+  - 'Suzanne Richards'
+  - 'Sylvia Thomas'
+  - 'Sze Suze Lau'
+  - 'Tabitha Price'
+  - 'Tammy L Enns'
+  - 'Tammy White'
+  - 'Teresa Everett-Leone'
+  - 'Teresa Linn'
+  - 'Terri Collins'
+  - 'Theresa Baker'
+  - 'Thomas Jopling'
+  - 'Thomas Nickell'
+  - 'Thomas Warren'
+  - 'Tim Coleman'
+  - 'Tim Ingram'
+  - 'Tim Linn'
+  - 'Tim Lovestrand'
+  - 'Tim Mentink'
+  - 'Tom Penry'
+  - 'Tom William Warren'
+  - 'Toni Shuma'
+  - 'Tracie Pogue'
+  - 'Tricia Coffman'
+  - 'Vicki Ivester'
+  - 'Victoria G DeKraker'
+  - 'Victor M Prieto'
+  - 'Vivian Kamph'
+  - 'Vivian Richardson'
+  - 'Ward Pyles'
+  - 'Warren Blaisdell'
+  - 'Wayne Homer'
+  - 'Wendy Coleman'
+  - 'Wendy Colon'
+  - 'Wilbur Zirk'
+  - 'Wil Gipson'
+  - 'William Carson'
+  - 'William Cline'
+  - 'William Dickerson'
+  - 'William Smitherman'
+  - 'William Wilder'
+  - 'Yvonne Tallent'
+  creator: 'Door43 World Missions Community'
+  description: 'Open-licensed exegetical notes that provide historical, cultural, and linguistic information for translators. It provides translators and checkers with pertinent, just-in-time information to help them make the best possible translation decisions.'
+  format: 'text/markdown'
+  identifier: 'tn'
+  issued: '2017-11-29'
+  language:
+    direction: 'ltr'
+    identifier: 'en'
+    title: 'English'
+  modified: '2017-11-29'
+  publisher: 'unfoldingWord'
+  relation:
+  - 'en/ulb'
+  - 'en/udb'
+  rights: 'CC BY-SA 4.0'
+  source:
+  - identifier: 'tn'
+    language: 'en'
+    version: '11'
+  subject: 'Translator Notes'
+  title: 'Translation Notes'
+  type: 'help'
+  version: '11'
+
+checking:
+  checking_entity:
+  - 'unfoldingWord'
+  checking_level: '3'
+
+projects:
+- categories: []
+  identifier: 2th
+  path: ./2th
+  sort: 0 
+  title: 2 Thessalonians translationNotes
+  versification: ''
+- categories: []
+  identifier: 1jn
+  path: ./1jn
+  sort: 0 
+  title: 1 John translationNotes
+  versification: ''
+- categories: []
+  identifier: sng
+  path: ./sng
+  sort: 0 
+  title: Song of Songs translationNotes
+  versification: ''
+- categories: []
+  identifier: lev
+  path: ./lev
+  sort: 0 
+  title: Leviticus translationNotes
+  versification: ''
+- categories: []
+  identifier: ezk
+  path: ./ezk
+  sort: 0 
+  title: Ezekiel translationNotes
+  versification: ''
+- categories: []
+  identifier: gal
+  path: ./gal
+  sort: 0 
+  title: Galatians translationNotes
+  versification: ''
+- categories: []
+  identifier: 1ti
+  path: ./1ti
+  sort: 0 
+  title: 1 Timothy translationNotes
+  versification: ''
+- categories: []
+  identifier: 1ki
+  path: ./1ki
+  sort: 0 
+  title: 1 Kings translationNotes
+  versification: ''
+- categories: []
+  identifier: 1pe
+  path: ./1pe
+  sort: 0 
+  title: 1 Peter translationNotes
+  versification: ''
+- categories: []
+  identifier: mat
+  path: ./mat
+  sort: 0 
+  title: Matthew translationNotes
+  versification: ''
+- categories: []
+  identifier: gen
+  path: ./gen
+  sort: 0 
+  title: Genesis translationNotes
+  versification: ''
+- categories: []
+  identifier: isa
+  path: ./isa
+  sort: 0 
+  title: Isaiah translationNotes
+  versification: ''
+- categories: []
+  identifier: 3jn
+  path: ./3jn
+  sort: 0 
+  title: 3 John translationNotes
+  versification: ''
+- categories: []
+  identifier: psa
+  path: ./psa
+  sort: 0 
+  title: Psalms translationNotes
+  versification: ''
+- categories: []
+  identifier: hos
+  path: ./hos
+  sort: 0 
+  title: Hosea translationNotes
+  versification: ''
+- categories: []
+  identifier: rev
+  path: ./rev
+  sort: 0 
+  title: Revelation translationNotes
+  versification: ''
+- categories: []
+  identifier: phm
+  path: ./phm
+  sort: 0 
+  title: Philemon translationNotes
+  versification: ''
+- categories: []
+  identifier: est
+  path: ./est
+  sort: 0 
+  title: Esther translationNotes
+  versification: ''
+- categories: []
+  identifier: job
+  path: ./job
+  sort: 0 
+  title: Job translationNotes
+  versification: ''
+- categories: []
+  identifier: jol
+  path: ./jol
+  sort: 0 
+  title: Joel translationNotes
+  versification: ''
+- categories: []
+  identifier: jud
+  path: ./jud
+  sort: 0 
+  title: Jude translationNotes
+  versification: ''
+- categories: []
+  identifier: lam
+  path: ./lam
+  sort: 0 
+  title: Lamentations translationNotes
+  versification: ''
+- categories: []
+  identifier: col
+  path: ./col
+  sort: 0 
+  title: Colossians translationNotes
+  versification: ''
+- categories: []
+  identifier: 2co
+  path: ./2co
+  sort: 0 
+  title: 2 Corinthians translationNotes
+  versification: ''
+- categories: []
+  identifier: jer
+  path: ./jer
+  sort: 0 
+  title: Jeremiah translationNotes
+  versification: ''
+- categories: []
+  identifier: dan
+  path: ./dan
+  sort: 0 
+  title: Daniel translationNotes
+  versification: ''
+- categories: []
+  identifier: num
+  path: ./num
+  sort: 0 
+  title: Numbers translationNotes
+  versification: ''
+- categories: []
+  identifier: mic
+  path: ./mic
+  sort: 0 
+  title: Micah translationNotes
+  versification: ''
+- categories: []
+  identifier: 1sa
+  path: ./1sa
+  sort: 0 
+  title: 1 Samuel translationNotes
+  versification: ''
+- categories: []
+  identifier: php
+  path: ./php
+  sort: 0 
+  title: Philippians translationNotes
+  versification: ''
+- categories: []
+  identifier: hag
+  path: ./hag
+  sort: 0 
+  title: Haggai translationNotes
+  versification: ''
+- categories: []
+  identifier: jdg
+  path: ./jdg
+  sort: 0 
+  title: Judges translationNotes
+  versification: ''
+- categories: []
+  identifier: eph
+  path: ./eph
+  sort: 0 
+  title: Ephesians translationNotes
+  versification: ''
+- categories: []
+  identifier: 2pe
+  path: ./2pe
+  sort: 0 
+  title: 2 Peter translationNotes
+  versification: ''
+- categories: []
+  identifier: 1ch
+  path: ./1ch
+  sort: 0 
+  title: 1 Chronicles translationNotes
+  versification: ''
+- categories: []
+  identifier: 2jn
+  path: ./2jn
+  sort: 0 
+  title: 2 John translationNotes
+  versification: ''
+- categories: []
+  identifier: 2ch
+  path: ./2ch
+  sort: 0 
+  title: 2 Chronicles translationNotes
+  versification: ''
+- categories: []
+  identifier: zec
+  path: ./zec
+  sort: 0 
+  title: Zechariah translationNotes
+  versification: ''
+- categories: []
+  identifier: act
+  path: ./act
+  sort: 0 
+  title: Acts translationNotes
+  versification: ''
+- categories: []
+  identifier: heb
+  path: ./heb
+  sort: 0 
+  title: Hebrews translationNotes
+  versification: ''
+- categories: []
+  identifier: pro
+  path: ./pro
+  sort: 0 
+  title: Proverbs translationNotes
+  versification: ''
+- categories: []
+  identifier: ecc
+  path: ./ecc
+  sort: 0 
+  title: Ecclesiastes translationNotes
+  versification: ''
+- categories: []
+  identifier: jon
+  path: ./jon
+  sort: 0 
+  title: Jonah translationNotes
+  versification: ''
+- categories: []
+  identifier: ezr
+  path: ./ezr
+  sort: 0 
+  title: Ezra translationNotes
+  versification: ''
+- categories: []
+  identifier: deu
+  path: ./deu
+  sort: 0 
+  title: Deuteronomy translationNotes
+  versification: ''
+- categories: []
+  identifier: 2ki
+  path: ./2ki
+  sort: 0 
+  title: 2 Kings translationNotes
+  versification: ''
+- categories: []
+  identifier: exo
+  path: ./exo
+  sort: 0 
+  title: Exodus translationNotes
+  versification: ''
+- categories: []
+  identifier: 2sa
+  path: ./2sa
+  sort: 0 
+  title: 2 Samuel translationNotes
+  versification: ''
+- categories: []
+  identifier: zep
+  path: ./zep
+  sort: 0 
+  title: Zephaniah translationNotes
+  versification: ''
+- categories: []
+  identifier: 2ti
+  path: ./2ti
+  sort: 0 
+  title: 2 Timothy translationNotes
+  versification: ''
+- categories: []
+  identifier: luk
+  path: ./luk
+  sort: 0 
+  title: Luke translationNotes
+  versification: ''
+- categories: []
+  identifier: jos
+  path: ./jos
+  sort: 0 
+  title: Joshua translationNotes
+  versification: ''
+- categories: []
+  identifier: tit
+  path: ./tit
+  sort: 0 
+  title: Titus translationNotes
+  versification: ''
+- categories: []
+  identifier: nam
+  path: ./nam
+  sort: 0 
+  title: Nahum translationNotes
+  versification: ''
+- categories: []
+  identifier: 1co
+  path: ./1co
+  sort: 0 
+  title: 1 Corinthians translationNotes
+  versification: ''
+- categories: []
+  identifier: rom
+  path: ./rom
+  sort: 0 
+  title: Romans translationNotes
+  versification: ''
+- categories: []
+  identifier: mrk
+  path: ./mrk
+  sort: 0 
+  title: Mark translationNotes
+  versification: ''
+- categories: []
+  identifier: jas
+  path: ./jas
+  sort: 0 
+  title: James translationNotes
+  versification: ''
+- categories: []
+  identifier: rut
+  path: ./rut
+  sort: 0 
+  title: Ruth translationNotes
+  versification: ''
+- categories: []
+  identifier: 1th
+  path: ./1th
+  sort: 0 
+  title: 1 Thessalonians translationNotes
+  versification: ''
+- categories: []
+  identifier: hab
+  path: ./hab
+  sort: 0 
+  title: Habakkuk translationNotes
+  versification: ''
+- categories: []
+  identifier: mal
+  path: ./mal
+  sort: 0 
+  title: Malachi translationNotes
+  versification: ''
+- categories: []
+  identifier: amo
+  path: ./amo
+  sort: 0 
+  title: Amos translationNotes
+  versification: ''
+- categories: []
+  identifier: jhn
+  path: ./jhn
+  sort: 0 
+  title: John translationNotes
+  versification: ''
+- categories: []
+  identifier: neh
+  path: ./neh
+  sort: 0 
+  title: Nehemiah translationNotes
+  versification: ''
+- categories: []
+  identifier: oba
+  path: ./oba
+  sort: 0 
+  title: Obadiah translationNotes
+  versification: ''

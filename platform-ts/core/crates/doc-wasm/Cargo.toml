@@ -1,0 +1,22 @@
+[package]
+name = "doc-wasm"
+description = "wasm-bindgen entry point: JSON in, JSON out."
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+[features]
+# `jobs` (default): the document-job ops (parse, assemble) and the crates they pull in (interleaver, markdown, kitchen USFM). The API process builds without it.
+default = ["jobs"]
+jobs = ["dep:doc-job"]
+# Test builds only: adds an op that never returns, to prove the host can kill a wasm call that hangs inside the module.
+fault-injection = []
+[lints]
+workspace = true
+[lib]
+crate-type = ["cdylib", "rlib"]
+[dependencies]
+doc-books = { path = "../doc-books" }
+doc-kitchen = { path = "../doc-kitchen" }
+doc-job = { path = "../doc-job", optional = true }
+doc-request = { path = "../doc-request" }
+wasm-bindgen = "=0.2.130"

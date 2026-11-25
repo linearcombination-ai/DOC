@@ -1,0 +1,10 @@
+node_modules/
+core/target/
+core/pkg/
+.vitest-cache/
+.mypy_cache/
+core/pkg-api/
+core/pkg-fault/
+run/
+vendor/
+scratch/

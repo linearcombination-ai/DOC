@@ -1,0 +1,8 @@
+dublin_core:
+  conformsto: 'rc0.2'
+  identifier: 'tw'
+  language:
+    identifier: 'en'
+    title: 'English'
+  title: 'Translation Words'
+  type: 'dict'

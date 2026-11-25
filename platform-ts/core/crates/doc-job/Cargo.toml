@@ -1,0 +1,15 @@
+[package]
+name = "doc-job"
+description = "The document-job pipeline in one JSON call: resource trees and USFM text in, interleaved parts and findings out."
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+[lints]
+workspace = true
+[dependencies]
+doc-model = { path = "../doc-model" }
+doc-request = { path = "../doc-request" }
+doc-md = { path = "../doc-md" }
+doc-canon = { path = "../doc-canon" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

@@ -1,0 +1,1657 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "DOC shell (TypeScript), waves 1-3",
+    "version": "0.0.4",
+    "description": "Experimental TypeScript shell running beside DOC's FastAPI. Endpoints 1-7 of the stack report's table."
+  },
+  "components": {
+    "schemas": {
+      "HealthBody": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "degraded"
+            ]
+          },
+          "problems": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "queue": {
+            "$ref": "#/components/schemas/QueueHealth"
+          },
+          "redis": {
+            "type": "object",
+            "properties": {
+              "up": {
+                "type": "boolean"
+              },
+              "version": {
+                "type": "string"
+              },
+              "latencyMs": {
+                "type": "number"
+              },
+              "usedMemory": {
+                "type": "string"
+              },
+              "aof": {
+                "type": "boolean"
+              },
+              "lastSaveAgeSeconds": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "evictionPolicy": {
+                "type": "string"
+              },
+              "connectedClients": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "up"
+            ]
+          },
+          "workers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "pid": {
+                  "type": "integer"
+                },
+                "heartbeatAgeSeconds": {
+                  "type": "number"
+                },
+                "running": {
+                  "type": "integer"
+                },
+                "rssMb": {
+                  "type": "number"
+                },
+                "docxMode": {
+                  "type": "string",
+                  "enum": [
+                    "process",
+                    "persistent"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "pid",
+                "heartbeatAgeSeconds",
+                "running",
+                "rssMb",
+                "docxMode"
+              ]
+            }
+          },
+          "docxPool": {
+            "type": "object",
+            "properties": {
+              "mode": {
+                "type": "string",
+                "enum": [
+                  "process",
+                  "persistent"
+                ]
+              },
+              "size": {
+                "type": "integer"
+              },
+              "idle": {
+                "type": "integer"
+              },
+              "busy": {
+                "type": "integer"
+              },
+              "starting": {
+                "type": "integer"
+              },
+              "recycled": {
+                "type": "integer"
+              },
+              "crashed": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "mode",
+              "size",
+              "idle",
+              "busy",
+              "starting",
+              "recycled",
+              "crashed"
+            ]
+          },
+          "catalog": {
+            "type": "object",
+            "properties": {
+              "lastSuccessAgeSeconds": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "number"
+                }
+              }
+            },
+            "required": [
+              "lastSuccessAgeSeconds"
+            ]
+          },
+          "disk": {
+            "type": "object",
+            "properties": {
+              "freeMb": {
+                "type": "number"
+              },
+              "dir": {
+                "type": "string"
+              },
+              "floorMb": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "freeMb",
+              "dir",
+              "floorMb"
+            ]
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "QueueHealth": {
+        "type": "object",
+        "properties": {
+          "redis": {
+            "type": "string",
+            "enum": [
+              "up",
+              "down"
+            ]
+          },
+          "waiting": {
+            "type": "integer"
+          },
+          "active": {
+            "type": "integer"
+          },
+          "delayed": {
+            "type": "integer"
+          },
+          "failed": {
+            "type": "integer"
+          },
+          "workers": {
+            "type": "integer"
+          },
+          "oldestWaitingMs": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "redis"
+        ]
+      },
+      "Finding": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "UnknownBookCode"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "info",
+              "warn",
+              "error"
+            ]
+          },
+          "lang": {
+            "type": "string"
+          },
+          "repo": {
+            "type": "string"
+          },
+          "book": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "severity",
+          "detail"
+        ]
+      },
+      "LegacyValidationError": {
+        "type": "object",
+        "properties": {
+          "status_code": {
+            "type": "number",
+            "enum": [
+              10422
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "data": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "status_code",
+          "message",
+          "data"
+        ]
+      },
+      "ServiceUnavailable": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "catalog_unavailable",
+              "deadline_exceeded"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "transient": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "detail": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "required": [
+          "kind",
+          "message",
+          "transient",
+          "detail"
+        ]
+      },
+      "TaskCreated": {
+        "type": "object",
+        "properties": {
+          "task_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "task_id"
+        ]
+      },
+      "RequestTooLarge": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "request_too_large"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "retryable": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "detail",
+          "retryable"
+        ]
+      },
+      "QueueUnavailable": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "queue_unavailable"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "retryable": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "detail",
+          "retryable"
+        ]
+      },
+      "DiskLow": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "disk_space_low"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "retryable": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "detail",
+          "retryable"
+        ]
+      },
+      "DocumentRequest": {
+        "type": "object",
+        "additionalProperties": {},
+        "description": "DOC's DocumentRequest; validated by the core with DOC's rules (422 in the legacy body when invalid)."
+      },
+      "NotImplemented": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "enum": [
+              "not_implemented"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "retryable": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "detail",
+          "retryable"
+        ]
+      },
+      "TaskStatus": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/TaskStatusInProgress"
+          },
+          {
+            "$ref": "#/components/schemas/TaskStatusSuccess"
+          },
+          {
+            "$ref": "#/components/schemas/TaskStatusFailure"
+          }
+        ],
+        "description": "state is one of PENDING, DOC's stage strings, SUCCESS or FAILURE. An unknown task id is PENDING (Celery's behaviour, kept)."
+      },
+      "TaskStatusInProgress": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "Receiving request",
+              "Locating assets",
+              "Provisioning asset files",
+              "Parsing asset files",
+              "Assembling content",
+              "Converting to Docx",
+              "Converting to PDF",
+              "Sending email"
+            ]
+          },
+          "attempt": {
+            "type": "integer",
+            "description": "From the second attempt on: which attempt is running (the state stays at the last stage reached)."
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "TaskStatusSuccess": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "SUCCESS"
+            ]
+          },
+          "result": {
+            "type": "string",
+            "description": "The document request key: the files are `<key>.docx`, `<key>.html`, `<key>.pdf`."
+          }
+        },
+        "required": [
+          "state",
+          "result"
+        ]
+      },
+      "TaskStatusFailure": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "FAILURE"
+            ]
+          },
+          "result": {
+            "$ref": "#/components/schemas/FailureResult"
+          }
+        },
+        "required": [
+          "state",
+          "result"
+        ]
+      },
+      "FailureResult": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "retryable": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "retryable"
+        ]
+      },
+      "NotFound": {
+        "type": "object",
+        "properties": {
+          "detail": {
+            "type": "string",
+            "enum": [
+              "Not Found"
+            ]
+          }
+        },
+        "required": [
+          "detail"
+        ]
+      }
+    },
+    "parameters": {}
+  },
+  "paths": {
+    "/health/status": {
+      "get": {
+        "tags": [
+          "DOC wave 1-3"
+        ],
+        "summary": "Ping-able server endpoint",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "0",
+                "1"
+              ],
+              "description": "`1` answers HTTP 503 (same body) when the status is not ok, for a load balancer."
+            },
+            "required": false,
+            "description": "`1` answers HTTP 503 (same body) when the status is not ok, for a load balancer.",
+            "name": "strict",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "`[{\"status\":\"ok\"},200]` (a FastAPI quirk, kept) with the queue, Redis, workers, docx pool, catalog and disk added when the job queue is configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "prefixItems": [
+                    {
+                      "$ref": "#/components/schemas/HealthBody"
+                    },
+                    {
+                      "type": "number",
+                      "enum": [
+                        200
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Only with `?strict=1` and a status that is not ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "prefixItems": [
+                    {
+                      "$ref": "#/components/schemas/HealthBody"
+                    },
+                    {
+                      "type": "number",
+                      "enum": [
+                        200
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/chapters_in_books": {
+      "get": {
+        "tags": [
+          "DOC wave 1-3"
+        ],
+        "summary": "Chapter numbers of every book, in canonical order",
+        "responses": {
+          "200": {
+            "description": "`{book code: [1..N]}`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "array",
+                    "items": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/language_codes_and_names": {
+      "get": {
+        "tags": [
+          "DOC wave 1-3"
+        ],
+        "summary": "All languages in the catalog",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "0",
+                "1"
+              ],
+              "description": "`1` wraps the answer in `{result, findings, stale, failedRepos}`. Absent: the bare DOC-shaped answer, with the finding count in the `x-doc-findings` header."
+            },
+            "required": false,
+            "description": "`1` wraps the answer in `{result, findings, stale, failedRepos}`. Absent: the bare DOC-shaped answer, with the finding count in the `x-doc-findings` header.",
+            "name": "findings",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sorted by displayed name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "prefixItems": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "boolean"
+                          }
+                        ],
+                        "description": "[language code, \"national (english)\", is gateway language]"
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "result": {
+                          "type": "array",
+                          "items": {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "boolean"
+                              }
+                            ],
+                            "description": "[language code, \"national (english)\", is gateway language]"
+                          }
+                        },
+                        "findings": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Finding"
+                          }
+                        },
+                        "stale": {
+                          "type": "boolean",
+                          "description": "The catalog was served from the last good answer because a refresh failed."
+                        },
+                        "failedRepos": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "url": {
+                                "type": "string"
+                              },
+                              "reason": {
+                                "type": "string"
+                              },
+                              "detail": {
+                                "type": "string"
+                              },
+                              "attempts": {
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "url",
+                              "reason",
+                              "detail",
+                              "attempts"
+                            ]
+                          },
+                          "description": "Repositories the request needed and could not fetch."
+                        }
+                      },
+                      "required": [
+                        "result",
+                        "findings",
+                        "stale",
+                        "failedRepos"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid request (the legacy FastAPI handler's body)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegacyValidationError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "A dependency (the catalog) is down and nothing can be served (`fixed` mode)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceUnavailable"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/book_codes_for_lang/{lang_code}": {
+      "get": {
+        "tags": [
+          "DOC wave 1-3"
+        ],
+        "summary": "Books available for a language, with localized names",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "pt-br",
+              "description": "IETF language code as the catalog spells it (e.g. `sw`, `es-419`, `tca-CO-ticuna`). As built, any string is accepted and an unknown code answers `[]`; `fixed` mode additionally requires `^[A-Za-z0-9-]{1,35}$` (1 to 35 letters, digits and hyphens) and answers 422 otherwise."
+            },
+            "required": true,
+            "description": "IETF language code as the catalog spells it (e.g. `sw`, `es-419`, `tca-CO-ticuna`). As built, any string is accepted and an unknown code answers `[]`; `fixed` mode additionally requires `^[A-Za-z0-9-]{1,35}$` (1 to 35 letters, digits and hyphens) and answers 422 otherwise.",
+            "name": "lang_code",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "0",
+                "1"
+              ],
+              "description": "`1` wraps the answer in `{result, findings, stale, failedRepos}`. Absent: the bare DOC-shaped answer, with the finding count in the `x-doc-findings` header."
+            },
+            "required": false,
+            "description": "`1` wraps the answer in `{result, findings, stale, failedRepos}`. Absent: the bare DOC-shaped answer, with the finding count in the `x-doc-findings` header.",
+            "name": "findings",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Canonical book order",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "prefixItems": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "string"
+                          }
+                        ],
+                        "description": "[book code, name]"
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "result": {
+                          "type": "array",
+                          "items": {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "string"
+                              }
+                            ],
+                            "description": "[book code, name]"
+                          }
+                        },
+                        "findings": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Finding"
+                          }
+                        },
+                        "stale": {
+                          "type": "boolean",
+                          "description": "The catalog was served from the last good answer because a refresh failed."
+                        },
+                        "failedRepos": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "url": {
+                                "type": "string"
+                              },
+                              "reason": {
+                                "type": "string"
+                              },
+                              "detail": {
+                                "type": "string"
+                              },
+                              "attempts": {
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "url",
+                              "reason",
+                              "detail",
+                              "attempts"
+                            ]
+                          },
+                          "description": "Repositories the request needed and could not fetch."
+                        }
+                      },
+                      "required": [
+                        "result",
+                        "findings",
+                        "stale",
+                        "failedRepos"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid request (the legacy FastAPI handler's body)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegacyValidationError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "A dependency (the catalog) is down and nothing can be served (`fixed` mode)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceUnavailable"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/book_codes_for_lang_from_usfm_only/{lang_code}": {
+      "get": {
+        "tags": [
+          "DOC wave 1-3"
+        ],
+        "summary": "As book_codes_for_lang, English names only where USFM gives no name",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "pt-br",
+              "description": "IETF language code as the catalog spells it (e.g. `sw`, `es-419`, `tca-CO-ticuna`). As built, any string is accepted and an unknown code answers `[]`; `fixed` mode additionally requires `^[A-Za-z0-9-]{1,35}$` (1 to 35 letters, digits and hyphens) and answers 422 otherwise."
+            },
+            "required": true,
+            "description": "IETF language code as the catalog spells it (e.g. `sw`, `es-419`, `tca-CO-ticuna`). As built, any string is accepted and an unknown code answers `[]`; `fixed` mode additionally requires `^[A-Za-z0-9-]{1,35}$` (1 to 35 letters, digits and hyphens) and answers 422 otherwise.",
+            "name": "lang_code",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "0",
+                "1"
+              ],
+              "description": "`1` wraps the answer in `{result, findings, stale, failedRepos}`. Absent: the bare DOC-shaped answer, with the finding count in the `x-doc-findings` header."
+            },
+            "required": false,
+            "description": "`1` wraps the answer in `{result, findings, stale, failedRepos}`. Absent: the bare DOC-shaped answer, with the finding count in the `x-doc-findings` header.",
+            "name": "findings",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Canonical book order",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "prefixItems": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "string"
+                          }
+                        ],
+                        "description": "[book code, name]"
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "result": {
+                          "type": "array",
+                          "items": {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "string"
+                              }
+                            ],
+                            "description": "[book code, name]"
+                          }
+                        },
+                        "findings": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Finding"
+                          }
+                        },
+                        "stale": {
+                          "type": "boolean",
+                          "description": "The catalog was served from the last good answer because a refresh failed."
+                        },
+                        "failedRepos": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "url": {
+                                "type": "string"
+                              },
+                              "reason": {
+                                "type": "string"
+                              },
+                              "detail": {
+                                "type": "string"
+                              },
+                              "attempts": {
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "url",
+                              "reason",
+                              "detail",
+                              "attempts"
+                            ]
+                          },
+                          "description": "Repositories the request needed and could not fetch."
+                        }
+                      },
+                      "required": [
+                        "result",
+                        "findings",
+                        "stale",
+                        "failedRepos"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid request (the legacy FastAPI handler's body)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegacyValidationError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "A dependency (the catalog) is down and nothing can be served (`fixed` mode)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceUnavailable"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/shared_book_codes/{lang0_code}/{lang1_code}": {
+      "get": {
+        "tags": [
+          "DOC wave 1-3"
+        ],
+        "summary": "Books both languages have, named as in the first language",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "pt-br",
+              "description": "IETF language code as the catalog spells it (e.g. `sw`, `es-419`, `tca-CO-ticuna`). As built, any string is accepted and an unknown code answers `[]`; `fixed` mode additionally requires `^[A-Za-z0-9-]{1,35}$` (1 to 35 letters, digits and hyphens) and answers 422 otherwise."
+            },
+            "required": true,
+            "description": "IETF language code as the catalog spells it (e.g. `sw`, `es-419`, `tca-CO-ticuna`). As built, any string is accepted and an unknown code answers `[]`; `fixed` mode additionally requires `^[A-Za-z0-9-]{1,35}$` (1 to 35 letters, digits and hyphens) and answers 422 otherwise.",
+            "name": "lang0_code",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "pt-br",
+              "description": "IETF language code as the catalog spells it (e.g. `sw`, `es-419`, `tca-CO-ticuna`). As built, any string is accepted and an unknown code answers `[]`; `fixed` mode additionally requires `^[A-Za-z0-9-]{1,35}$` (1 to 35 letters, digits and hyphens) and answers 422 otherwise."
+            },
+            "required": true,
+            "description": "IETF language code as the catalog spells it (e.g. `sw`, `es-419`, `tca-CO-ticuna`). As built, any string is accepted and an unknown code answers `[]`; `fixed` mode additionally requires `^[A-Za-z0-9-]{1,35}$` (1 to 35 letters, digits and hyphens) and answers 422 otherwise.",
+            "name": "lang1_code",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "0",
+                "1"
+              ],
+              "description": "`1` wraps the answer in `{result, findings, stale, failedRepos}`. Absent: the bare DOC-shaped answer, with the finding count in the `x-doc-findings` header."
+            },
+            "required": false,
+            "description": "`1` wraps the answer in `{result, findings, stale, failedRepos}`. Absent: the bare DOC-shaped answer, with the finding count in the `x-doc-findings` header.",
+            "name": "findings",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Order and names of the first language",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "prefixItems": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "string"
+                          }
+                        ],
+                        "description": "[book code, name]"
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "result": {
+                          "type": "array",
+                          "items": {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "string"
+                              }
+                            ],
+                            "description": "[book code, name]"
+                          }
+                        },
+                        "findings": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Finding"
+                          }
+                        },
+                        "stale": {
+                          "type": "boolean",
+                          "description": "The catalog was served from the last good answer because a refresh failed."
+                        },
+                        "failedRepos": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "url": {
+                                "type": "string"
+                              },
+                              "reason": {
+                                "type": "string"
+                              },
+                              "detail": {
+                                "type": "string"
+                              },
+                              "attempts": {
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "url",
+                              "reason",
+                              "detail",
+                              "attempts"
+                            ]
+                          },
+                          "description": "Repositories the request needed and could not fetch."
+                        }
+                      },
+                      "required": [
+                        "result",
+                        "findings",
+                        "stale",
+                        "failedRepos"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid request (the legacy FastAPI handler's body)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegacyValidationError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "A dependency (the catalog) is down and nothing can be served (`fixed` mode)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceUnavailable"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/resource_types/{lang_code}/{book_codes}": {
+      "get": {
+        "tags": [
+          "DOC wave 1-3"
+        ],
+        "summary": "Resource types a language offers for the given books",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "pt-br",
+              "description": "IETF language code as the catalog spells it (e.g. `sw`, `es-419`, `tca-CO-ticuna`). As built, any string is accepted and an unknown code answers `[]`; `fixed` mode additionally requires `^[A-Za-z0-9-]{1,35}$` (1 to 35 letters, digits and hyphens) and answers 422 otherwise."
+            },
+            "required": true,
+            "description": "IETF language code as the catalog spells it (e.g. `sw`, `es-419`, `tca-CO-ticuna`). As built, any string is accepted and an unknown code answers `[]`; `fixed` mode additionally requires `^[A-Za-z0-9-]{1,35}$` (1 to 35 letters, digits and hyphens) and answers 422 otherwise.",
+            "name": "lang_code",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "example": "gen,exo,mat",
+              "description": "Comma-separated book codes, or `all`. As built, any string is accepted. `fixed` mode requires `all` or three-character lowercase codes."
+            },
+            "required": true,
+            "description": "Comma-separated book codes, or `all`. As built, any string is accepted. `fixed` mode requires `all` or three-character lowercase codes.",
+            "name": "book_codes",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "0",
+                "1"
+              ],
+              "description": "`1` wraps the answer in `{result, findings, stale, failedRepos}`. Absent: the bare DOC-shaped answer, with the finding count in the `x-doc-findings` header."
+            },
+            "required": false,
+            "description": "`1` wraps the answer in `{result, findings, stale, failedRepos}`. Absent: the bare DOC-shaped answer, with the finding count in the `x-doc-findings` header.",
+            "name": "findings",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sorted by resource type name",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "prefixItems": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "string"
+                          }
+                        ],
+                        "description": "[resource type code, resource type name]"
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "result": {
+                          "type": "array",
+                          "items": {
+                            "type": "array",
+                            "prefixItems": [
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "string"
+                              }
+                            ],
+                            "description": "[resource type code, resource type name]"
+                          }
+                        },
+                        "findings": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/Finding"
+                          }
+                        },
+                        "stale": {
+                          "type": "boolean",
+                          "description": "The catalog was served from the last good answer because a refresh failed."
+                        },
+                        "failedRepos": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "url": {
+                                "type": "string"
+                              },
+                              "reason": {
+                                "type": "string"
+                              },
+                              "detail": {
+                                "type": "string"
+                              },
+                              "attempts": {
+                                "type": "integer"
+                              }
+                            },
+                            "required": [
+                              "url",
+                              "reason",
+                              "detail",
+                              "attempts"
+                            ]
+                          },
+                          "description": "Repositories the request needed and could not fetch."
+                        }
+                      },
+                      "required": [
+                        "result",
+                        "findings",
+                        "stale",
+                        "failedRepos"
+                      ]
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid request (the legacy FastAPI handler's body)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegacyValidationError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "A dependency (the catalog) is down and nothing can be served (`fixed` mode)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceUnavailable"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/documents_docx": {
+      "post": {
+        "tags": [
+          "DOC wave 4-5 (P5 job path)"
+        ],
+        "summary": "Enqueue a docx document; identical in-flight requests share one job",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "`{task_id}`; poll `/task_status/{task_id}`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskCreated"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The request body is larger than MAX_BODY_BYTES",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestTooLarge"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid request (the legacy FastAPI handler's body)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegacyValidationError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The job queue (Redis) is unreachable, or the disk is nearly full",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/QueueUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/DiskLow"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/documents": {
+      "post": {
+        "tags": [
+          "DOC wave 4-5 (P5 job path)"
+        ],
+        "summary": "Enqueue a document: the html DOC writes as a by-product, and a PDF when generate_pdf is true",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "`{task_id}`; poll `/task_status/{task_id}`; the files are `<key>.html` and, with generate_pdf, `<key>.pdf`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskCreated"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "The request body is larger than MAX_BODY_BYTES",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestTooLarge"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid request (the legacy FastAPI handler's body)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LegacyValidationError"
+                }
+              }
+            }
+          },
+          "501": {
+            "description": "PDF output is switched off (`PDF_ENGINE=off`)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotImplemented"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The job queue (Redis) is unreachable, or the disk is nearly full",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/QueueUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/DiskLow"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/metrics": {
+      "get": {
+        "tags": [
+          "DOC wave 4-5 (P5 job path)"
+        ],
+        "summary": "Prometheus text-format metrics for the whole fleet (queue, stages, attempts, failures, clones, catalog, docx pool, workers)",
+        "responses": {
+          "200": {
+            "description": "Prometheus exposition format 0.0.4",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/task_status/{task_id}": {
+      "get": {
+        "tags": [
+          "DOC wave 4-5 (P5 job path)"
+        ],
+        "summary": "Task state in Celery's legacy shape",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1
+            },
+            "required": true,
+            "name": "task_id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "`{state}`; `{state:\"SUCCESS\", result:<document request key>}`; `{state:\"FAILURE\", result:{code,message,retryable}}`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskStatus"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "The job queue (Redis) is unreachable, or the disk is nearly full",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/QueueUnavailable"
+                    },
+                    {
+                      "$ref": "#/components/schemas/DiskLow"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/findings/documents/{key}": {
+      "get": {
+        "tags": [
+          "DOC wave 4-5 (P5 job path)"
+        ],
+        "summary": "What the job found while building a document (defects in the sources, repairs, stale repositories)",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9_-]{1,120}$"
+            },
+            "required": true,
+            "name": "key",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The findings, in the order the pipeline produced them",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": {}
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such document yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotFound"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "webhooks": {}
+}

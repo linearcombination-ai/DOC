@@ -1,0 +1,23 @@
+# P4 TypeScript-shell build: the Rust core for waves 1-3 (endpoints 1-7), compiled to wasm for Node.
+#   doc-model   (copied unchanged from the P3b prototype, plus Tree::add_empty_dir)  shared tables, Tree, NameProvider port
+#   doc-books   pure core: catalog rows, locator, name rules, manifest reading, the book-list path   (no I/O, no kitchen)
+#   doc-kitchen the thin adapter: the only crate that names scripture-kitchen types
+#   doc-wasm    wasm-bindgen entry point: one JSON-in JSON-out function
+# kitchen is a read-only clone of WycliffeAssociates/scripture-kitchen v0.1.24 (0090c0be) at ../../.lab/_exp/kitchen.
+[workspace]
+resolver = "2"
+members = ["crates/doc-model", "crates/doc-books", "crates/doc-kitchen", "crates/doc-wasm", "crates/doc-request", "crates/doc-interleave", "crates/doc-md", "crates/doc-canon", "crates/doc-job"]
+
+[workspace.package]
+version = "0.0.4"
+edition = "2021"
+publish = false
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = true

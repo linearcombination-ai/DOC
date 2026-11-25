@@ -1,0 +1,8 @@
+dublin_core:
+  conformsto: 'rc0.2'
+  identifier: 'tq'
+  language:
+    identifier: 'en'
+    title: 'English'
+  title: 'Translation Questions'
+  type: 'help'
