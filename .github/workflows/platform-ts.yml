@@ -494,7 +494,7 @@ jobs:
           out = subprocess.run([sys.executable, "platform-ts/ci/e2e_table.py", "--ts", "ts-xml", "--doc", "doc-xml", "--out", "ci-out/e2e-table.md"], capture_output=True, text=True, check=False)
           print(out.stdout[:200], out.stderr[:2000])
           PY
-          cat ci-out/e2e-table.md | tee -a "$GITHUB_STEP_SUMMARY"
+          tee -a "$GITHUB_STEP_SUMMARY" < ci-out/e2e-table.md
       - uses: actions/upload-artifact@v4
         with:
           name: e2e-table

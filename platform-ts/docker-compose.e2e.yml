@@ -35,8 +35,6 @@ services:
       - --junitxml=/results/junit.xml
       - -o
       - junit_family=xunit2
-      - -p
-      - no:cacheprovider
       - /app/tests/e2e/doc
     environment:
       E2E_BASE_URL: http://gateway:5005

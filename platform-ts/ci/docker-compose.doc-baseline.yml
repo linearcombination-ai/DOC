@@ -22,8 +22,6 @@ services:
       - --junitxml=/results/junit.xml
       - -o
       - junit_family=xunit2
-      - -p
-      - no:cacheprovider
       - /app/tests/e2e/doc
     volumes:
       - ./e2e-results:/results

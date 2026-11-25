@@ -20,6 +20,8 @@ import httpx
 class RemoteClient(httpx.Client):
     """Same call shape as fastapi's TestClient for what the tests use: context manager, .get, .post with json=."""
 
+    __test__ = False  # the tests import this under the name `TestClient`; pytest must not try to collect it as a test class
+
     def __init__(self, app: object = None, base_url: str = "", **kwargs: object) -> None:
         del app  # the point of the shim: the app object is not used, the URL is
         super().__init__(base_url=os.environ["E2E_BASE_URL"], timeout=float(os.environ.get("E2E_TIMEOUT_SECONDS", "120")))

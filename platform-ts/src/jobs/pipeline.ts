@@ -186,7 +186,8 @@ export async function runDocumentJob(deps: PipelineDeps, data: JobData, ctx: Job
     // --- Locating assets
     await ctx.setState(STAGE.locating);
     const found = await timed(STAGE.locating, () => stage(STAGE.locating, jobs.STAGE_LOCATE_DEADLINE_MS, ctx.signal, () => locate(deps, requests)));
-    if (found.resolved.length === 0) throw new JobError("no_resources", "none of the requested resources exists in the catalog", { transient: false, detail: { requests } });
+    // DOC builds a document from whatever resolved, even nothing (its tests ask for a language the catalog does not have and expect a file): so do we, and the findings say why it is empty
+    if (found.resolved.length === 0) jlog.warn({ requests }, "none of the requested resources exists in the catalog; building a document without content");
 
     // --- Provisioning asset files
     await ctx.setState(STAGE.provisioning);
