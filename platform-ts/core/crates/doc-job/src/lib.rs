@@ -24,8 +24,14 @@ struct UsfmIn {
     national_book_name: String,
     #[serde(default)]
     resource_type_name: String,
-    /// The text of the book's USFM file.
+    /// The text of the book's USFM file (empty when the book is empty or `writer_files` carry it).
+    #[serde(default)]
     source: String,
+    /// A Writer repository: `(relative path with '/', text)` of its chapter chunk files and `front/title.txt`; stitched into one USFM text.
+    #[serde(default)]
+    writer_files: Vec<(String, String)>,
+    #[serde(default)]
+    fallback_title: String,
 }
 
 #[derive(Deserialize)]
@@ -118,13 +124,21 @@ pub fn parse_json(input: &str) -> String {
     let mut findings = Vec::new();
     let mut book_names: Vec<String> = Vec::new();
     for book in &parsed.usfm {
-        let model = doc_canon::usfm::parse_book(&book.source);
+        let stitched;
+        let source: &str = if book.source.is_empty() && !book.writer_files.is_empty() {
+            let files: Vec<(String, Vec<u8>)> = book.writer_files.iter().map(|(p, t)| (p.clone(), t.as_bytes().to_vec())).collect();
+            stitched = doc_canon::stitch::stitch_writer_book(&files, &book.book_code, &book.fallback_title);
+            &stitched
+        } else {
+            &book.source
+        };
+        let model = doc_canon::usfm::parse_book(source);
         let chapters: Vec<Value> = model
             .chapters
             .iter()
             .map(|c| {
                 let verses: Vec<Value> = c.verses.iter().map(|v| json!([v.label_doc, doc_canon::usfm::verse_html(&v.text_doc)])).collect();
-                json!([c.number, {"content": doc_canon::look::ulb_chapter_html(c, &UlbOptions::default()), "verses": verses}])
+                json!([c.number, {"content": doc_canon::look::ulb_chapter_html(c, &UlbOptions::default()), "content_doc": doc_canon::look::chapter_html_doc(c), "verses": verses}])
             })
             .collect();
         for (code, n) in &model.lint {
@@ -169,12 +183,29 @@ pub fn assemble_json(input: &str) -> String {
         Ok(i) => i,
         Err(e) => return fail("input", e),
     };
+    let mut books = parsed.books.clone();
+    if parsed.structure == "as_built" {
+        // DOC's markup (HTML and PDF output): the ULB chapters in the sidecar's shape instead of the proposed look's
+        if let Some(usfm) = books.get_mut("usfm").and_then(Value::as_array_mut) {
+            for book in usfm {
+                if let Some(chapters) = book.get_mut("chapters").and_then(Value::as_array_mut) {
+                    for chapter in chapters {
+                        if let Some(body) = chapter.get_mut(1).and_then(Value::as_object_mut) {
+                            if let Some(doc) = body.get("content_doc").cloned() {
+                                body.insert("content".into(), doc);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
     let mut request = parsed.request.clone();
     if let Some(obj) = request.as_object_mut() {
         // Translation Words in print: link out (the captain's default for the look); an explicit value wins.
         obj.entry("tw_mode").or_insert_with(|| json!("link"));
     }
-    let call = json!({"request": request, "books": parsed.books, "bug_compat": parsed.bug_compat, "structure": parsed.structure, "unresolved": parsed.unresolved});
+    let call = json!({"request": request, "books": books, "bug_compat": parsed.bug_compat, "structure": parsed.structure, "unresolved": parsed.unresolved});
     let out = doc_canon::run_json(&call.to_string());
     let Ok(mut v) = serde_json::from_str::<Value>(&out) else { return fail("interleave", "core returned no JSON") };
     if v.get("ok") != Some(&json!(true)) {

@@ -8,7 +8,7 @@ import { listRepos, readTexts } from "../acquirer/listing.ts";
 import type { CatalogClient, CatalogKind } from "../catalog/client.ts";
 import type { Config } from "../config.ts";
 import type { Core } from "../core/wasm.ts";
-import type { Finding, Flags, Located, Repo } from "../core/seam.ts";
+import type { Finding, Flags, Located, LookupDto, Repo } from "../core/seam.ts";
 import { errorMessage } from "../util/errors.ts";
 import type { Log } from "../util/log.ts";
 
@@ -156,6 +156,21 @@ export class Lookup {
     const repos = view.snap.byLang.get(lang) ?? [];
     const planned = this.#core.plan("book_codes", lang, repos, flags, this.#config.EN_RG_DIR);
     return { located: [...planned.repos], repos, stale: view.stale };
+  }
+
+  /**
+   * The document path's lookup: DOC's `resource_lookup_dto` for every requested resource, over the primary catalog plus the entries DOC adds
+   * itself. A resource the catalog has no repository for comes back as `null` (DOC drops those and builds the document from the rest).
+   */
+  async resolve(requests: readonly { lang_code: string; resource_type: string; book_code: string }[], mode: Mode): Promise<{ dtos: (LookupDto | null)[]; repos: Map<string, Repo>; stale: boolean }> {
+    const view = await this.#snapshot(mode, "primary");
+    const langs = [...new Set(requests.map((r) => r.lang_code))];
+    const rows: Repo[] = [];
+    for (const lang of langs) rows.push(...(view.snap.byLang.get(lang) ?? []));
+    const out = this.#core.lookupDtos(rows, requests, this.#config.EN_RG_DIR);
+    const repos = new Map<string, Repo>();
+    for (const repo of rows) repos.set(repo.repo_url, repo);
+    return { dtos: out.dtos, repos, stale: view.stale };
   }
 
   /** Endpoint 7. */

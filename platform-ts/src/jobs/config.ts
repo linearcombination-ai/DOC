@@ -39,8 +39,12 @@ export const JobEnvSchema = z.object({
 
   /** Request limits (API). */
   MAX_BODY_BYTES: Int(262_144),
-  /** `off` answers POST /documents with generate_pdf=true with the typed 501; `weasyprint` runs the PDF stage through the Python seam. */
-  PDF_ENGINE: z.enum(["weasyprint", "off"]).default("weasyprint"),
+  /**
+   * `off` answers POST /documents with generate_pdf=true with the typed 501. Otherwise the PDF stage runs through the Python seam:
+   * `prince` or `weasyprint` force an engine; `auto` uses Prince when its binary is installed and the request does not forbid it (DOC's `use_prince`
+   * flag selects it per request), else WeasyPrint, and says which in a finding.
+   */
+  PDF_ENGINE: z.enum(["auto", "prince", "weasyprint", "off"]).default("auto"),
   /** `/health/status` reports degraded when the oldest waiting job is older than this. */
   QUEUE_LAG_WARN_MS: Int(60_000),
   /** `/health/status` reports degraded when no catalog fetch succeeded within this many seconds (0: never). */

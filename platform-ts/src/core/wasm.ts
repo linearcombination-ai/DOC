@@ -18,6 +18,8 @@ export interface Core {
   normalizeCatalog(rows: readonly unknown[], kind: "primary" | "non_primary", flags: seam.Flags): Promise<z.infer<typeof seam.NormalizeOut>>;
   langCodesAndNames(primary: readonly seam.Repo[], nonPrimary: readonly seam.Repo[], flags: seam.Flags): z.infer<typeof seam.LangListOut>;
   plan(op: "book_codes" | "book_codes_usfm_only" | "resource_types", lang: string, rows: readonly seam.Repo[], flags: seam.Flags, enRgDir: string): z.infer<typeof seam.PlanOut>;
+  /** DOC's `resource_lookup_dto` for each requested resource (null: the catalog has no repository for it), over the catalog rows of the requested languages. */
+  lookupDtos(rows: readonly seam.Repo[], requests: readonly { lang_code: string; resource_type: string; book_code: string }[], enRgDir: string): z.infer<typeof seam.LookupOut>;
   wanted(lang: string, repos: readonly seam.Located[], listing: seam.Listing, flags: seam.Flags): string[];
   finishBookCodes(args: FinishArgs): z.infer<typeof seam.FinishOut>;
   finishResourceTypes(args: FinishArgs): z.infer<typeof seam.FinishOut>;
@@ -75,6 +77,7 @@ export function createCore(wasm: WasmModule, log: Log, offThread?: OffThread): C
     },
     langCodesAndNames: (primary, non_primary, flags) => call("lang_codes_and_names", { primary, non_primary, flags }, seam.LangListOut),
     plan: (op, lang, rows, flags, en_rg_dir) => call("plan", { op, lang, rows, flags, en_rg_dir }, seam.PlanOut),
+    lookupDtos: (rows, requests, en_rg_dir) => call("lookup_dtos", { rows, requests, en_rg_dir }, seam.LookupOut),
     wanted: (lang, repos, listing, flags) => call("wanted", { lang, repos, listing, flags }, seam.WantedOut).reads,
     finishBookCodes: (a) => call("finish_book_codes", { lang: a.lang, usfm_only: a.usfmOnly ?? false, repos: a.repos, listing: a.listing, texts: a.texts ?? {}, flags: a.flags }, seam.FinishOut),
     finishResourceTypes: (a) => call("finish_resource_types", { lang: a.lang, books: a.books ?? "", repos: a.repos, listing: a.listing, flags: a.flags }, seam.FinishOut),

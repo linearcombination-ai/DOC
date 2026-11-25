@@ -42,12 +42,13 @@ FROM ${NODE_IMAGE} AS node-bin
 # ---- stage 4: the worker ----
 FROM ${PYTHON_IMAGE} AS worker
 # Same packages as DOC's Dockerfile minus what only Calibre (ePub) needed: git for clones; fonts for PDF (Prince and WeasyPrint);
-# pango for WeasyPrint; the image libraries Prince links; libstdc++ for the node binary.
+# pango for WeasyPrint; the image libraries Prince links; libstdc++ and libatomic for the node binary.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     git \
     ca-certificates \
     libstdc++6 \
+    libatomic1 \
     texlive-fonts-recommended \
     pango1.0-tools \
     fontconfig \

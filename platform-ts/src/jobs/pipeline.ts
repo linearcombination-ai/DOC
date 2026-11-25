@@ -16,7 +16,7 @@ import type { Redis } from "ioredis";
 import type { Acquirer } from "../acquirer/acquirer.ts";
 import { pythonText } from "../acquirer/listing.ts";
 import type { Config } from "../config.ts";
-import type { Located, Repo } from "../core/seam.ts";
+import type { LookupDto, Repo } from "../core/seam.ts";
 import { noMetrics, type Metrics } from "../obs/metrics.ts";
 import type { Lookup } from "../service/lookup.ts";
 import type { Log } from "../util/log.ts";
@@ -190,14 +190,15 @@ export async function runDocumentJob(deps: PipelineDeps, data: JobData, ctx: Job
 
     // --- Provisioning asset files
     await ctx.setState(STAGE.provisioning);
-    const provisioned = await timed(STAGE.provisioning, () => stage(STAGE.provisioning, jobs.STAGE_PROVISION_DEADLINE_MS, ctx.signal, (signal) => provision(deps, found.resolved, signal)));
+    const provisioned = await timed(STAGE.provisioning, () => stage(STAGE.provisioning, jobs.STAGE_PROVISION_DEADLINE_MS, ctx.signal, (signal) => provision(deps, found.resolved, signal, ctx.attempt >= ctx.maxAttempts)));
 
     // --- Parsing asset files
     await ctx.setState(STAGE.parsing);
     const parsed = await timed(STAGE.parsing, () =>
       stage(STAGE.parsing, jobs.STAGE_PARSE_DEADLINE_MS, ctx.signal, async (signal) => {
-        const input = await buildParseInput(data.request, found.resolved, provisioned);
-        return deps.core.parse({ ...input, bug_compat: "fixed" }, signal);
+        const { findings: inputFindings, ...input } = await buildParseInput(data.request, found.resolved.filter((r) => !provisioned.missing.has(r.dto.url)), provisioned);
+        const out = await deps.core.parse({ ...input, bug_compat: "fixed" }, signal);
+        return { ...out, findings: [...inputFindings, ...out.findings] };
       }),
     );
 
@@ -316,88 +317,139 @@ function readRequests(request: Record<string, unknown>): RequestedResource[] {
 
 interface Resolved {
   request: RequestedResource;
-  located: Located;
+  /** DOC's `resource_lookup_dto` for this request: the repository (url), its directory name, the language as the catalog has it. */
+  dto: LookupDto;
   repo: Repo | undefined;
 }
 
-/** Catalog lookup: which repository serves each requested resource. A request the catalog has no repository for is reported, not dropped silently (DOC drops it). */
+/**
+ * Catalog lookup, DOC's way (`resource_lookup_dto`, in the core): which repository serves each requested resource. A request the catalog has
+ * no repository for is returned as unresolved with a finding, and the document is built from the rest (DOC drops it silently).
+ */
 async function locate(deps: PipelineDeps, requests: readonly RequestedResource[]): Promise<{ resolved: Resolved[]; unresolved: RequestedResource[]; findings: Finding[] }> {
-  const langs = [...new Set(requests.map((r) => r.lang_code))];
-  const byLang = new Map<string, { located: Located[]; repos: Repo[] }>();
-  for (const lang of langs) {
-    const got = await deps.lookup.located(lang, "fixed");
-    byLang.set(lang, got);
-  }
+  const { dtos, repos } = await deps.lookup.resolve(requests, "fixed");
   const resolved: Resolved[] = [];
   const unresolved: RequestedResource[] = [];
   const findings: Finding[] = [];
-  for (const request of requests) {
-    const entry = byLang.get(request.lang_code);
-    const candidates = (entry?.located ?? []).filter((l) => l.resource_type === request.resource_type);
-    const located = candidates.find((l) => l.dir.includes(`__${request.book_code}`)) ?? candidates[0];
-    if (!located) {
+  requests.forEach((request, i) => {
+    const dto = dtos[i];
+    if (!dto) {
       unresolved.push(request);
-      findings.push({ code: "ResourceNotInCatalog", severity: "warn", lang: request.lang_code, book: request.book_code, detail: `${request.resource_type} has no repository in the catalog` });
-      continue;
+      findings.push({ code: "ResourceNotInCatalog", severity: "warn", lang: request.lang_code, book: request.book_code, detail: `${request.resource_type} has no repository in the catalog for ${request.lang_code}; the document is built without it (DOC drops it too)` });
+      return;
     }
-    resolved.push({ request, located, repo: entry?.repos.find((r) => r.repo_url === located.url) });
-  }
+    resolved.push({ request, dto, repo: repos.get(dto.url) });
+  });
   return { resolved, unresolved, findings };
 }
 
 interface Provisioned {
   paths: Map<string, string>;
   findings: Finding[];
+  /** Repositories that could not be fetched on the last attempt: their resources are left out and each is a finding. */
+  missing: Set<string>;
 }
 
-async function provision(deps: PipelineDeps, resolved: readonly Resolved[], signal: AbortSignal): Promise<Provisioned> {
-  const urls = [...new Set(resolved.map((r) => r.located.url))];
+async function provision(deps: PipelineDeps, resolved: readonly Resolved[], signal: AbortSignal, lastAttempt: boolean): Promise<Provisioned> {
+  const urls = [...new Set(resolved.map((r) => r.dto.url))];
   const deadlineAt = Date.now() + deps.jobs.STAGE_PROVISION_DEADLINE_MS;
   const result = await deps.acquirer.acquire(urls, deadlineAt);
   if (signal.aborted) throw new JobError("stage_deadline", "provisioning was aborted", { transient: true });
   const findings: Finding[] = [];
   const paths = new Map<string, string>();
+  const missing = new Set<string>();
   for (const [url, got] of result.acquired) {
     paths.set(url, got.path);
     if (got.provenance === "stale_served") findings.push({ code: "RepoServedStale", severity: "warn", repo: url, detail: got.refreshError ?? "refresh failed" });
   }
   if (result.failed.length > 0) {
     const first = result.failed[0];
-    throw new JobError("resource_unavailable", `could not fetch ${result.failed.map((f) => f.url).join(", ")}: ${first?.reason ?? ""}: ${first?.detail ?? ""}`, { transient: true, detail: { failed: result.failed } });
+    // Earlier attempts retry (the content host may be briefly down); the last attempt builds the document from what it has: a request ends with a document.
+    if (!lastAttempt || result.acquired.size === 0) throw new JobError("resource_unavailable", `could not fetch ${result.failed.map((f) => f.url).join(", ")}: ${first?.reason ?? ""}: ${first?.detail ?? ""}`, { transient: true, detail: { failed: result.failed } });
+    for (const f of result.failed) {
+      missing.add(f.url);
+      findings.push({ code: "RepoNotFetched", severity: "error", repo: f.url, detail: `${f.url}: ${f.reason}: ${f.detail} (after ${f.attempts} attempts); the document is built without it` });
+    }
   }
-  return { paths, findings };
+  return { paths, findings, missing };
 }
 
-/** The shell's half of the parse call: list and read what the core's readers will look at (a book's subtree of a TN repository; the book's USFM file). */
+/** The shell's half of the parse call: list and read what the core's readers will look at (a book's subtree of a TN repository; the book's USFM file or its Writer chapter files). */
 async function buildParseInput(request: Record<string, unknown>, resolved: readonly Resolved[], provisioned: Provisioned) {
   const dtos: Record<string, unknown>[] = [];
   const tree: Record<string, { files: string[]; texts: Record<string, string | null> }> = {};
   const usfm: Record<string, unknown>[] = [];
+  const findings: Finding[] = [];
   for (const r of resolved) {
-    const root = provisioned.paths.get(r.located.url);
+    const root = provisioned.paths.get(r.dto.url);
     if (root === undefined) continue;
+    const langName = r.repo?.language.english_name ?? r.dto.lang_name;
     if (USFM_TYPES.has(r.request.resource_type)) {
-      const file = await findUsfm(root, r.request.book_code);
-      if (file === undefined) throw new JobError("resource_unavailable", `${r.located.url} has no USFM file for ${r.request.book_code}`, { transient: false, detail: { url: r.located.url, book: r.request.book_code } });
-      const text = pythonText(await readFile(join(root, file)));
-      if (text === null) throw new JobError("core_failure", `${file} is not valid UTF-8`, { transient: false });
-      usfm.push({ lang_code: r.request.lang_code, lang_name: r.repo?.language.english_name ?? "", book_code: r.request.book_code, resource_type_name: resourceName(r.request.resource_type), source: text });
+      const found = await findUsfm(root, r.dto.dir, r.request.book_code);
+      const base = { lang_code: r.request.lang_code, lang_name: langName, book_code: r.request.book_code, resource_type_name: r.dto.resource_type_name };
+      if (found.kind === "none") {
+        // DOC builds an empty book (no chapters) and goes on; so do we, and say so
+        findings.push({ code: "UsfmNotFound", severity: "warn", lang: r.request.lang_code, book: r.request.book_code, repo: r.dto.url, detail: `${r.dto.url} has no USFM file for ${r.request.book_code}; the book is empty in the document` });
+        usfm.push({ ...base, source: "" });
+      } else if (found.kind === "single") {
+        const text = pythonText(await readFile(join(root, found.rel)));
+        if (text === null) throw new JobError("core_failure", `${found.rel} is not valid UTF-8`, { transient: false });
+        usfm.push({ ...base, source: text });
+      } else {
+        // a Writer repository: chapter directories with chunk files; the core stitches them into one USFM text
+        usfm.push({ ...base, source: "", writer_files: found.files, fallback_title: "" });
+      }
     } else {
-      dtos.push({ lang_code: r.request.lang_code, lang_name: r.repo?.language.english_name ?? "", resource_type: r.request.resource_type, resource_type_name: resourceName(r.request.resource_type), book_code: r.request.book_code, lang_direction: r.repo?.language.direction ?? "ltr", dir: r.located.dir });
-      tree[r.located.dir] = await listBookTree(root, r.request.book_code, r.request.resource_type);
+      dtos.push({ lang_code: r.request.lang_code, lang_name: langName, resource_type: r.request.resource_type, resource_type_name: r.dto.resource_type_name, book_code: r.request.book_code, lang_direction: r.dto.lang_direction, dir: r.dto.dir });
+      tree[r.dto.dir] = await listBookTree(root, r.request.book_code, r.request.resource_type);
     }
   }
-  return { request, dtos, tree, usfm };
+  // Nothing at all to build a document from (every requested book is absent from its repository): not transient, say so plainly instead of returning an empty document
+  const emptyUsfm = usfm.every((u) => u["source"] === "" && u["writer_files"] === undefined);
+  if (dtos.length === 0 && usfm.length > 0 && emptyUsfm) {
+    throw new JobError("resource_unavailable", `none of the requested resources has content for the requested books: ${findings.map((f) => f.detail).join("; ")}`, { transient: false, detail: { findings } });
+  }
+  return { request, dtos, tree, usfm, findings };
 }
 
-function resourceName(code: string): string {
-  return { ulb: "Unlocked Literal Bible", udb: "Unlocked Dynamic Bible", tn: "Translation Notes", tq: "Translation Questions", tw: "Translation Words", bc: "Bible Commentary" }[code] ?? code;
+type UsfmFound = { kind: "none" } | { kind: "single"; rel: string } | { kind: "writer"; files: [string, string][] };
+
+/**
+ * DOC's `usfm_asset_file`: the `.usfm` files one level below the repository directory, else its `.txt` files, else the `.txt` files two levels below it
+ * (Python's glob without `recursive` treats a double star as a single one), `title.txt` excluded; the files of the book are those whose stem (`.usfm`) or whole path
+ * (`.txt`, which includes the repository directory's name) names the book code, in any case. One file: that is the book. More than one: a Writer repository,
+ * stitched into one USFM by the core.
+ */
+export async function findUsfm(root: string, dirName: string, book: string): Promise<UsfmFound> {
+  const level1 = await filesAt(root, "");
+  const level2: string[] = [];
+  for (const d of await dirsAt(root)) for (const f of await filesAt(root, d)) level2.push(`${d}/${f}`);
+  let candidates = level1.filter((f) => f.endsWith(".usfm"));
+  if (candidates.length === 0) candidates = level1.filter((f) => f.endsWith(".txt"));
+  if (candidates.length === 0) candidates = level2.filter((f) => f.endsWith(".txt"));
+  candidates = candidates.filter((f) => !f.endsWith("title.txt"));
+  if (candidates.length === 0) return { kind: "none" };
+  const code = book.toLowerCase();
+  const stem = (f: string): string => (f.split("/").pop() ?? "").replace(/\.[^.]*$/, "").toLowerCase();
+  const chosen = candidates[0]?.endsWith(".usfm") ? candidates.filter((f) => stem(f).includes(code)) : candidates.filter((f) => `${dirName}/${f}`.toLowerCase().includes(code));
+  if (chosen.length === 0) return { kind: "none" };
+  if (chosen.length === 1) return { kind: "single", rel: chosen[0] as string };
+  const files: [string, string][] = [];
+  for (const f of [...level1, ...level2].filter((x) => /\.(usfm|txt)$/.test(x)).sort()) {
+    const text = pythonText(await readFile(join(root, f)));
+    if (text !== null) files.push([f, text]);
+  }
+  return { kind: "writer", files };
 }
 
-async function findUsfm(root: string, book: string): Promise<string | undefined> {
-  const names = await readdir(root);
-  const upper = book.toUpperCase();
-  return names.find((n) => new RegExp(`^\\d+-${upper}\\.usfm$`, "i").test(n)) ?? names.find((n) => n.toLowerCase().endsWith(".usfm") && n.toUpperCase().includes(upper));
+async function dirsAt(root: string): Promise<string[]> {
+  const entries = await readdir(root, { withFileTypes: true }).catch(() => []);
+  return entries.filter((e) => e.isDirectory() && !e.name.startsWith(".")).map((e) => e.name).sort();
+}
+
+async function filesAt(root: string, rel: string): Promise<string[]> {
+  const entries = await readdir(join(root, rel), { withFileTypes: true }).catch(() => []);
+  return entries.filter((e) => e.isFile()).map((e) => e.name).sort();
 }
 
 /**

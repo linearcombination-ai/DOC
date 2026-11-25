@@ -37,6 +37,19 @@ export type Located = z.infer<typeof Located>;
 
 export const NormalizeOut = z.object({ repos: z.array(Repo), validation_failure: z.string().nullable(), findings: z.array(Finding) });
 export const LangListOut = z.object({ result: z.array(z.tuple([z.string(), z.string(), z.boolean()])), findings: z.array(Finding) });
+export const LookupDto = z.object({
+  lang_code: z.string(),
+  lang_name: z.string(),
+  localized_lang_name: z.string(),
+  resource_type: z.string(),
+  resource_type_name: z.string(),
+  book_code: z.string(),
+  lang_direction: z.string(),
+  url: z.string(),
+  dir: z.string(),
+});
+export type LookupDto = z.infer<typeof LookupDto>;
+export const LookupOut = z.object({ dtos: z.array(LookupDto.nullable()), augmented: z.number() });
 export const PlanOut = z.object({ repos: z.array(Located), augmented: z.number(), findings: z.array(Finding) });
 export const WantedOut = z.object({ reads: z.array(z.string()) });
 export const FinishOut = z.object({

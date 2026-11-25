@@ -37,6 +37,21 @@ struct LangListIn {
 }
 
 #[derive(Deserialize)]
+struct LookupIn {
+    /// All catalog rows (any language); the six entries DOC adds itself are added here.
+    rows: Vec<Repo>,
+    requests: Vec<LookupReq>,
+    en_rg_dir: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct LookupReq {
+    lang_code: String,
+    resource_type: String,
+    book_code: String,
+}
+
+#[derive(Deserialize)]
 struct PlanIn {
     /// `book_codes`, `book_codes_usfm_only` or `resource_types`.
     op: String,
@@ -130,6 +145,13 @@ fn dispatch(op: &str, input: &str, provider: &dyn NameProvider) -> Result<Value,
                 locator::repos_to_clone(&i.lang, &i.rows, en_rg, &|t| usfm(t) || matches!(t, "tq" | "tn"))
             };
             Ok(json!({ "repos": repos, "augmented": added, "findings": [] }))
+        }
+        "lookup_dtos" => {
+            let mut i: LookupIn = parse(input)?;
+            let en_rg = i.en_rg_dir.as_deref().unwrap_or(DEFAULT_EN_RG_DIR);
+            let added = catalog::augment(&mut i.rows);
+            let dtos: Vec<Option<locator::LookupDto>> = i.requests.iter().map(|r| locator::resource_lookup_dto(&r.lang_code, &r.resource_type, &r.book_code, &i.rows, en_rg)).collect();
+            Ok(json!({ "dtos": dtos, "augmented": added }))
         }
         "wanted" => {
             let f: FinishIn = parse(input)?;
