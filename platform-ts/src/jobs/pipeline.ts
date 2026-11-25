@@ -202,11 +202,12 @@ export async function runDocumentJob(deps: PipelineDeps, data: JobData, ctx: Job
       }),
     );
 
-    // --- Assembling content
+    // --- Assembling content (HTML and PDF in DOC's own markup unless OUTPUT_LOOK=proposed; the docx always uses the proposed look's styles)
+    const look = jobs.OUTPUT_LOOK;
     await ctx.setState(STAGE.assembling);
     const assembled = await timed(STAGE.assembling, () =>
       stage(STAGE.assembling, jobs.STAGE_ASSEMBLE_DEADLINE_MS, ctx.signal, (signal) =>
-        deps.core.assemble({ request: data.request, books: parsed.books, structure: "proposed_look", bug_compat: "fixed", unresolved: found.unresolved, findings: parsed.findings }, signal),
+        deps.core.assemble({ request: data.request, books: parsed.books, structure: look === "doc" && data.kind !== "docx" ? "as_built" : "proposed_look", bug_compat: "fixed", unresolved: found.unresolved, findings: parsed.findings }, signal),
       ),
     );
     const findings: Finding[] = [...found.findings, ...provisioned.findings, ...assembled.findings, ...extraFindings];
@@ -232,11 +233,16 @@ export async function runDocumentJob(deps: PipelineDeps, data: JobData, ctx: Job
             title2: parsed.title2,
             book,
             output_path: tmp,
+            look: format === "docx" ? "proposed" : look,
+            layout: typeof data.request["assembly_layout_kind"] === "string" ? data.request["assembly_layout_kind"] : "1c",
+            pdf_engine: jobs.PDF_ENGINE === "prince" ? "prince" : jobs.PDF_ENGINE === "weasyprint" ? "weasyprint" : "auto",
+            use_prince: data.request["use_prince"] === true,
           };
           const jobFile = join(scratch, `docx-job-${format}.json`);
           await writeFile(jobFile, JSON.stringify(DocxJob.parse(job)));
           const report = await deps.docx.run({ jobFile, deadlineMs: jobs.STAGE_DOCX_DEADLINE_MS, signal, requestId: data.requestId, memoryCeilingMb: format === "pdf" ? jobs.PDF_MEMORY_CEILING_MB : jobs.DOCX_MEMORY_CEILING_MB });
-          jlog.info({ format, mode: deps.docx.mode, pid: report.pid, wallMs: report.wallMs, workerMs: report.result.ms, rssKb: report.result.rss_kb, bytes: report.result.bytes }, "document worker finished");
+          jlog.info({ format, mode: deps.docx.mode, pid: report.pid, wallMs: report.wallMs, workerMs: report.result.ms, rssKb: report.result.rss_kb, bytes: report.result.bytes, engine: report.result.engine }, "document worker finished");
+          if (report.result.note) findings.push({ code: "PdfEngineFallback", severity: "warn", detail: report.result.note });
           await validateDocx(tmp, format);
         }),
       );

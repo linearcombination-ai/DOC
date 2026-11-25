@@ -35,11 +35,18 @@ export const DocxJob = z.object({
   title2: z.string(),
   book: z.string(),
   output_path: z.string(),
+  /** `doc`: DOC's own HTML (its header template and CSS around the parts); `proposed`: the proposed look. Absent: `proposed` (older job files). */
+  look: z.enum(["doc", "proposed"]).optional(),
+  /** DOC's `assembly_layout_kind`: the compact layouts use DOC's compact header template. */
+  layout: z.string().optional(),
+  /** PDF engine: `auto` asks for Prince only when the request does (`use_prince`); the seam falls back to WeasyPrint when Prince is not installed or fails, and says so in `note`. */
+  pdf_engine: z.enum(["auto", "prince", "weasyprint"]).optional(),
+  use_prince: z.boolean().optional(),
 });
 export type DocxJob = z.infer<typeof DocxJob>;
 
 export const DocxResult = z.discriminatedUnion("ok", [
-  z.object({ ok: z.literal(true), bytes: z.number().int(), ms: z.number(), max_rss_kb: z.number(), rss_kb: z.number().optional(), python: z.string(), jobs: z.number().int().optional() }),
+  z.object({ ok: z.literal(true), bytes: z.number().int(), ms: z.number(), max_rss_kb: z.number(), rss_kb: z.number().optional(), python: z.string(), jobs: z.number().int().optional(), engine: z.string().optional(), note: z.string().optional() }),
   z.object({ ok: z.literal(false), kind: z.enum(["input", "render", "unavailable"]), message: z.string() }),
 ]);
 export type DocxResult = z.infer<typeof DocxResult>;

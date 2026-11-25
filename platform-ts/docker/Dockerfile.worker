@@ -111,7 +111,7 @@ RUN pip install --no-cache-dir -r /tmp/requirements.txt && rm /tmp/requirements.
 
 COPY --from=node-bin /usr/local/bin/node /usr/local/bin/node
 
-RUN groupadd -r -g 10001 app && useradd -m -r -u 10001 -g app app
+RUN groupadd -g 1000 app && useradd -m -u 1000 -g app app
 ENV NODE_ENV=production \
     DOC_MODE=fixed \
     DOCUMENT_OUTPUT_DIR=/data/output \
@@ -125,8 +125,8 @@ COPY --from=wasm /src/platform-ts/core/pkg ./core/pkg
 COPY platform-ts/package.json ./
 COPY platform-ts/src ./src
 COPY platform-ts/python ./python
-RUN mkdir -p /data/output /data/work /data/assets && chown -R 10001:10001 /data /app
-USER 10001:10001
+RUN mkdir -p /data/output /data/work /data/assets && chown -R 1000:1000 /data /app
+USER 1000:1000
 EXPOSE 18302
 HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=6 CMD ["node", "src/healthcheck.ts", "http://127.0.0.1:18302/health"]
 CMD ["node", "src/worker-main.ts"]

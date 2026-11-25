@@ -48,7 +48,7 @@ jobs:
           curl -fsSL -o /usr/local/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.15.1/hadolint-linux-x86_64
           chmod +x /usr/local/bin/hadolint
           curl -fsSL https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz | tar -xz -C /usr/local/bin actionlint
-          pip install --quiet mypy==2.4.1 pytest httpx weasyprint==68.1 fastapi
+          pip install --quiet mypy==2.4.1 pytest httpx fastapi -r platform-ts/python/requirements.txt
       - name: hadolint
         working-directory: platform-ts
         run: |
@@ -118,7 +118,7 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq --no-install-recommends libpango-1.0-0 libpangoft2-1.0-0 fonts-noto-core
-          pip install --quiet weasyprint==68.1
+          pip install --quiet -r platform-ts/python/requirements.txt
       - name: Install node dependencies
         working-directory: platform-ts
         run: npm ci --no-audit --no-fund
@@ -218,9 +218,9 @@ jobs:
         working-directory: platform-ts
         run: |
           start=$(date +%s)
-          docker compose up -d --no-build --wait --wait-timeout 300
+          docker compose up -d --no-build
+          bash ci/wait-healthy.sh 300 valkey api worker gateway frontend
           echo "up_seconds=$(( $(date +%s) - start ))" | tee -a "$GITHUB_STEP_SUMMARY"
-          docker compose ps
       - name: Smoke test
         working-directory: platform-ts
         run: |

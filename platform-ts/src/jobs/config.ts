@@ -45,6 +45,8 @@ export const JobEnvSchema = z.object({
    * flag selects it per request), else WeasyPrint, and says which in a finding.
    */
   PDF_ENGINE: z.enum(["auto", "prince", "weasyprint", "off"]).default("auto"),
+  /** `doc`: the HTML and PDF are DOC's own markup and CSS (what DOC's tests and users see); `proposed`: the captain's proposed look. The docx always uses the proposed look's Word styles. */
+  OUTPUT_LOOK: z.enum(["doc", "proposed"]).default("doc"),
   /** `/health/status` reports degraded when the oldest waiting job is older than this. */
   QUEUE_LAG_WARN_MS: Int(60_000),
   /** `/health/status` reports degraded when no catalog fetch succeeded within this many seconds (0: never). */

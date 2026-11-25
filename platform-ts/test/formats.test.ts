@@ -2,7 +2,8 @@
  * P6 item E: HTML output for POST /documents, PDF through the Python seam (WeasyPrint, engine swappable), and the other request
  * shapes the core supports (Translation Questions, Translation Words).
  */
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { createStack, judeRequest, PROTO, type Stack } from "./support/stack.ts";
@@ -27,12 +28,27 @@ describe("POST /documents", () => {
     expect(done.last["state"]).toBe("SUCCESS");
     const key = String(done.last["result"]);
     const html = readFileSync(join(s.dirs.out, `${key}.html`), "utf8");
-    expect(html.startsWith("<!doctype html>")).toBe(true);
-    expect(html).toContain("<style>");
-    expect(html).toMatch(/Jude/);
+    // DOC's own markup is the default (what DOC's end-to-end tests parse): its header template and CSS, then `sup.versemarker` inside `span.verse`
+    expect(html.startsWith("<!DOCTYPE html PUBLIC")).toBe(true);
+    expect(html).toContain('<style media="all" type="text/css">');
+    const body = /<body.*?>(.*?)<\/body>/s.exec(html)?.[1] ?? "";
+    expect(body).toContain('class="versemarker"');
+    expect(body).toContain('<span class="chaptermarker">1</span>');
+    expect(body).toMatch(/Jude/);
     expect(existsSync(join(s.dirs.out, `${key}.pdf`))).toBe(false);
     expect(existsSync(join(s.dirs.out, `${key}.docx`))).toBe(false);
     expect(s.states.get(String(res.json["task_id"]))).not.toContain("Converting to PDF");
+  }, 60_000);
+
+  it("OUTPUT_LOOK=proposed: the html is the proposed look (semantic classes, its own CSS), still a complete document", async () => {
+    s = await createStack({ env: { OUTPUT_LOOK: "proposed" } });
+    await s.startWorker();
+    const done = await s.waitFor(String((await s.post(doc(), "/documents")).json["task_id"]));
+    expect(done.last["state"]).toBe("SUCCESS");
+    const html = readFileSync(join(s.dirs.out, `${String(done.last["result"])}.html`), "utf8");
+    expect(html.startsWith("<!doctype html>")).toBe(true);
+    expect(html).toContain("<style>");
+    expect(html).toContain('class="tn-note"');
   }, 60_000);
 
   it("PDF_ENGINE=off: generate_pdf answers the typed 501 and nothing is queued", async () => {
@@ -59,13 +75,24 @@ describe("POST /documents", () => {
   }, 180_000);
 
   it("generate_pdf without WeasyPrint in the worker's Python: a permanent typed failure (pdf_unavailable), not a retry loop", async () => {
-    s = await createStack({ env: { PYTHON_BIN: "python3" } }); // the system Python has no WeasyPrint
-    await s.startWorker();
-    const id = String((await s.post(doc({ generate_pdf: true }), "/documents")).json["task_id"]);
-    const done = await s.waitFor(id, ["SUCCESS", "FAILURE"], 60_000);
-    expect(done.last["state"]).toBe("FAILURE");
-    expect(done.last["result"]).toMatchObject({ code: "pdf_unavailable", retryable: false });
-    expect((await s.app.jobs?.service.queue.getJob(id))?.attemptsMade).toBe(1);
+    // WeasyPrint is hidden from the worker's Python by a stub module that fails to import (works whatever the host's Python has installed); Prince is not installed here either
+    const stub = mkdtempSync(join(tmpdir(), "no-weasy-"));
+    writeFileSync(join(stub, "weasyprint.py"), 'raise ImportError("WeasyPrint is hidden for this test")\n');
+    const before = process.env["PYTHONPATH"];
+    process.env["PYTHONPATH"] = stub;
+    try {
+      s = await createStack({ env: { PYTHON_BIN: process.env["PYTHON_BIN"] ?? "python3", PDF_ENGINE: "weasyprint" } });
+      await s.startWorker();
+      const id = String((await s.post(doc({ generate_pdf: true }), "/documents")).json["task_id"]);
+      const done = await s.waitFor(id, ["SUCCESS", "FAILURE"], 60_000);
+      expect(done.last["state"]).toBe("FAILURE");
+      expect(done.last["result"]).toMatchObject({ code: "pdf_unavailable", retryable: false });
+      expect((await s.app.jobs?.service.queue.getJob(id))?.attemptsMade).toBe(1);
+    } finally {
+      if (before === undefined) delete process.env["PYTHONPATH"];
+      else process.env["PYTHONPATH"] = before;
+      rmSync(stub, { recursive: true, force: true });
+    }
   }, 60_000);
 });
 

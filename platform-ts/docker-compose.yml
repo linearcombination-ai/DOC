@@ -28,7 +28,31 @@ x-doc-env: &doc-env
   WORKING_DIR: /data/work
   RESOURCE_ASSETS_DIR: /data/assets
 
+x-worker-build: &worker-build
+  context: ..
+  dockerfile: platform-ts/docker/Dockerfile.worker
+
 services:
+  # One-shot: a new named volume can come up owned by root (or by whichever container mounted it first), and both app images run as the
+  # same non-root user (uid 1000). This makes the three data directories writable for that user and exits; api and worker wait for it.
+  volume-init:
+    build: *worker-build
+    image: doc-ts/worker:${IMAGE_TAG:-local}
+    user: "0:0"
+    entrypoint:
+      - sh
+      - -c
+      - mkdir -p /data/output /data/work /data/assets && find /data -xdev ! -user 1000 -exec chown 1000:1000 {} + && chmod 0775 /data/output /data/work /data/assets
+    volumes:
+      - assets:/data/assets
+      - output:/data/output
+      - work:/data/work
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER]
+    network_mode: none
+    restart: "no"
+    mem_limit: 64m
+
   valkey:
     image: valkey/valkey:9
     command:
@@ -68,6 +92,8 @@ services:
     depends_on:
       valkey:
         condition: service_healthy
+      volume-init:
+        condition: service_completed_successfully
     restart: unless-stopped
     init: true
     stop_grace_period: 20s
@@ -78,9 +104,7 @@ services:
     logging: *logging
 
   worker:
-    build:
-      context: ..
-      dockerfile: platform-ts/docker/Dockerfile.worker
+    build: *worker-build
     image: doc-ts/worker:${IMAGE_TAG:-local}
     environment:
       <<: *doc-env
@@ -102,6 +126,8 @@ services:
     depends_on:
       valkey:
         condition: service_healthy
+      volume-init:
+        condition: service_completed_successfully
     restart: unless-stopped
     init: true
     # SIGTERM starts a drain (finish the running jobs); docker's default 10 s would SIGKILL the worker mid-job
