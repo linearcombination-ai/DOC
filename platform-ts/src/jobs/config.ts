@@ -121,6 +121,10 @@ export const JobEnvSchema = z.object({
   /** How long the record "this email was sent" is kept (a redelivery within this window never sends again). */
   EMAIL_RECORD_DAYS: Int(14),
 
+  /** The worker's own health listener for container health checks (0: off). */
+  WORKER_HEALTH_PORT: z.coerce.number().int().nonnegative().max(65_535).default(0),
+  WORKER_HEALTH_HOST: z.string().default("0.0.0.0"),
+
   /** Heartbeat interval and expiry for worker liveness in Redis. */
   HEARTBEAT_INTERVAL_MS: Int(5_000),
 });

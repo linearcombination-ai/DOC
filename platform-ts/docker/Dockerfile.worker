@@ -1,0 +1,131 @@
+# syntax=docker/dockerfile:1.7
+# The worker image of the TypeScript build: the BullMQ job runner (node) with the FULL Rust core (wasm) and the Python docx / HTML / PDF
+# seam (a supervised pool of Python child processes), plus Prince and the fonts, installed the way DOC's own Dockerfile installs them.
+# WeasyPrint (pinned to DOC's version) is the fallback PDF engine. Build context: the repository root.
+#   docker build -f platform-ts/docker/Dockerfile.worker -t doc-ts/worker:local .
+ARG RUST_IMAGE=rust:1.100.0-slim-bookworm
+ARG NODE_IMAGE=node:26.13.1-bookworm-slim
+ARG PYTHON_IMAGE=python:3.13-slim-bookworm
+
+# ---- stage 1: Rust core -> wasm (full module) ----
+FROM ${RUST_IMAGE} AS wasm
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+ARG WASM_BINDGEN_VERSION=0.2.130
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends git ca-certificates curl \
+ && rm -rf /var/lib/apt/lists/*
+RUN rustup target add wasm32-unknown-unknown
+RUN set -eu; \
+    case "$(uname -m)" in x86_64) triple=x86_64-unknown-linux-musl ;; aarch64) triple=aarch64-unknown-linux-gnu ;; *) echo "unsupported arch" >&2; exit 1 ;; esac; \
+    curl -fsSL "https://github.com/rustwasm/wasm-bindgen/releases/download/${WASM_BINDGEN_VERSION}/wasm-bindgen-${WASM_BINDGEN_VERSION}-${triple}.tar.gz" \
+      | tar -xz -C /usr/local/bin --strip-components=1 "wasm-bindgen-${WASM_BINDGEN_VERSION}-${triple}/wasm-bindgen"; \
+    wasm-bindgen --version
+WORKDIR /src/platform-ts
+COPY platform-ts/scripts/fetch-kitchen.sh scripts/fetch-kitchen.sh
+RUN bash scripts/fetch-kitchen.sh
+COPY platform-ts/core core
+COPY platform-ts/scripts/build-wasm.sh scripts/build-wasm.sh
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/usr/local/cargo/git \
+    --mount=type=cache,target=/src/platform-ts/core/target \
+    CARGO_BUILD_JOBS="$(nproc)" WASM_ONLY=full WASM_BINDGEN=/usr/local/bin/wasm-bindgen bash scripts/build-wasm.sh
+
+# ---- stage 2: production node_modules ----
+FROM ${NODE_IMAGE} AS deps
+WORKDIR /app
+COPY platform-ts/package.json platform-ts/package-lock.json ./
+RUN --mount=type=cache,target=/root/.npm npm ci --omit=dev --no-audit --no-fund
+
+# ---- stage 3: where the node binary comes from (the official image; copied, not re-installed) ----
+FROM ${NODE_IMAGE} AS node-bin
+
+# ---- stage 4: the worker ----
+FROM ${PYTHON_IMAGE} AS worker
+# Same packages as DOC's Dockerfile minus what only Calibre (ePub) needed: git for clones; fonts for PDF (Prince and WeasyPrint);
+# pango for WeasyPrint; the image libraries Prince links; libstdc++ for the node binary.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    wget \
+    git \
+    ca-certificates \
+    libstdc++6 \
+    texlive-fonts-recommended \
+    pango1.0-tools \
+    fontconfig \
+    fonts-khmeros \
+    fonts-lklug-sinhala \
+    fonts-tlwg-garuda-otf \
+    fonts-lohit-orya \
+    fonts-lohit-mlym \
+    fonts-lohit-knda \
+    fonts-lohit-telu \
+    fonts-lohit-taml \
+    fonts-lohit-gujr \
+    fonts-lohit-guru \
+    fonts-lohit-beng-bengali \
+    fonts-lohit-deva \
+    fonts-noto \
+    fonts-noto-cjk \
+    fonts-dzongkha \
+    fonts-tibetan-machine \
+    fonts-baekmuk \
+    fonts-ipafont-mincho \
+    fonts-arphic-uming \
+    fonts-opensymbol \
+    fonts-liberation2 \
+    libaom3 \
+    libavif15 \
+    libgif7 \
+    libjpeg62-turbo \
+    liblcms2-2 \
+    libtiff6 \
+    libwebp7 \
+    libwebpdemux2 \
+ && rm -rf /var/lib/apt/lists/*
+
+# PrinceXML, the way DOC's Dockerfile installs it (the .deb from princexml.com; no licence file, so Prince runs in its non-commercial mode
+# and puts its notice on the first page, which is DOC's situation today). The build does not fail when the .deb for this architecture is
+# not available: the worker then falls back to WeasyPrint and says so in a finding (see docs/RUNBOOK.md).
+ARG PRINCE_VERSION=16.1-1
+RUN set -eu; \
+    arch="$(dpkg --print-architecture)"; \
+    url="https://www.princexml.com/download/prince_${PRINCE_VERSION}_debian12_${arch}.deb"; \
+    if wget -nv -O /tmp/prince.deb "$url"; then \
+      (dpkg -i /tmp/prince.deb || (apt-get update && apt-get install -fy --no-install-recommends)); \
+      rm -f /tmp/prince.deb; rm -rf /var/lib/apt/lists/*; \
+      prince --version; \
+    else \
+      echo "WARNING: Prince ${PRINCE_VERSION} is not available for ${arch}; PDF output will use WeasyPrint" >&2; \
+    fi
+
+# The fonts DOC adds from the Scripture App Builder pipeline repository, then refresh the font cache.
+RUN set -eu; \
+    git clone --depth 1 https://github.com/Bible-Translation-Tools/ScriptureAppBuilder-pipeline /tmp/sab \
+ && cp /tmp/sab/ContainerImage/home/fonts/*.ttf /usr/share/fonts/ \
+ && rm -rf /tmp/sab \
+ && fc-cache -f
+
+# WeasyPrint, the fallback PDF engine, at the version DOC pins (backend/requirements.txt)
+COPY platform-ts/python/requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt && rm /tmp/requirements.txt
+
+COPY --from=node-bin /usr/local/bin/node /usr/local/bin/node
+
+RUN groupadd -r -g 10001 app && useradd -m -r -u 10001 -g app app
+ENV NODE_ENV=production \
+    DOC_MODE=fixed \
+    DOCUMENT_OUTPUT_DIR=/data/output \
+    WORKING_DIR=/data/work \
+    RESOURCE_ASSETS_DIR=/data/assets \
+    PYTHON_BIN=python3 \
+    WORKER_HEALTH_PORT=18302
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=wasm /src/platform-ts/core/pkg ./core/pkg
+COPY platform-ts/package.json ./
+COPY platform-ts/src ./src
+COPY platform-ts/python ./python
+RUN mkdir -p /data/output /data/work /data/assets && chown -R 10001:10001 /data /app
+USER 10001:10001
+EXPOSE 18302
+HEALTHCHECK --interval=10s --timeout=5s --start-period=30s --retries=6 CMD ["node", "src/healthcheck.ts", "http://127.0.0.1:18302/health"]
+CMD ["node", "src/worker-main.ts"]

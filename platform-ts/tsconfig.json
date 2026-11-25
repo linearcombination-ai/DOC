@@ -18,5 +18,6 @@
     "noEmit": true,
     "skipLibCheck": true
   },
-  "include": ["src", "test", "tools", "scripts"]
+  "include": ["src", "test", "tools", "scripts"],
+  "exclude": ["vendor", "node_modules", "core"]
 }

@@ -2,6 +2,7 @@
 import { loadConfig } from "./config.ts";
 import { loadJobConfig } from "./jobs/config.ts";
 import { describeRedis } from "./jobs/redis.ts";
+import { startHealthServer, type WorkerHealth } from "./jobs/health.ts";
 import { startWorker } from "./jobs/worker.ts";
 import { buildApp, preflight } from "./main.ts";
 import { exitOnConfigError } from "./util/configError.ts";
@@ -20,10 +21,15 @@ try {
   await docx.warm();
   const running = await startWorker({ config, jobs, log, lookup: built.lookup, acquirer: built.acquirer, core: built.jobCore, docx, metrics: built.metrics, ...(built.jobs ? { redis: built.jobs.service.connection } : {}) }, { metrics: built.metrics, ...(built.telemetry ? { telemetry: built.telemetry } : {}) });
 
+  const health: WorkerHealth = { accepting: true, id: running.id, running: () => running.counts().running, done: () => running.counts().done, startedAt: Date.now() };
+  const healthServer = jobs.WORKER_HEALTH_PORT > 0 ? startHealthServer(jobs.WORKER_HEALTH_PORT, jobs.WORKER_HEALTH_HOST, health) : undefined;
+  if (healthServer) log.info({ port: jobs.WORKER_HEALTH_PORT }, "worker health listener");
+
   let closing = false;
   async function shutdown(signal: string): Promise<void> {
     if (closing) return;
     closing = true;
+    health.accepting = false;
     log.info({ signal, graceMs: jobs.SHUTDOWN_GRACE_MS, running: running.counts().running }, "shutting down: no new jobs, draining the running ones");
     const forced = setTimeout(() => {
       log.error({ graceMs: jobs.SHUTDOWN_GRACE_MS }, "drain deadline passed: abandoning running jobs (they will be recovered as stalled by another worker)");
@@ -34,6 +40,7 @@ try {
     await docx?.close();
     await built.jobs?.service.close();
     await built.thread.close();
+    healthServer?.close();
     log.info({ done: running.counts().done }, "drained; bye");
     process.exit(0);
   }

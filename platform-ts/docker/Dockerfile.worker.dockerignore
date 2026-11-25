@@ -1,0 +1,13 @@
+*
+!platform-ts/package.json
+!platform-ts/package-lock.json
+!platform-ts/src
+!platform-ts/core
+!platform-ts/python
+!platform-ts/scripts/fetch-kitchen.sh
+!platform-ts/scripts/build-wasm.sh
+platform-ts/core/target
+platform-ts/core/pkg
+platform-ts/core/pkg-api
+platform-ts/core/pkg-fault
+**/__pycache__

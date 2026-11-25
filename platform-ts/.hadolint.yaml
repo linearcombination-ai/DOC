@@ -1,0 +1,3 @@
+# DL3008 (pin apt package versions): Debian point releases drop old versions, so a pin breaks the build within weeks; DOC's own Dockerfile does not pin either.
+ignored:
+  - DL3008

@@ -1,0 +1,20 @@
+# Override for the CI end-to-end runs: docker compose -f docker-compose.yml -f docker-compose.e2e.yml --profile e2e run --rm test-runner
+# The test runner is DOC's own API image (built from DOC's Dockerfile by ci/make-baseline-dockerfile.sh) so DOC's tests import their own
+# `doc` package unchanged; the pytest plugin ci/doc_e2e_shim.py points DOC's TestClient at the gateway instead of an in-process app.
+# Filled in at milestone M3; the service exists here so the file validates from M1 on.
+services:
+  test-runner:
+    profiles: ["e2e"]
+    image: doc-baseline-api:${IMAGE_TAG:-local}
+    depends_on:
+      gateway:
+        condition: service_healthy
+      worker:
+        condition: service_healthy
+    entrypoint: pytest
+    command: ["--version"]
+    environment:
+      DOC_E2E_BASE_URL: http://gateway:5005
+      DOC_E2E_FILES_URL: http://gateway:8089
+    volumes:
+      - output:/app/document_output:ro

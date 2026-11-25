@@ -1,0 +1,166 @@
+# DOC, TypeScript build: the full system.   cd platform-ts && docker compose up --build   (then open http://localhost:8001)
+#
+#   frontend   DOC's own UI image (built from ../frontend, unchanged; configured by environment only)         :8001
+#   gateway    nginx: DOC's API port and file-server port in front of the services below                      :5005 :8089
+#   api        Hono shell + light Rust core (wasm)                                                            (internal :18301)
+#   worker     BullMQ job runner + full Rust core (wasm) + supervised Python docx/HTML/PDF pool, Prince        (internal :18302 health)
+#   valkey     the queue and status store (AOF on a named volume)                                             (internal :6379)
+#
+# DOC's own compose files in the repository root are untouched. Ports, volumes and variable names follow DOC's compose file.
+# Limits, restart policies, stop grace periods and health checks are set below; see docs/RUNBOOK.md.
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-doc-env: &doc-env
+  REDIS_URL: redis://valkey:6379/0
+  REDIS_PASSWORD: ${VALKEY_PASSWORD:-}
+  QUEUE_PREFIX: doc
+  DATA_API_URL: ${DATA_API_URL:-https://api.bibleineverylanguage.org/v1/graphql}
+  DOC_MODE: ${DOC_MODE:-fixed}
+  LOG_LEVEL: ${LOG_LEVEL:-info}
+  ASSET_CACHING_PERIOD: ${ASSET_CACHING_PERIOD:-30}
+  OUTPUT_TTL_MINUTES: ${OUTPUT_TTL_MINUTES:-30}
+  DOCUMENT_OUTPUT_DIR: /data/output
+  WORKING_DIR: /data/work
+  RESOURCE_ASSETS_DIR: /data/assets
+
+services:
+  valkey:
+    image: valkey/valkey:9
+    command:
+      - sh
+      - -c
+      - exec valkey-server /etc/valkey/valkey.conf $${VALKEY_PASSWORD:+--requirepass "$$VALKEY_PASSWORD"}
+    environment:
+      VALKEY_PASSWORD: ${VALKEY_PASSWORD:-}
+    volumes:
+      - valkey-data:/data
+      - ./docker/valkey.conf:/etc/valkey/valkey.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "valkey-cli --no-auth-warning $${VALKEY_PASSWORD:+-a \"$$VALKEY_PASSWORD\"} ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 3s
+    restart: unless-stopped
+    stop_grace_period: 20s
+    mem_limit: ${VALKEY_MEM_LIMIT:-256m}
+    cpus: 1.0
+    logging: *logging
+
+  api:
+    build:
+      context: ..
+      dockerfile: platform-ts/docker/Dockerfile.shell
+    image: doc-ts/api:${IMAGE_TAG:-local}
+    environment:
+      <<: *doc-env
+      BACKEND_CORS_ORIGINS: '["http://localhost:8001","http://127.0.0.1:8001"]'
+      PDF_ENGINE: ${PDF_ENGINE:-auto}
+    volumes:
+      - assets:/data/assets
+      - output:/data/output
+      - work:/data/work
+    depends_on:
+      valkey:
+        condition: service_healthy
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 20s
+    mem_limit: ${API_MEM_LIMIT:-768m}
+    cpus: ${API_CPUS:-1.0}
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    logging: *logging
+
+  worker:
+    build:
+      context: ..
+      dockerfile: platform-ts/docker/Dockerfile.worker
+    image: doc-ts/worker:${IMAGE_TAG:-local}
+    environment:
+      <<: *doc-env
+      PDF_ENGINE: ${PDF_ENGINE:-auto}
+      WORKER_CONCURRENCY: ${WORKER_CONCURRENCY:-2}
+      DOCX_POOL_SIZE: ${DOCX_POOL_SIZE:-2}
+      SHUTDOWN_GRACE_MS: "120000"
+      SEND_EMAIL: ${SEND_EMAIL:-false}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-25}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      FROM_EMAIL_ADDRESS: ${FROM_EMAIL_ADDRESS:-doc@localhost}
+      EMAIL_SEND_SUBJECT: ${EMAIL_SEND_SUBJECT:-The BIEL document you requested is attached}
+    volumes:
+      - assets:/data/assets
+      - output:/data/output
+      - work:/data/work
+    depends_on:
+      valkey:
+        condition: service_healthy
+    restart: unless-stopped
+    init: true
+    # SIGTERM starts a drain (finish the running jobs); docker's default 10 s would SIGKILL the worker mid-job
+    stop_grace_period: 135s
+    mem_limit: ${WORKER_MEM_LIMIT:-3g}
+    cpus: ${WORKER_CPUS:-2.0}
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    logging: *logging
+
+  gateway:
+    build:
+      context: ./docker/gateway
+    image: doc-ts/gateway:${IMAGE_TAG:-local}
+    ports:
+      - ${API_HOST_PORT:-5005}:5005
+      - ${FILESERVER_HOST_PORT:-8089}:8089
+    volumes:
+      - output:/srv/content:ro
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    mem_limit: ${GATEWAY_MEM_LIMIT:-128m}
+    cpus: 0.5
+    logging: *logging
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      args:
+        PUBLIC_DOC_VERSION_ARG: ${DOC_VERSION:-ts-build}
+        PUBLIC_DOC_BUILD_TIMESTAMP_ARG: ${DOC_BUILD_TIMESTAMP:-local}
+    image: doc-ts/frontend:${IMAGE_TAG:-local}
+    environment:
+      PUBLIC_BACKEND_API_URL: ${PUBLIC_BACKEND_API_URL:-http://localhost:5005}
+      PUBLIC_FILE_SERVER_URL: ${PUBLIC_FILE_SERVER_URL:-http://localhost:8089}
+      PUBLIC_LOGROCKET_ID: ${PUBLIC_LOGROCKET_ID:-ct7zyg/bible-in-every-language}
+    ports:
+      - ${FRONTEND_HOST_PORT:-8001}:80
+    depends_on:
+      gateway:
+        condition: service_healthy
+      worker:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+    mem_limit: ${FRONTEND_MEM_LIMIT:-512m}
+    cpus: 1.0
+    logging: *logging
+
+volumes:
+  valkey-data:
+  output:
+  assets:
+  work:

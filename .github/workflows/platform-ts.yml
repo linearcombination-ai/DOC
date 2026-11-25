@@ -1,0 +1,251 @@
+# DOC platform experiment, TypeScript build (branch exp/platform-ts on the fork). Builds the images on the runner only (no registry push,
+# no secrets), runs the unit and integration tests, brings the compose stack up and proves it. Later milestones add DOC's own end-to-end
+# tests and the operations scenarios as further jobs (see platform-ts/docs/P7-PLAN.md, section 4).
+name: platform-ts
+
+on:
+  push:
+    branches:
+      - exp/platform-ts
+      - exp/platform-ts/**
+  workflow_dispatch:
+    inputs:
+      jobs:
+        description: "Which jobs: all, static, unit, stack (build + smoke), e2e-api, e2e-ui, ops (a comma list also works)"
+        required: false
+        default: all
+
+concurrency:
+  group: platform-ts-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "26.13.1"
+  RUST_VERSION: "1.100.0"
+  WASM_BINDGEN_VERSION: "0.2.130"
+
+jobs:
+  static:
+    name: Static checks
+    if: ${{ github.event_name == 'push' || inputs.jobs == 'all' || contains(inputs.jobs, 'static') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: platform-ts/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install linters
+        run: |
+          curl -fsSL -o /usr/local/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.15.1/hadolint-linux-x86_64
+          chmod +x /usr/local/bin/hadolint
+          curl -fsSL https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz | tar -xz -C /usr/local/bin actionlint
+          pip install --quiet mypy==2.4.1 pytest httpx weasyprint==68.1
+      - name: hadolint
+        working-directory: platform-ts
+        run: |
+          for f in docker/Dockerfile.shell docker/Dockerfile.worker docker/gateway/Dockerfile; do echo "== $f"; hadolint --config .hadolint.yaml "$f"; done
+      - name: actionlint
+        run: actionlint .github/workflows/platform-ts.yml
+      - name: compose files
+        working-directory: platform-ts
+        run: |
+          docker compose -f docker-compose.yml config --quiet
+          docker compose -f docker-compose.yml -f docker-compose.e2e.yml config --quiet
+      - name: TypeScript (strict, no emit) and no `any`
+        working-directory: platform-ts
+        run: |
+          npm ci --no-audit --no-fund
+          npx tsc --noEmit
+          if grep -rnE ':\s*any\s*[;,)=|>\]\[]|\bas any\b|<any>|\bany\[\]' src test tools scripts --include=*.ts; then echo "found any"; exit 1; fi
+      - name: mypy --strict, no typing.Any
+        working-directory: platform-ts
+        run: |
+          MYPY=mypy bash scripts/mypy.sh
+          python ci/check_no_any.py python tools ci
+
+  unit:
+    name: Unit and integration tests (Valkey)
+    if: ${{ github.event_name == 'push' || inputs.jobs == 'all' || contains(inputs.jobs, 'unit') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: platform-ts/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Rust toolchain and wasm target
+        run: |
+          rustup toolchain install "$RUST_VERSION" --profile minimal --target wasm32-unknown-unknown
+          rustup default "$RUST_VERSION"
+          curl -fsSL "https://github.com/rustwasm/wasm-bindgen/releases/download/${WASM_BINDGEN_VERSION}/wasm-bindgen-${WASM_BINDGEN_VERSION}-x86_64-unknown-linux-musl.tar.gz" \
+            | sudo tar -xz -C /usr/local/bin --strip-components=1 "wasm-bindgen-${WASM_BINDGEN_VERSION}-x86_64-unknown-linux-musl/wasm-bindgen"
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            platform-ts/core/target
+          key: cargo-${{ runner.os }}-${{ env.RUST_VERSION }}-${{ hashFiles('platform-ts/core/Cargo.lock') }}
+          restore-keys: cargo-${{ runner.os }}-${{ env.RUST_VERSION }}-
+      - name: Build the wasm core (full, light, fault-injection) and fetch kitchen
+        working-directory: platform-ts
+        run: |
+          bash scripts/fetch-kitchen.sh
+          time FAULT=1 CARGO_BUILD_JOBS=4 bash scripts/build-wasm.sh
+      - name: Valkey from the official image (the binary the stack runs)
+        run: |
+          mkdir -p "$HOME/bin"
+          cid=$(docker create valkey/valkey:9)
+          docker cp "$cid:/usr/local/bin/valkey-server" "$HOME/bin/valkey-server"
+          docker cp "$cid:/usr/local/bin/valkey-cli" "$HOME/bin/valkey-cli"
+          docker rm "$cid"
+          "$HOME/bin/valkey-server" --version
+      - name: Python dependencies of the seam
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends libpango-1.0-0 libpangoft2-1.0-0 fonts-noto-core
+          pip install --quiet weasyprint==68.1
+      - name: Install node dependencies
+        working-directory: platform-ts
+        run: npm ci --no-audit --no-fund
+      - name: Run the whole suite
+        working-directory: platform-ts
+        run: |
+          export REDIS_SERVER_BIN="$HOME/bin/valkey-server"
+          mkdir -p ../ci-out
+          npx vitest run --reporter=verbose --reporter=junit --outputFile.junit=../ci-out/vitest-junit.xml 2>&1 | tee ../ci-out/vitest.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: unit-results
+          path: ci-out
+          retention-days: 7
+
+  build:
+    name: Build ${{ matrix.name }} image
+    if: ${{ github.event_name == 'push' || inputs.jobs == 'all' || contains(inputs.jobs, 'stack') || contains(inputs.jobs, 'e2e') || contains(inputs.jobs, 'ops') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: api
+            context: .
+            file: platform-ts/docker/Dockerfile.shell
+            tag: doc-ts/api:ci
+          - name: worker
+            context: .
+            file: platform-ts/docker/Dockerfile.worker
+            tag: doc-ts/worker:ci
+          - name: gateway
+            context: platform-ts/docker/gateway
+            file: platform-ts/docker/gateway/Dockerfile
+            tag: doc-ts/gateway:ci
+          - name: frontend
+            context: frontend
+            file: frontend/Dockerfile
+            tag: doc-ts/frontend:ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Start timer
+        run: echo "BUILD_START=$(date +%s)" >> "$GITHUB_ENV"
+      - name: Build ${{ matrix.name }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          tags: ${{ matrix.tag }}
+          build-args: ${{ matrix.name == 'frontend' && 'PUBLIC_DOC_VERSION_ARG=ts-build' || '' }}
+          outputs: type=docker,dest=${{ runner.temp }}/${{ matrix.name }}.tar
+          cache-from: type=gha,scope=ts-${{ matrix.name }}
+          cache-to: type=gha,scope=ts-${{ matrix.name }},mode=max
+      - name: Record build time and image size
+        run: |
+          end=$(date +%s)
+          docker load -i "${{ runner.temp }}/${{ matrix.name }}.tar" >/dev/null
+          size=$(docker image inspect --format '{{.Size}}' "${{ matrix.tag }}")
+          layers=$(docker image inspect --format '{{len .RootFS.Layers}}' "${{ matrix.tag }}")
+          mkdir -p build-info
+          printf '{"image":"%s","build_seconds":%s,"size_bytes":%s,"layers":%s,"tar_bytes":%s}\n' \
+            "${{ matrix.name }}" "$((end - BUILD_START))" "$size" "$layers" "$(stat -c %s "${{ runner.temp }}/${{ matrix.name }}.tar")" | tee "build-info/${{ matrix.name }}.json"
+          echo "| ${{ matrix.name }} | $((end - BUILD_START)) s | $((size / 1048576)) MB | $layers |" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: image-${{ matrix.name }}
+          path: ${{ runner.temp }}/${{ matrix.name }}.tar
+          retention-days: 1
+          compression-level: 1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build-info-${{ matrix.name }}
+          path: build-info
+          retention-days: 14
+
+  smoke:
+    name: Stack up, health checks, smoke test
+    needs: [build]
+    if: ${{ always() && needs.build.result == 'success' && (github.event_name == 'push' || inputs.jobs == 'all' || contains(inputs.jobs, 'stack')) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      IMAGE_TAG: ci
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: image-*
+          path: ${{ runner.temp }}/images
+          merge-multiple: true
+      - name: Load images
+        run: for f in "${{ runner.temp }}"/images/*.tar; do docker load -i "$f"; done
+      - name: Start the stack (waits for every health check)
+        working-directory: platform-ts
+        run: |
+          start=$(date +%s)
+          docker compose up -d --no-build --wait --wait-timeout 300
+          echo "up_seconds=$(( $(date +%s) - start ))" | tee -a "$GITHUB_STEP_SUMMARY"
+          docker compose ps
+      - name: Smoke test
+        working-directory: platform-ts
+        run: |
+          mkdir -p ../ci-out
+          OUT=../ci-out/smoke bash ci/smoke.sh 2>&1 | tee ../ci-out/smoke.txt
+      - name: Memory and CPU at rest and after the smoke test
+        if: always()
+        run: |
+          mkdir -p ci-out
+          docker stats --no-stream --format 'table {{.Name}}\t{{.MemUsage}}\t{{.MemPerc}}\t{{.CPUPerc}}\t{{.PIDs}}' | tee ci-out/stats-after-smoke.txt
+          docker images --format '{{.Repository}}:{{.Tag}} {{.Size}}' | grep doc-ts | tee ci-out/image-sizes.txt
+      - name: Logs
+        if: always()
+        working-directory: platform-ts
+        run: |
+          mkdir -p ../ci-out
+          docker compose ps -a > ../ci-out/compose-ps.txt
+          docker compose logs --no-color --timestamps > ../ci-out/compose-logs.txt 2>&1
+      - name: Tear down
+        if: always()
+        working-directory: platform-ts
+        run: docker compose down -v
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke-results
+          path: ci-out
+          retention-days: 14

@@ -3,6 +3,8 @@
 #   core/pkg       the full module (worker: parse and assemble the document) .... default features
 #   core/pkg-api   the light module (API: request keys, catalog and book lists) .. --no-default-features (no interleaver, markdown, USFM)
 #   core/pkg-fault the full module plus a `debug_spin` op, for the test that proves a hung wasm call can be killed .... FAULT=1
+#   WASM_ONLY=api   build only the light module (the API image)      WASM_ONLY=full   only the full module (the worker image)
+#   LOCKED=0        do not pass --locked (the default passes it: Cargo.lock is the pinned dependency set)
 # Needs: rustup stable + target wasm32-unknown-unknown, wasm-bindgen CLI 0.2.130 (the version Cargo.lock pins; WASM_BINDGEN=/path to override).
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -17,12 +19,18 @@ bind() { # <out dir>
   echo '{"type":"commonjs"}' > "$1/package.json"
   ls -l "$1/doc_wasm_bg.wasm"
 }
-cargo build --release -p doc-wasm --target wasm32-unknown-unknown
-bind pkg
-cargo build --release -p doc-wasm --target wasm32-unknown-unknown --no-default-features
-bind pkg-api
+LOCK=--locked; [ "${LOCKED:-1}" = "0" ] && LOCK=""
+ONLY="${WASM_ONLY:-both}"
+if [ "$ONLY" != "api" ]; then
+  cargo build --release $LOCK -p doc-wasm --target wasm32-unknown-unknown
+  bind pkg
+fi
+if [ "$ONLY" != "full" ]; then
+  cargo build --release $LOCK -p doc-wasm --target wasm32-unknown-unknown --no-default-features
+  bind pkg-api
+fi
 if [ "${FAULT:-0}" = "1" ]; then
-  cargo build --release -p doc-wasm --target wasm32-unknown-unknown --features fault-injection
+  cargo build --release $LOCK -p doc-wasm --target wasm32-unknown-unknown --features fault-injection
   bind pkg-fault
-  cargo build --release -p doc-wasm --target wasm32-unknown-unknown   # leave the target directory holding the production build
+  cargo build --release $LOCK -p doc-wasm --target wasm32-unknown-unknown   # leave the target directory holding the production build
 fi
