@@ -1,0 +1,4 @@
+*
+!backend/requirements.txt
+!platform-rs/python
+**/__pycache__

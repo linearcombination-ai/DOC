@@ -252,6 +252,8 @@ async fn relay_stderr(err: ChildStderr) {
 pub enum DocxBackend {
     PerJob(SeamConfig),
     Pool(Arc<DocxPool>),
+    /// The Python service in another container (P7).
+    Remote(crate::remote::RemoteConfig, reqwest::Client),
 }
 
 impl DocxBackend {
@@ -259,18 +261,20 @@ impl DocxBackend {
         match self {
             DocxBackend::PerJob(cfg) => run_docx_worker(cfg, job, job_file, ctx).await,
             DocxBackend::Pool(p) => p.run(job, ctx).await,
+            DocxBackend::Remote(cfg, client) => crate::remote::run_docx_remote(client, cfg, job, job_file, ctx).await,
         }
     }
     pub fn info(&self) -> Value {
         match self {
             DocxBackend::PerJob(cfg) => json!({"mode": "per_job", "deadline_s": cfg.deadline.as_secs()}),
             DocxBackend::Pool(p) => p.info(),
+            DocxBackend::Remote(cfg, _) => json!({"mode": "remote", "url": cfg.base_url, "deadline_s": cfg.docx_deadline.as_secs()}),
         }
     }
     pub fn pool(&self) -> Option<&Arc<DocxPool>> {
         match self {
             DocxBackend::Pool(p) => Some(p),
-            DocxBackend::PerJob(_) => None,
+            DocxBackend::PerJob(_) | DocxBackend::Remote(..) => None,
         }
     }
 }

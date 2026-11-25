@@ -165,6 +165,13 @@ async fn run<S: JobStore>(store: Arc<S>, store_kind: &'static str, cfg: JobdConf
         info!(swept, output = %pc.dirs.output.display(), "worker starting; scratch of dead attempts removed");
         let backend = match cfg.docx_mode {
             DocxMode::PerJob => Arc::new(DocxBackend::PerJob(cfg.seam.clone())),
+            DocxMode::Remote => match cfg.remote.clone() {
+                Some(r) => Arc::new(DocxBackend::Remote(r, doc_jobs::remote::client())),
+                None => {
+                    error!("DOC_PYWORKER_URL is required for DOC_DOCX_MODE=remote");
+                    return std::process::ExitCode::from(2);
+                }
+            },
             DocxMode::Persistent => {
                 let pool = DocxPool::new(cfg.pool.clone());
                 pool.warm().await;
@@ -173,7 +180,8 @@ async fn run<S: JobStore>(store: Arc<S>, store_kind: &'static str, cfg: JobdConf
             }
         };
         docx = Some(backend.clone());
-        let handler = Arc::new(DocPipeline { app: app.clone(), cfg: pc.clone(), docx: backend, store: store.clone() });
+        let remote = cfg.remote.clone().map(|r| (r, doc_jobs::remote::client()));
+        let handler = Arc::new(DocPipeline { app: app.clone(), cfg: pc.clone(), docx: backend, remote, store: store.clone() });
         let runner = Runner::new(store.clone(), handler, cfg.runner.clone());
         let r2 = runner.clone();
         running = Arc::new(move || r2.running_jobs());

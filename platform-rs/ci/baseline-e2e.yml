@@ -1,0 +1,25 @@
+# CI-only override for DOC's OWN compose stack (docker-compose.yml + docker-compose.api-test.yml at the repository root):
+# the same pytest selection, split and parallelism as the Rust stack's e2e run, plus a JUnit file, so the two runs give a
+# per-test table. DOC's tests and DOC's images are unmodified.
+services:
+  test-runner:
+    command:
+      - -vv
+      - --log-cli-level=INFO
+      - -m
+      - "${E2E_MARKER:-not all and not randomized and not english_randomized}"
+      - -k
+      - "${E2E_K:-}"
+      - -n
+      - "4"
+      - --splits
+      - "${PYTEST_SPLITS:-1}"
+      - --group
+      - "${PYTEST_GROUP:-1}"
+      - --durations-path
+      - /app/tests/.test_durations
+      - --junitxml=/results/junit.xml
+      - /app/tests/e2e/doc
+    volumes:
+      - shared:/app/document_output
+      - ${E2E_RESULTS_DIR:-./e2e-results}:/results

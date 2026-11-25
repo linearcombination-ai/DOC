@@ -1,0 +1,10 @@
+# DL3008: apt packages are not pinned (the base images are; Debian bookworm's archive moves slowly and DOC's own Dockerfile does the same)
+# DL3059: consecutive RUNs are kept apart on purpose where they separate cacheable layers
+ignored:
+  - DL3008
+  - DL3059
+trustedRegistries:
+  - docker.io
+  - lukemathwalker
+  - nginxinc
+  - valkey

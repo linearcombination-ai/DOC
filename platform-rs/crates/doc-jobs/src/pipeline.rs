@@ -91,6 +91,8 @@ pub struct DocPipeline<C: Catalog, A: Acquirer, S: JobStore> {
     pub app: Arc<App<C, A>>,
     pub cfg: PipelineConfig,
     pub docx: Arc<DocxBackend>,
+    /// The Python seam service (container deployment): its configuration and a shared HTTP client.
+    pub remote: Option<(crate::remote::RemoteConfig, reqwest::Client)>,
     pub store: Arc<S>,
 }
 
@@ -454,12 +456,23 @@ impl<C: Catalog, A: Acquirer, S: JobStore> DocPipeline<C, A, S> {
     }
 
     /// HTML to PDF through the Python seam (WeasyPrint or Prince); the PDF is placed under the request key.
-    async fn convert_pdf(&self, ctx: &JobCtx, key: &str, html_path: &Path, scratch: &Path) -> Result<PathBuf, JobError> {
+    async fn convert_pdf(&self, ctx: &JobCtx, key: &str, html_path: &Path, scratch: &Path, use_prince: bool) -> Result<PathBuf, JobError> {
         let Some(cfg) = self.cfg.pdf.as_ref() else { return Err(JobError::permanent("pdf_not_configured", "no PDF engine is configured")) };
         ctx.progress(Progress::ConvertingToPdf).await;
         let out_scratch = scratch.join("out.pdf");
-        let job = PdfJob { version: 1, job_id: ctx.task_id.clone(), request_id: ctx.request_id.clone(), input_html: html_path.to_path_buf(), output_path: out_scratch.clone(), engine: cfg.engine.clone() };
-        let report = self.stage(ctx, key, "pdf", Duration::from_secs(3600), run_pdf_worker(cfg, &job, &scratch.join("pdf-job.json"), Some(ctx))).await?;
+        let engine = if cfg.engine == "remote" { (if use_prince { "prince" } else { "weasyprint" }).to_string() } else { cfg.engine.clone() };
+        let job = PdfJob { version: 1, job_id: ctx.task_id.clone(), request_id: ctx.request_id.clone(), input_html: html_path.to_path_buf(), output_path: out_scratch.clone(), engine };
+        let report = if cfg.engine == "remote" {
+            let Some(remote) = self.remote.as_ref() else { return Err(JobError::permanent("pdf_not_configured", "DOC_PDF_ENGINE=remote needs DOC_PYWORKER_URL")) };
+            let (r, used, fell_back) = self.stage(ctx, key, "pdf", Duration::from_secs(3600), crate::remote::run_pdf_remote(&remote.1, &remote.0, &job, &scratch.join("pdf-job.json"), Some(ctx))).await?;
+            if fell_back {
+                let _ = self.store.metric_add(&[(metrics::counter("doc_pdf_engine_fallbacks_total", &[("engine", used.as_str())]), 1)]).await;
+                self.append_findings(key, vec![json!({"code": "pdf_engine_fallback", "severity": "info", "message": format!("the PDF was made with {used} because the requested engine could not be used for this document")})]).await;
+            }
+            r
+        } else {
+            self.stage(ctx, key, "pdf", Duration::from_secs(3600), run_pdf_worker(cfg, &job, &scratch.join("pdf-job.json"), Some(ctx))).await?
+        };
         let dest = self.cfg.dirs.pdf_path(key);
         place_atomic(&out_scratch, &dest).await?;
         info!(request_id = %ctx.request_id, key, bytes = report.bytes, pdf_wall_ms = report.wall.as_millis() as u64, "pdf placed");
@@ -505,7 +518,7 @@ impl<C: Catalog, A: Acquirer, S: JobStore> Handler for DocPipeline<C, A, S> {
         }
         let mut attach: Option<(PathBuf, &'static str)> = if is_docx { Some((doc_path.clone(), DOCX_MIME)) } else { None };
         if want_pdf {
-            let pdf = self.convert_pdf(&ctx, &key, &doc_path, &scratch.path).await?;
+            let pdf = self.convert_pdf(&ctx, &key, &doc_path, &scratch.path, p.valid.options.use_prince).await?;
             attach = Some((pdf, PDF_MIME));
         }
         if let Some((path, mime)) = attach {

@@ -1,0 +1,50 @@
+# Override for the end-to-end run (used by CI and by anyone who wants to run DOC's own tests against this stack):
+#
+#   docker compose -f docker-compose.yml -f docker-compose.e2e.yml up -d --no-build valkey pyworker api worker gateway
+#   docker compose -f docker-compose.yml -f docker-compose.e2e.yml --profile e2e run --rm -T test-runner
+#
+# test-runner is DOC's own API image (wycliffeassociates/doc:local, built from DOC's Dockerfile) holding DOC's tests, run
+# UNMODIFIED. DOC's tests build `fastapi.testclient.TestClient(app=app)`, which runs DOC's FastAPI app inside the test
+# process; the plugin e2e/e2e_remote.py replaces that class with an HTTP client aimed at E2E_TARGET, so the same tests
+# hit this stack's gateway instead. The tests read the finished files from /app/document_output, the shared volume.
+services:
+  test-runner:
+    image: ${DOC_API_IMAGE:-wycliffeassociates/doc:local}
+    profiles: ["e2e"]
+    depends_on:
+      gateway:
+        condition: service_healthy
+      worker:
+        condition: service_healthy
+    entrypoint: pytest
+    command:
+      - -vv
+      - --log-cli-level=INFO
+      - -p
+      - e2e_remote
+      - -m
+      - "${E2E_MARKER:-not all and not randomized and not english_randomized}"
+      - -k
+      - "${E2E_K:-}"
+      - -n
+      - "4"
+      - --splits
+      - "${PYTEST_SPLITS:-1}"
+      - --group
+      - "${PYTEST_GROUP:-1}"
+      - --durations-path
+      - /app/tests/.test_durations
+      - --junitxml=/results/junit.xml
+      - /app/tests/e2e/doc
+    environment:
+      E2E_TARGET: http://gateway:5005
+      PYTHONPATH: /app/backend:/app/tests:/e2e
+      FROM_EMAIL_ADDRESS: foo@example.com
+      SMTP_PASSWORD: fakepass
+      SMTP_HOST: smtp.example.com
+      SMTP_PORT: "111"
+      SEND_EMAIL: "False"
+    volumes:
+      - output:/app/document_output
+      - ./e2e:/e2e:ro
+      - ${E2E_RESULTS_DIR:-./e2e-results}:/results

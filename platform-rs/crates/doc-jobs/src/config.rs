@@ -57,6 +57,8 @@ pub enum StoreKind {
 pub enum DocxMode {
     PerJob,
     Persistent,
+    /// A Python service in another container (`DOC_PYWORKER_URL`): the container deployment.
+    Remote,
 }
 
 #[derive(Clone, Debug)]
@@ -70,6 +72,8 @@ pub struct JobdConfig {
     pub seam: SeamConfig,
     pub docx_mode: DocxMode,
     pub pool: PoolConfig,
+    /// The Python seam service, when `DOC_DOCX_MODE=remote` or `DOC_PDF_ENGINE=remote`.
+    pub remote: Option<crate::remote::RemoteConfig>,
     /// How often a process reports itself to the store (workers, API nodes); `3 x` this is the liveness window.
     pub beat_every: Duration,
     /// Output files older than `fresh_for + output_grace` are deleted by the janitor.
@@ -234,14 +238,18 @@ impl JobdConfig {
         stages.parse = e.ms("DOC_JOBD_STAGE_PARSE_MS", stages.parse, 100, 86_400_000);
         stages.assemble = e.ms("DOC_JOBD_STAGE_ASSEMBLE_MS", stages.assemble, 100, 86_400_000);
         let here = std::env::current_exe().ok().and_then(|p| p.parent().map(PathBuf::from)).unwrap_or_default();
+        let docx_mode = match e.choice("DOC_DOCX_MODE", "per_job", &["per_job", "persistent", "remote"]) {
+            "persistent" => DocxMode::Persistent,
+            "remote" => DocxMode::Remote,
+            _ => DocxMode::PerJob,
+        };
         let script = e.get("DOC_JOBD_DOCX_WORKER").map(PathBuf::from).unwrap_or_else(|| here.join("../../python/docx_worker.py"));
         let python = PathBuf::from(e.get("DOC_JOBD_PYTHON").unwrap_or("python3"));
-        if role.runs_worker() && !script.is_file() {
+        if role.runs_worker() && docx_mode != DocxMode::Remote && !script.is_file() {
             e.bad("DOC_JOBD_DOCX_WORKER", &script.display().to_string(), "the docx worker script does not exist");
         }
         let docx_deadline = e.ms("DOC_JOBD_DOCX_DEADLINE_MS", Duration::from_secs(300), 100, 86_400_000);
         let fault_env: Vec<(String, String)> = vars.iter().filter(|(k, _)| k.starts_with("DOCX_WORKER_FAULT") || k == &"DOCX_WORKER_PIDFILE").map(|(k, v)| (k.clone(), v.clone())).collect();
-        let docx_mode = if e.choice("DOC_DOCX_MODE", "per_job", &["per_job", "persistent"]) == "persistent" { DocxMode::Persistent } else { DocxMode::PerJob };
         let pool = PoolConfig {
             python: python.clone(),
             script: script.clone(),
@@ -296,12 +304,16 @@ impl JobdConfig {
         }
         let email_body_template = templates_text_email(&templates);
         // PDF: off unless an engine is named; an engine that cannot run is a start-up error, not a surprise at the first request
-        let engine = e.choice("DOC_PDF_ENGINE", "none", &["none", "weasyprint", "prince"]).to_string();
+        let engine = e.choice("DOC_PDF_ENGINE", "none", &["none", "weasyprint", "prince", "remote"]).to_string();
+        let engine_is_remote = engine == "remote";
         let pdf_python = PathBuf::from(e.get("DOC_PDF_PYTHON").unwrap_or_else(|| python.to_str().unwrap_or("python3")));
         let pdf_script = e.get("DOC_PDF_WORKER").map(PathBuf::from).unwrap_or_else(|| here.join("../../python/pdf_worker.py"));
         let pdf_deadline = e.ms("DOC_PDF_DEADLINE_MS", Duration::from_secs(600), 1000, 86_400_000);
         let pdf = if engine == "none" {
             None
+        } else if engine == "remote" {
+            // The container deployment: the engine (Prince, with WeasyPrint as the fallback) lives in the Python service.
+            Some(PdfConfig { python: pdf_python, script: pdf_script, engine, deadline: pdf_deadline, env: Vec::new() })
         } else {
             let c = PdfConfig { python: pdf_python, script: pdf_script, engine, deadline: pdf_deadline, env: vars.iter().filter(|(k, _)| k.starts_with("PDF_WORKER_FAULT")).map(|(k, v)| (k.clone(), v.clone())).collect() };
             if role.runs_worker() {
@@ -314,6 +326,17 @@ impl JobdConfig {
             Some(c)
         };
 
+        let remote = match e.get("DOC_PYWORKER_URL").map(|u| u.trim_end_matches('/').to_string()) {
+            Some(u) if u.starts_with("http://") || u.starts_with("https://") => Some(crate::remote::RemoteConfig { base_url: u, docx_deadline, pdf_deadline }),
+            Some(u) => {
+                e.bad("DOC_PYWORKER_URL", &u, "must start with http:// or https://");
+                None
+            }
+            None => None,
+        };
+        if role.runs_worker() && remote.is_none() && (docx_mode == DocxMode::Remote || engine_is_remote) {
+            e.problems.push("DOC_PYWORKER_URL must be set when DOC_DOCX_MODE=remote or DOC_PDF_ENGINE=remote (for example http://pyworker:9100)".into());
+        }
         let pipeline = PipelineConfig {
             dirs: Dirs::new(output),
             fresh_for: Duration::from_secs(period_min * 60),
@@ -334,7 +357,7 @@ impl JobdConfig {
         let ops_addr = e.get("DOC_JOBD_OPS_ADDR").map(str::to_string);
         let clone_lock = e.flag("DOC_JOBD_CLONE_LOCK", true);
         if e.problems.is_empty() {
-            Ok(JobdConfig { role, store, redis, namespace, runner: r, pipeline, seam, docx_mode, pool, beat_every, output_grace, janitor_every, ops_addr, clone_lock })
+            Ok(JobdConfig { role, store, redis, namespace, runner: r, pipeline, seam, docx_mode, pool, remote, beat_every, output_grace, janitor_every, ops_addr, clone_lock })
         } else {
             Err(JobdConfigError(e.problems))
         }

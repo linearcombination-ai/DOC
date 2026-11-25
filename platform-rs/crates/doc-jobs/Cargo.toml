@@ -33,6 +33,7 @@ rustls-pki-types = "1"
 rustls-native-certs = "0.8"
 tokio-rustls = "0.26"
 nix = { version = "0.31", default-features = false, features = ["signal", "process", "fs"] }
+reqwest.workspace = true
 
 [dev-dependencies]
 doc-catalog.workspace = true

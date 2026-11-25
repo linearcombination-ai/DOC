@@ -1,0 +1,171 @@
+# The DOC platform, Rust build, as one stack. From this directory:
+#
+#     docker compose up            # first run builds the images (about 20 to 30 minutes on a laptop); open http://localhost:8001
+#
+# Same host ports as DOC's own compose file, so DOC's UI, links and tests work unchanged:
+#   8001 the UI (DOC's own frontend image)      5005 the API (the gateway, in front of the Rust service)
+#   8089 the generated documents (the gateway)  -- nothing else is published; Valkey and the Python worker stay private
+#
+# Architecture, volumes, limits and operations: docs/RUNBOOK.md. Variables you may want to set (all optional) are listed in
+# .env.example. DOC's own backend (FastAPI + Celery + the .NET sidecar) is NOT in this file: this stack replaces it.
+name: doc-rs
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-core-env: &core-env
+  DATA_API_URL: ${DATA_API_URL:-https://api.bibleineverylanguage.org/v1/graphql}
+  DOC_JOBD_REDIS_URL: redis://valkey:6379/0
+  DOC_JOBD_STORE: redis
+  DOC_SHELL_MODE: ${DOC_SHELL_MODE:-fixed}
+  ASSET_CACHING_PERIOD: ${ASSET_CACHING_PERIOD:-30}
+  BACKEND_CORS_ORIGINS: '${BACKEND_CORS_ORIGINS:-["http://localhost:8001","http://127.0.0.1:8001"]}'
+  RUST_LOG: ${RUST_LOG:-info}
+
+services:
+  valkey:
+    image: valkey/valkey:9.2.0-alpine
+    command: ["valkey-server", "/usr/local/etc/valkey/valkey.conf"]
+    volumes:
+      - valkey-data:/data
+      - ./containers/valkey.conf:/usr/local/etc/valkey/valkey.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "valkey-cli ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 3s
+    restart: unless-stopped
+    init: true
+    mem_limit: ${VALKEY_MEM:-256m}
+    cpus: 1.0
+    pids_limit: 64
+    stop_grace_period: 20s
+    logging: *logging
+
+  pyworker:
+    image: doc-rs/pyworker:${DOC_RS_TAG:-local}
+    build:
+      context: ..
+      dockerfile: platform-rs/containers/pyworker.Dockerfile
+    environment:
+      PYWORKER_CONCURRENCY: ${PYWORKER_CONCURRENCY:-2}
+      PYWORKER_DRAIN_SECONDS: "120"
+    volumes:
+      - output:/app/document_output
+    restart: unless-stopped
+    init: true
+    mem_limit: ${PYWORKER_MEM:-3g}
+    cpus: ${PYWORKER_CPUS:-2.0}
+    pids_limit: 512
+    stop_grace_period: 150s
+    logging: *logging
+
+  api:
+    image: doc-rs/core:${DOC_RS_TAG:-local}
+    build:
+      context: ..
+      dockerfile: platform-rs/containers/core.Dockerfile
+    environment:
+      <<: *core-env
+      DOC_JOBD_ROLE: api
+    volumes:
+      - output:/app/document_output
+      - assets:/app/assets_download
+    depends_on:
+      valkey:
+        condition: service_healthy
+    restart: unless-stopped
+    init: true
+    mem_limit: ${API_MEM:-768m}
+    cpus: ${API_CPUS:-1.0}
+    pids_limit: 256
+    stop_grace_period: 30s
+    logging: *logging
+
+  worker:
+    image: doc-rs/core:${DOC_RS_TAG:-local}
+    environment:
+      <<: *core-env
+      DOC_JOBD_ROLE: worker
+      DOC_JOBD_OPS_ADDR: 0.0.0.0:8082
+      DOC_HEALTH_URL: http://127.0.0.1:8082/health/status
+      DOC_DOCX_MODE: remote
+      DOC_PDF_ENGINE: remote
+      DOC_PYWORKER_URL: http://pyworker:9100
+      DOC_JOBD_CONCURRENCY: ${WORKER_CONCURRENCY:-2}
+      DOC_JOBD_DRAIN_DEADLINE_MS: "120000"
+      FROM_EMAIL_ADDRESS: ${FROM_EMAIL_ADDRESS:-foo@example.com}
+      SEND_EMAIL: ${SEND_EMAIL:-false}
+      SMTP_HOST: ${SMTP_HOST:-localhost}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_TLS: ${SMTP_TLS:-starttls}
+    volumes:
+      - output:/app/document_output
+      - assets:/app/assets_download
+    depends_on:
+      valkey:
+        condition: service_healthy
+      pyworker:
+        condition: service_healthy
+    restart: unless-stopped
+    init: true
+    mem_limit: ${WORKER_MEM:-1g}
+    cpus: ${WORKER_CPUS:-2.0}
+    pids_limit: 256
+    stop_grace_period: 180s
+    logging: *logging
+
+  gateway:
+    image: doc-rs/gateway:${DOC_RS_TAG:-local}
+    build:
+      context: ./containers/gateway
+    ports:
+      - "${API_HOST_PORT:-5005}:5005"
+      - "${FILESERVER_HOST_PORT:-8089}:8089"
+    volumes:
+      - output:/app/document_output:ro
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+    init: true
+    mem_limit: 128m
+    cpus: 0.5
+    pids_limit: 64
+    logging: *logging
+
+  frontend:
+    # DOC's own frontend, built from DOC's own frontend/Dockerfile unchanged; only environment configures it.
+    image: doc-rs/frontend:${DOC_RS_TAG:-local}
+    build:
+      context: ../frontend
+    environment:
+      PUBLIC_BACKEND_API_URL: ${PUBLIC_BACKEND_API_URL:-http://localhost:5005}
+      PUBLIC_FILE_SERVER_URL: ${PUBLIC_FILE_SERVER_URL:-http://localhost:8089}
+      PUBLIC_LOGROCKET_ID: ${PUBLIC_LOGROCKET_ID:-}
+    ports:
+      - "${FRONTEND_HOST_PORT:-8001}:80"
+    depends_on:
+      gateway:
+        condition: service_healthy
+    restart: unless-stopped
+    mem_limit: ${FRONTEND_MEM:-384m}
+    cpus: 1.0
+    logging: *logging
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  output:        # generated documents (<key>.docx|html|pdf, <key>.findings.json) and per-job scratch
+  assets:        # git clones of the content repositories (the 30-minute cache)
+  valkey-data:   # the append-only file: queued and running jobs survive a restart

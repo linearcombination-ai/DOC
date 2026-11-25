@@ -1,0 +1,66 @@
+# syntax=docker/dockerfile:1.7
+#
+# The Python docx and PDF worker: the seam's other side (python/seam_server.py), with Prince and WeasyPrint.
+# Same base image, same system packages, same Prince .deb and the same extra fonts as DOC's own Dockerfile, so PDFs
+# come out of the same engine with the same fonts; the Calibre/ePub parts are not here (ePub is out of scope).
+# Build context: the repository root.
+#
+#   docker build -f platform-rs/containers/pyworker.Dockerfile -t doc-rs/pyworker:local .
+#
+# Licence note (the captain handles it; see docs/COMPARISON.md): the Prince .deb is the one DOC installs and runs
+# unlicensed-for-commercial-use; its output carries Prince's notice on the first page. WeasyPrint (BSD) is the fallback:
+# the service switches to it when Prince is missing or fails on a document.
+
+FROM python:3.13-slim-bookworm
+
+ARG PRINCE_DEB=prince_16.1-1_debian12_amd64.deb
+ARG FONTS_REPO=https://github.com/Bible-Translation-Tools/ScriptureAppBuilder-pipeline
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    wget ca-certificates git fontconfig \
+    pango1.0-tools libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz-subset0 \
+    texlive-fonts-recommended \
+    fonts-khmeros fonts-lklug-sinhala fonts-tlwg-garuda-otf fonts-lohit-orya fonts-lohit-mlym fonts-lohit-knda \
+    fonts-lohit-telu fonts-lohit-taml fonts-lohit-gujr fonts-lohit-guru fonts-lohit-beng-bengali fonts-lohit-deva \
+    fonts-noto fonts-noto-cjk fonts-dzongkha fonts-tibetan-machine fonts-baekmuk fonts-ipafont-mincho \
+    fonts-arphic-uming fonts-opensymbol fonts-liberation2 \
+    libaom3 libavif15 libgif7 libjpeg62-turbo liblcms2-2 libtiff6 libwebp7 libwebpdemux2 \
+ && rm -rf /var/lib/apt/lists/*
+
+# Prince, installed the way DOC's Dockerfile installs it (the same .deb from the same place), then the extra fonts.
+RUN wget -nv "https://www.princexml.com/download/${PRINCE_DEB}" \
+ && apt-get update && apt-get install -y --no-install-recommends "./${PRINCE_DEB}" \
+ && rm -f "${PRINCE_DEB}" && rm -rf /var/lib/apt/lists/* \
+ && prince --version \
+ && git clone --depth 1 "${FONTS_REPO}" /tmp/ScriptureAppBuilder-pipeline \
+ && cp /tmp/ScriptureAppBuilder-pipeline/ContainerImage/home/fonts/*.ttf /usr/share/fonts/ \
+ && rm -rf /tmp/ScriptureAppBuilder-pipeline \
+ && fc-cache -f
+
+# WeasyPrint at DOC's pinned versions (backend/requirements.txt used as a constraints file).
+COPY backend/requirements.txt /tmp/doc-requirements.txt
+RUN python -m venv /opt/venv \
+ && /opt/venv/bin/pip install --no-cache-dir --upgrade pip \
+ && /opt/venv/bin/pip install --no-cache-dir -c /tmp/doc-requirements.txt weasyprint \
+ && rm /tmp/doc-requirements.txt
+ENV PATH=/opt/venv/bin:${PATH}
+
+RUN groupadd --system --gid 10001 doc \
+ && useradd --system --uid 10001 --gid 10001 --home-dir /app --shell /usr/sbin/nologin doc \
+ && mkdir -p /app/document_output /app/python \
+ && chown -R doc:doc /app
+COPY --chown=doc:doc platform-rs/python /app/python
+
+ENV PYWORKER_HOST=0.0.0.0 \
+    PYWORKER_PORT=9100 \
+    PYWORKER_CONCURRENCY=2 \
+    PYWORKER_ROOT=/app/document_output \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+WORKDIR /app
+USER 10001:10001
+EXPOSE 9100
+HEALTHCHECK --interval=10s --timeout=10s --start-period=20s --retries=6 \
+  CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9100/readyz', timeout=8)"]
+STOPSIGNAL SIGTERM
+ENTRYPOINT ["python", "-I", "/app/python/seam_server.py"]

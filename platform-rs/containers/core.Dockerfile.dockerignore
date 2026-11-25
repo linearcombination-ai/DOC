@@ -1,0 +1,7 @@
+*
+!platform-rs/Cargo.toml
+!platform-rs/Cargo.lock
+!platform-rs/crates
+!backend/templates
+platform-rs/crates/**/target
+**/*.log
