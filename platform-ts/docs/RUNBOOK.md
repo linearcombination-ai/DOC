@@ -36,15 +36,19 @@ Commands (run in `platform-ts/`):
 
 **PDF engine.** `PDF_ENGINE=auto` (default): Prince when the request sets `use_prince` and the binary is installed, else WeasyPrint; a `PdfEngineFallback` finding says when Prince was wanted but not used. Prince is installed the way DOC's own Dockerfile installs it (the `.deb` from princexml.com, no licence file, so its non-commercial notice appears on the first page); on a CPU architecture without that package the image still builds and uses WeasyPrint.
 
-**Failure drills (what to expect, RAN in the `ops` job unless marked).**
+**Failure drills (what to expect; all RAN in the `ops` CI job, run 9: https://github.com/linearcombination-ai/DOC/actions/runs/45732097074).**
 
-| Drill | Command | Expected |
+| Drill | Command | Expected (measured) |
 |---|---|---|
-| SIGTERM the worker mid-job | `docker compose stop -t 130 worker` | log `shutting down: no new jobs, draining the running ones`; exit 0; the job finishes (or a restarted worker recovers it); the document arrives |
-| SIGKILL the worker mid-job | `docker kill -s KILL $(docker compose ps -q worker)` | `unless-stopped` restarts it; the job is recovered as stalled after the lock expires (about 30 s); the document arrives |
-| Valkey restart | `docker compose restart valkey` | AOF replay; earlier task records still answer; a job in flight finishes |
-| API killed or stopped | `docker kill ...api` / `docker compose stop api` | restarts; SIGTERM exits 0 within seconds; clients retry (the UI polls) |
-| Roll to another image tag | `IMAGE_TAG=<tag> docker compose up -d --no-build api worker` | same volumes, same queue; earlier documents still served |
+| SIGTERM the worker mid-job | `docker compose stop -t 130 worker` | log `shutting down: no new jobs, draining the running ones`, then `drained; bye`; **exit 0 after 11 s**; the job finishes; the document arrives |
+| the worker process crashes mid-job (out-of-memory kill, segfault) | simulate with `crash worker '^node src/worker-main'` from `ci/ops.sh` (a `/proc` loop run with `docker exec`, no extra tools needed), or let the memory limit do it | the container exits non-zero and **`unless-stopped` restarts it** (RestartCount 0 to 1, healthy after 7 s); the job is recovered as stalled once its lock expires (`job stalled: its worker stopped renewing the lock`, about 30 to 45 s); the document arrives |
+| `docker kill -s KILL` (or `docker stop`) on the worker | `docker kill -s KILL $(docker compose ps -q worker)` | **the engine treats this as a manual stop and does NOT restart the container**: start it again (`docker compose start worker`); the job is recovered as stalled and the document arrives (51 s end to end) |
+| Valkey restart | `docker compose restart valkey` | AOF replay (8 s): earlier task records still answer, a job in flight finishes, new jobs work |
+| API crash, then SIGTERM | `kill -9` inside as above, then `docker compose stop api` | restarted by the policy (healthy after 6 s); SIGTERM exits 0 in under a second; clients retry (the UI polls) |
+| Roll to another image tag | `IMAGE_TAG=<tag> docker compose up -d --no-build api worker` | same volumes, same queue; earlier documents still served; switch back the same way |
+| 24 documents at once | `python3 ci/loadgen.py burst http://localhost:5005 24` | 0 failed, 2.8 s |
+
+To re-run all of them against your own stack: `cd platform-ts && OUT=out SOAK_MINUTES=2 bash ci/ops.sh` (needs the stack up and healthy; it kills and restarts services on purpose).
 
 ## 1. What runs (processes; the container map is in section 0)
 

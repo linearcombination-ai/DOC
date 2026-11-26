@@ -43,8 +43,15 @@ Optional settings (environment or a `.env` file next to `docker-compose.yml`): `
 
 ## Evidence
 
-CI runs on the fork (`linearcombination-ai/DOC`, workflow `platform-ts`): images are built on the runner (never pushed), the stack is brought up with `docker compose`, DOC's own `tests/e2e/doc` and Playwright tests run against it next to the same tests on DOC's FastAPI stack. Run URLs, timings and pass tables are in `docs/COMPARISON.md`.
+CI runs on the fork (`linearcombination-ai/DOC`, workflow `platform-ts`, branch `exp/platform-ts`): images are built on the runner (never pushed), the stack is brought up with `docker compose`, and DOC's own tests run against it next to the same tests on DOC's FastAPI + Celery stack, in the same run:
+
+| DOC's own tests | this build | DOC's FastAPI stack |
+|---|---|---|
+| `tests/e2e/doc` (pytest, 466 test cases, DOC's CI marker expression) | **334 passed, 0 failed, 132 skipped** | 334 / 0 / 132 (0 tests differ) |
+| Playwright `frontend/tests/e2e/doc_test_*.ts` (28) | **18 passed, 0 failed, 10 skipped** | 18 / 0 / 10 |
+
+Run: https://github.com/linearcombination-ai/DOC/actions/runs/45729013524 . The operations scenarios (SIGTERM drain, a crashed container, Valkey restart, 24 documents at once, rollback to another image tag, a 10-minute soak) and every number (image sizes, build and CI times, memory per container) are in `docs/COMPARISON.md`. Operating the containers: `docs/RUNBOOK.md`, section 0.
 
 ## What it does not do yet
 
-STET and Passages routes and tests are out of this phase (listed as excluded in the comparison). Word was not opened on any output (your check). See the report for the full list of what was and was not measured.
+STET and Passages routes and tests are out of this phase (listed as excluded in the comparison). Word was not opened on any output: the docx keeps the proposed look's Word styles while HTML and PDF are DOC's own markup, so **your visual check of the docx in Word is the open item**. Prince runs in its non-commercial mode (as DOC's image does). See `report.md` for what was and was not measured.

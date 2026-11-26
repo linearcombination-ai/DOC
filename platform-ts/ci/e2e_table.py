@@ -52,7 +52,17 @@ def load(directory: Path) -> dict[str, Outcome]:
         except ET.ParseError:
             continue
         for case in root.iter("testcase"):
-            name = f"{module_of(case.get('classname', ''))}::{case.get('name', '')}"
+            classname = case.get("classname", "")
+            if classname:
+                name = f"{module_of(classname)}::{case.get('name', '')}"
+            else:
+                # pytest reports a module that is skipped as a whole with an empty class name and the dotted module path as the name; each group reports it once
+                module = f"{(case.get('name', '') or 'unnamed').split('.')[-1]}.py"
+                name = f"{module}::(module skipped as a whole)"
+                n = 1
+                while name in out:
+                    n += 1
+                    name = f"{module}::(module skipped as a whole) #{n}"
             failure = case.find("failure")
             error = case.find("error")
             skipped = case.find("skipped")
