@@ -13,7 +13,7 @@
 
 FROM python:3.13-slim-bookworm
 
-ARG PRINCE_DEB=prince_16.1-1_debian12_amd64.deb
+ARG PRINCE_VERSION=16.1-1
 ARG FONTS_REPO=https://github.com/Bible-Translation-Tools/ScriptureAppBuilder-pipeline
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -27,12 +27,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libaom3 libavif15 libgif7 libjpeg62-turbo liblcms2-2 libtiff6 libwebp7 libwebpdemux2 \
  && rm -rf /var/lib/apt/lists/*
 
-# Prince, installed the way DOC's Dockerfile installs it (the same .deb from the same place), then the extra fonts.
-RUN wget -nv "https://www.princexml.com/download/${PRINCE_DEB}" \
- && apt-get update && apt-get install -y --no-install-recommends "./${PRINCE_DEB}" \
- && rm -f "${PRINCE_DEB}" && rm -rf /var/lib/apt/lists/* \
- && prince --version \
- && git clone --depth 1 "${FONTS_REPO}" /tmp/ScriptureAppBuilder-pipeline \
+# Prince, installed the way DOC's Dockerfile installs it (the .deb from princexml.com; no licence file, so Prince runs in its non-commercial mode and puts
+# its notice on the first page, which is DOC's situation today). DOC's Dockerfile names the amd64 package only; this one asks for the package of the
+# image's own architecture and does not fail the build when there is none: the service then uses WeasyPrint and says so in a finding.
+RUN set -eu; \
+    arch="$(dpkg --print-architecture)"; \
+    deb="prince_${PRINCE_VERSION}_debian12_${arch}.deb"; \
+    if wget -nv -O "/tmp/${deb}" "https://www.princexml.com/download/${deb}"; then \
+      apt-get update; apt-get install -y --no-install-recommends "/tmp/${deb}"; \
+      rm -f "/tmp/${deb}"; rm -rf /var/lib/apt/lists/*; \
+      prince --version; \
+    else \
+      echo "WARNING: Prince ${PRINCE_VERSION} is not available for ${arch}; PDF output will use WeasyPrint" >&2; \
+    fi
+
+# The extra fonts DOC adds from the Scripture App Builder pipeline repository, then refresh the font cache.
+RUN git clone --depth 1 "${FONTS_REPO}" /tmp/ScriptureAppBuilder-pipeline \
  && cp /tmp/ScriptureAppBuilder-pipeline/ContainerImage/home/fonts/*.ttf /usr/share/fonts/ \
  && rm -rf /tmp/ScriptureAppBuilder-pipeline \
  && fc-cache -f

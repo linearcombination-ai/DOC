@@ -24,6 +24,15 @@ use crate::reader::Workspace;
 use crate::tables_gen::{BOOK_NAMES, USFM_RESOURCE_TYPES};
 use crate::{Abort, Outcome};
 
+/// How the book list treats the names translators wrote (`Fixed` mode): `Written` keeps them (the captain's rule, the default; a finding says
+/// what DOC's rule would have shown), `Doc` applies DOC's normalisation (`2ኛ ቆሮንቶስ` becomes `2 ኛ ቆሮንቶስ`), which DOC's own UI test reads.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum NameRule {
+    #[default]
+    Written,
+    Doc,
+}
+
 /// `USE_LOCALIZED_BOOK_NAME` (true in DOC's `.env`).
 pub const USE_LOCALIZED_BOOK_NAME: bool = true;
 
@@ -221,7 +230,7 @@ pub fn usfm_book_name(ws: &Workspace, repo: &RepoRef, lang: &str, book: &str, so
 
 /// `get_book_names_from_usfm_metadata`: `(code, name)` in file order, a repeated code keeping its
 /// first position and last value (a Python dict).
-fn usfm_metadata_names(ws: &Workspace, repo: &RepoRef, lang: &str, mode: Mode, findings: &mut Vec<Finding>) -> Result<Vec<(String, String)>, Abort> {
+fn usfm_metadata_names(ws: &Workspace, repo: &RepoRef, lang: &str, mode: Mode, normalize: bool, findings: &mut Vec<Finding>) -> Result<Vec<(String, String)>, Abort> {
     let mut out: Vec<(String, String)> = Vec::new();
     for file in find_usfm_files(ws, &repo.segment) {
         let stem = path_stem(&file).to_lowercase();
@@ -246,7 +255,7 @@ fn usfm_metadata_names(ws: &Workspace, repo: &RepoRef, lang: &str, mode: Mode, f
             },
         };
         let front = usfm_frontmatter(&text);
-        let name = book_name_from_frontmatter(&front, lang, &repo.resource_type, mode == Mode::AsBuilt);
+        let name = book_name_from_frontmatter(&front, lang, &repo.resource_type, normalize || mode == Mode::AsBuilt);
         match out.iter_mut().find(|(c, _)| *c == code) {
             Some(slot) => slot.1 = name,
             None => out.push((code, name)),
@@ -301,7 +310,9 @@ pub fn book_codes_for_lang(
     usfm_only: bool,
     mode: Mode,
     names: &dyn NameProvider,
+    rule: NameRule,
 ) -> Result<Outcome<Vec<BookEntry>>, Abort> {
+    let normalize = rule == NameRule::Doc;
     let mut findings: Vec<Finding> = Vec::new();
     let mut localized: Vec<(String, String)> = Vec::new();
     let mut non_localized: Vec<(String, String)> = Vec::new();
@@ -310,7 +321,7 @@ pub fn book_codes_for_lang(
     for repo in repos {
         let usfm = is_usfm_type(&repo.resource_type);
         if USE_LOCALIZED_BOOK_NAME && repo.components.len() == 2 && usfm {
-            let meta = usfm_metadata_names(ws, repo, lang, mode, &mut findings)?;
+            let meta = usfm_metadata_names(ws, repo, lang, mode, normalize, &mut findings)?;
             let manifest = manifest_names(ws, &repo.segment, mode, &repo.url, &mut findings)?;
             for (code, name) in meta {
                 let manifest_name = manifest.iter().rev().find(|(c, _)| *c == code).map(|(_, t)| t.clone());
@@ -331,11 +342,12 @@ pub fn book_codes_for_lang(
                 };
                 let final_name = match mode {
                     Mode::AsBuilt => maybe_correct_book_name(lang, &normalize_localized_book_name(&chosen)),
+                    Mode::Fixed if normalize => maybe_correct_book_name(lang, &normalize_localized_book_name(&chosen)),
                     Mode::Fixed => maybe_correct_book_name(lang, py_strip(&chosen)),
                 };
                 if mode == Mode::Fixed && !final_name.is_empty() {
                     resource_named.insert(code.clone(), true);
-                    note_normalisation(&mut findings, lang, &code, &final_name, &repo.url);
+                    note_normalisation(&mut findings, lang, &code, py_strip(&chosen), &final_name, &repo.url, normalize);
                 }
                 localized.push((code, final_name));
             }
@@ -344,11 +356,12 @@ pub fn book_codes_for_lang(
             let code = repo.components[1].clone();
             let final_name = match mode {
                 Mode::AsBuilt => maybe_correct_book_name(lang, &normalize_localized_book_name(&title)),
+                Mode::Fixed if normalize => maybe_correct_book_name(lang, &normalize_localized_book_name(&title)),
                 Mode::Fixed => maybe_correct_book_name(lang, &title),
             };
             if mode == Mode::Fixed && !final_name.is_empty() {
                 resource_named.insert(code.clone(), true);
-                note_normalisation(&mut findings, lang, &code, &final_name, &repo.url);
+                note_normalisation(&mut findings, lang, &code, &title, &final_name, &repo.url, normalize);
             }
             localized.push((code, final_name));
         }
@@ -430,18 +443,16 @@ fn fallback_name(lang: &str, code: &str, existing: String, names: &dyn NameProvi
     if existing.is_empty() { english_name(code).unwrap_or("").to_string() } else { existing }
 }
 
-/// Fixed mode: say when DOC's normalisation would have rewritten what the translator wrote, and
-/// when the name equals the English one in a non-English language.
-fn note_normalisation(findings: &mut Vec<Finding>, lang: &str, code: &str, name: &str, repo: &str) {
-    let normalised = normalize_localized_book_name(name);
-    if normalised != name {
-        findings.push(
-            Finding::new(FindingCode::NameNormalisationWouldChange, Severity::Info, format!("kept {name:?}; DOC would show {normalised:?}"))
-                .lang(lang)
-                .repo(repo)
-                .book(code),
-        );
+/// Fixed mode: say when DOC's normalisation would have rewritten what the translator wrote (the name is kept), or did rewrite it
+/// (`NameRule::Doc`: the name DOC shows is returned and the finding keeps what was written), and when the name equals the English one
+/// in a non-English language.
+fn note_normalisation(findings: &mut Vec<Finding>, lang: &str, code: &str, written: &str, shown: &str, repo: &str, applied: bool) {
+    let normalised = normalize_localized_book_name(written);
+    if normalised != written {
+        let detail = if applied { format!("DOC's rule changed {written:?} to {shown:?}") } else { format!("kept {written:?}; DOC would show {normalised:?}") };
+        findings.push(Finding::new(FindingCode::NameNormalisationWouldChange, Severity::Info, detail).lang(lang).repo(repo).book(code));
     }
+    let name = shown;
     let is_english_lang = lang == "en" || lang.starts_with("en-");
     if !is_english_lang && english_name(code).is_some_and(|en| en.eq_ignore_ascii_case(name)) {
         findings.push(
@@ -485,7 +496,7 @@ mod tests {
             .with("41-MAT.usfm", "\\id MAT\n\\h MATEO\n\\toc1 x\n\\c 1\n\\v 1 t")
             .with("42-MRK.usfm", "\\id MRK\n\\toc2 marcos\n\\c 1");
         let (refs, ws) = setup(vec![("https://h/WA-Catalog/es-419_ulb", "ulb", repo)], "es-419", Mode::AsBuilt);
-        let out = book_codes_for_lang("es-419", &refs, &ws, false, Mode::AsBuilt, &NoNames).unwrap();
+        let out = book_codes_for_lang("es-419", &refs, &ws, false, Mode::AsBuilt, &NoNames, NameRule::Written).unwrap();
         assert_eq!(out.value, vec![BookEntry("mat".into(), "Mateo".into()), BookEntry("mrk".into(), "Marcos".into())]);
     }
 
@@ -498,10 +509,10 @@ mod tests {
             ("https://h/DCS-Mirror/faustin-azaza_ln_mat_text_reg", "reg", prefixed.clone()),
         ];
         let (refs, ws) = setup(entries.clone(), "ln", Mode::AsBuilt);
-        let err = book_codes_for_lang("ln", &refs, &ws, false, Mode::AsBuilt, &NoNames).unwrap_err();
+        let err = book_codes_for_lang("ln", &refs, &ws, false, Mode::AsBuilt, &NoNames, NameRule::Written).unwrap_err();
         assert!(err.0.contains("KeyError"), "{err:?}");
         let (refs, ws) = setup(entries, "ln", Mode::Fixed);
-        let out = book_codes_for_lang("ln", &refs, &ws, false, Mode::Fixed, &NoNames).unwrap();
+        let out = book_codes_for_lang("ln", &refs, &ws, false, Mode::Fixed, &NoNames, NameRule::Written).unwrap();
         assert_eq!(out.value, vec![BookEntry("mat".into(), "Matayo".into()), BookEntry("luk".into(), "Luka".into())]);
     }
 
@@ -510,7 +521,7 @@ mod tests {
         let manifest = "\u{feff}---\n\ndublin_core:\n  conformsto: 'rc0.2'\nprojects:\n  - identifier: 'mat'\n    title: 'Matthieu'\n";
         let repo = MemRepo::new().with("manifest.yaml", manifest).with("41-MAT.usfm", "\\id MAT\n\\c 1\n");
         let (refs, ws) = setup(vec![("https://h/WA-Catalog/fr_ulb", "ulb", repo)], "fr", Mode::AsBuilt);
-        let out = book_codes_for_lang("fr", &refs, &ws, true, Mode::AsBuilt, &NoNames).unwrap();
+        let out = book_codes_for_lang("fr", &refs, &ws, true, Mode::AsBuilt, &NoNames, NameRule::Written).unwrap();
         assert_eq!(out.value, vec![BookEntry("mat".into(), "Matthieu".into())]);
     }
 
@@ -518,11 +529,24 @@ mod tests {
     fn fixed_keeps_names_as_written() {
         let repo = MemRepo::new().with("front/title.txt", "Wimbo Wa Sulemani\nsecond line");
         let (refs, ws) = setup(vec![("https://h/o/sw_sng_text_reg", "reg", repo)], "sw", Mode::Fixed);
-        let fixed = book_codes_for_lang("sw", &refs, &ws, false, Mode::Fixed, &NoNames).unwrap();
+        let fixed = book_codes_for_lang("sw", &refs, &ws, false, Mode::Fixed, &NoNames, NameRule::Written).unwrap();
         assert_eq!(fixed.value, vec![BookEntry("sng".into(), "Wimbo Wa Sulemani".into())]);
         assert!(fixed.findings.iter().any(|f| f.code == FindingCode::NameNormalisationWouldChange));
         let (refs, ws) = setup(vec![("https://h/o/sw_sng_text_reg", "reg", MemRepo::new().with("front/title.txt", "Wimbo Wa Sulemani"))], "sw", Mode::AsBuilt);
-        let built = book_codes_for_lang("sw", &refs, &ws, false, Mode::AsBuilt, &NoNames).unwrap();
+        let built = book_codes_for_lang("sw", &refs, &ws, false, Mode::AsBuilt, &NoNames, NameRule::Written).unwrap();
         assert_eq!(built.value, vec![BookEntry("sng".into(), "Wimbo wa sulemani".into())]);
+    }
+
+    /// The captain's rule keeps what translators wrote; DOC's own UI test reads DOC's normalised form (`2 ኛ ቆሮንቶስ`, with a space), so a switch applies
+    /// DOC's rule and the finding keeps the written form.
+    #[test]
+    fn the_doc_rule_normalises_and_reports_what_was_written() {
+        let repo = MemRepo::new().with("front/title.txt", "2ኛ ቆሮንቶስ");
+        let (refs, ws) = setup(vec![("https://h/o/am_2co_text_reg", "reg", repo)], "am", Mode::Fixed);
+        let written = book_codes_for_lang("am", &refs, &ws, false, Mode::Fixed, &NoNames, NameRule::Written).unwrap();
+        assert_eq!(written.value, vec![BookEntry("2co".into(), "2ኛ ቆሮንቶስ".into())]);
+        let doc = book_codes_for_lang("am", &refs, &ws, false, Mode::Fixed, &NoNames, NameRule::Doc).unwrap();
+        assert_eq!(doc.value, vec![BookEntry("2co".into(), "2 ኛ ቆሮንቶስ".into())]);
+        assert!(doc.findings.iter().any(|f| f.code == FindingCode::NameNormalisationWouldChange && f.detail.contains("DOC's rule changed")));
     }
 }

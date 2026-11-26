@@ -35,11 +35,13 @@ pub struct AppConfig {
     pub request_deadline: Duration,
     /// How long as_built remembers a data-API failure (DOC: the 180 s TTL cache).
     pub as_built_failure_memory: Duration,
+    /// How `Fixed` mode treats the book names translators wrote: kept as written (default) or normalised the way DOC does.
+    pub name_rule: booklist::NameRule,
 }
 
 impl Default for AppConfig {
     fn default() -> Self {
-        AppConfig { default_mode: Mode::AsBuilt, request_deadline: Duration::from_secs(300), as_built_failure_memory: Duration::from_secs(180) }
+        AppConfig { default_mode: Mode::AsBuilt, request_deadline: Duration::from_secs(300), as_built_failure_memory: Duration::from_secs(180), name_rule: booklist::NameRule::Written }
     }
 }
 
@@ -272,8 +274,8 @@ impl<C: Catalog, A: Acquirer> App<C, A> {
             return Ok(Outcome::default());
         };
         let ws = self.workspace(&refs, deadline, &mut findings).await;
-        let (lang_s, names) = (lang.to_string(), self.names.clone());
-        let joined = tokio::task::spawn_blocking(move || booklist::book_codes_for_lang(&lang_s, &refs, &ws, usfm_only, mode, names.as_ref())).await;
+        let (lang_s, names, rule) = (lang.to_string(), self.names.clone(), self.cfg.name_rule);
+        let joined = tokio::task::spawn_blocking(move || booklist::book_codes_for_lang(&lang_s, &refs, &ws, usfm_only, mode, names.as_ref(), rule)).await;
         let result = joined.map_err(|e| AppError::Internal(format!("book list task: {e}")))?;
         let outcome = match result {
             Ok(mut o) => {

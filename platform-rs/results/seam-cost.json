@@ -1,26 +1,26 @@
 {
   "per_job": {
-    "docx_wall_ms_p50": 164,
+    "docx_wall_ms_p50": 148,
     "docx_wall_ms_all": [
+      145,
+      148,
+      148,
       151,
-      151,
-      164,
-      166,
-      175
+      156
     ],
-    "job_total_ms_p50": 24.857753,
+    "job_total_ms_p50": 24.889729,
     "jobs": 12
   },
   "persistent": {
-    "docx_wall_ms_p50": 22,
+    "docx_wall_ms_p50": 21,
     "docx_wall_ms_all": [
       19,
       20,
-      22,
-      24,
-      25
+      21,
+      23,
+      23
     ],
-    "job_total_ms_p50": 44.43155,
+    "job_total_ms_p50": 37.121695,
     "jobs": 12
   }
 }

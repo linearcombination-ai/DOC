@@ -5,7 +5,7 @@
     "outcome": "SUCCESS",
     "detail": "",
     "output_valid": true,
-    "seconds": 0.386117005
+    "seconds": 0.509413798
   },
   {
     "shape": "ulb + tn, lbo",
@@ -13,7 +13,7 @@
     "outcome": "SUCCESS",
     "detail": "",
     "output_valid": true,
-    "seconds": 0.603860781
+    "seconds": 0.649873168
   },
   {
     "shape": "ulb + tn, blo (by chapter)",
@@ -21,7 +21,7 @@
     "outcome": "SUCCESS",
     "detail": "",
     "output_valid": true,
-    "seconds": 0.675884345
+    "seconds": 0.730447691
   },
   {
     "shape": "ulb + tn, layout for print (compact)",
@@ -29,7 +29,7 @@
     "outcome": "SUCCESS",
     "detail": "",
     "output_valid": true,
-    "seconds": 0.738261719
+    "seconds": 0.79276156
   },
   {
     "shape": "ulb + tn + bc",
@@ -37,7 +37,7 @@
     "outcome": "SUCCESS",
     "detail": "",
     "output_valid": true,
-    "seconds": 0.933096847
+    "seconds": 1.138569666
   },
   {
     "shape": "tn only",
@@ -45,7 +45,7 @@
     "outcome": "SUCCESS",
     "detail": "",
     "output_valid": true,
-    "seconds": 1.002404031
+    "seconds": 1.214634951
   },
   {
     "shape": "tn-condensed only",
@@ -53,7 +53,7 @@
     "outcome": "SUCCESS",
     "detail": "",
     "output_valid": true,
-    "seconds": 1.101281094
+    "seconds": 1.299780524
   },
   {
     "shape": "bc only",
@@ -61,7 +61,7 @@
     "outcome": "SUCCESS",
     "detail": "",
     "output_valid": true,
-    "seconds": 1.214530443
+    "seconds": 1.3853248360000001
   },
   {
     "shape": "ulb + tw, links (default)",
@@ -69,7 +69,7 @@
     "outcome": "SUCCESS",
     "detail": "",
     "output_valid": true,
-    "seconds": 1.789597815
+    "seconds": 2.092377758
   },
   {
     "shape": "ulb + tw, definitions included",
@@ -77,7 +77,7 @@
     "outcome": "SUCCESS",
     "detail": "",
     "output_valid": true,
-    "seconds": 2.120357922
+    "seconds": 2.2779582
   },
   {
     "shape": "ulb + tw, only the words used",
@@ -85,7 +85,7 @@
     "outcome": "SUCCESS",
     "detail": "",
     "output_valid": true,
-    "seconds": 2.190704867
+    "seconds": 2.362444674
   },
   {
     "shape": "es-419 ulb + tq",
@@ -93,7 +93,7 @@
     "outcome": "SUCCESS",
     "detail": "",
     "output_valid": true,
-    "seconds": 2.248512747
+    "seconds": 2.434776082
   },
   {
     "shape": "two languages, lbo",
@@ -101,7 +101,7 @@
     "outcome": "SUCCESS",
     "detail": "",
     "output_valid": true,
-    "seconds": 2.350748379
+    "seconds": 2.510820175
   },
   {
     "shape": "two languages, blo, 2 columns scripture left/right",
@@ -109,7 +109,7 @@
     "outcome": "SUCCESS",
     "detail": "",
     "output_valid": true,
-    "seconds": 2.407640416
+    "seconds": 2.571400839
   },
   {
     "shape": "the UI's body as sent (all fields, epub flag, an extra field)",
@@ -117,7 +117,7 @@
     "outcome": "SUCCESS",
     "detail": "",
     "output_valid": true,
-    "seconds": 2.48774338
+    "seconds": 2.6266837
   },
   {
     "shape": "by verse (lvo), backend capability the UI hides",
@@ -125,7 +125,7 @@
     "outcome": "SUCCESS",
     "detail": "",
     "output_valid": true,
-    "seconds": 2.5506557819999998
+    "seconds": 2.684390901
   },
   {
     "shape": "by verse (bvo), backend capability the UI hides",
@@ -133,7 +133,7 @@
     "outcome": "SUCCESS",
     "detail": "",
     "output_valid": true,
-    "seconds": 2.613449402
+    "seconds": 2.747155815
   },
   {
     "shape": "a resource the catalog does not have (es-419 bc)",
@@ -141,7 +141,7 @@
     "outcome": "SUCCESS",
     "detail": "",
     "output_valid": true,
-    "seconds": 2.6661792010000003
+    "seconds": 2.808959362
   },
   {
     "shape": "ulb only, lbo, 1 column",
@@ -149,7 +149,7 @@
     "outcome": "SUCCESS",
     "detail": "",
     "output_valid": true,
-    "seconds": 0.266346163
+    "seconds": 0.230082498
   },
   {
     "shape": "ulb + tn, lbo",
@@ -157,7 +157,7 @@
     "outcome": "SUCCESS",
     "detail": "",
     "output_valid": true,
-    "seconds": 0.390863872
+    "seconds": 0.611622299
   },
   {
     "shape": "ulb + tn, blo (by chapter)",
@@ -165,7 +165,7 @@
     "outcome": "SUCCESS",
     "detail": "",
     "output_valid": true,
-    "seconds": 0.389986214
+    "seconds": 0.611821378
   },
   {
     "shape": "ulb + tn, layout for print (compact)",
@@ -173,7 +173,7 @@
     "outcome": "SUCCESS",
     "detail": "",
     "output_valid": true,
-    "seconds": 0.411165821
+    "seconds": 0.611644073
   },
   {
     "shape": "ulb + tn + bc",
@@ -181,7 +181,7 @@
     "outcome": "SUCCESS",
     "detail": "",
     "output_valid": true,
-    "seconds": 0.577794912
+    "seconds": 0.661508159
   },
   {
     "shape": "tn only",
@@ -189,7 +189,7 @@
     "outcome": "SUCCESS",
     "detail": "",
     "output_valid": true,
-    "seconds": 0.885434122
+    "seconds": 0.730800377
   },
   {
     "shape": "tn-condensed only",
@@ -197,7 +197,7 @@
     "outcome": "SUCCESS",
     "detail": "",
     "output_valid": true,
-    "seconds": 0.883079004
+    "seconds": 0.873109575
   },
   {
     "shape": "bc only",
@@ -205,7 +205,7 @@
     "outcome": "SUCCESS",
     "detail": "",
     "output_valid": true,
-    "seconds": 0.922459604
+    "seconds": 0.890816383
   },
   {
     "shape": "ulb + tw, links (default)",
@@ -213,7 +213,7 @@
     "outcome": "SUCCESS",
     "detail": "",
     "output_valid": true,
-    "seconds": 1.76398515
+    "seconds": 1.556099254
   },
   {
     "shape": "ulb + tw, definitions included",
@@ -221,7 +221,7 @@
     "outcome": "SUCCESS",
     "detail": "",
     "output_valid": true,
-    "seconds": 2.037705795
+    "seconds": 1.6259157370000001
   },
   {
     "shape": "ulb + tw, only the words used",
@@ -229,7 +229,7 @@
     "outcome": "SUCCESS",
     "detail": "",
     "output_valid": true,
-    "seconds": 2.0337796360000002
+    "seconds": 1.678530797
   },
   {
     "shape": "es-419 ulb + tq",
@@ -237,7 +237,7 @@
     "outcome": "SUCCESS",
     "detail": "",
     "output_valid": true,
-    "seconds": 2.031916231
+    "seconds": 1.677292295
   },
   {
     "shape": "two languages, lbo",
@@ -245,7 +245,7 @@
     "outcome": "SUCCESS",
     "detail": "",
     "output_valid": true,
-    "seconds": 2.024459959
+    "seconds": 1.676477942
   },
   {
     "shape": "two languages, blo, 2 columns scripture left/right",
@@ -253,7 +253,7 @@
     "outcome": "SUCCESS",
     "detail": "",
     "output_valid": true,
-    "seconds": 2.03983174
+    "seconds": 1.804839013
   },
   {
     "shape": "the UI's body as sent (all fields, epub flag, an extra field)",
@@ -261,7 +261,7 @@
     "outcome": "SUCCESS",
     "detail": "",
     "output_valid": true,
-    "seconds": 2.148618289
+    "seconds": 1.90345016
   },
   {
     "shape": "by verse (lvo), backend capability the UI hides",
@@ -269,7 +269,7 @@
     "outcome": "SUCCESS",
     "detail": "",
     "output_valid": true,
-    "seconds": 2.166891445
+    "seconds": 2.032845555
   },
   {
     "shape": "by verse (bvo), backend capability the UI hides",
@@ -277,7 +277,7 @@
     "outcome": "SUCCESS",
     "detail": "",
     "output_valid": true,
-    "seconds": 2.259999505
+    "seconds": 2.125683096
   },
   {
     "shape": "a resource the catalog does not have (es-419 bc)",
@@ -285,6 +285,6 @@
     "outcome": "SUCCESS",
     "detail": "",
     "output_valid": true,
-    "seconds": 2.259461007
+    "seconds": 2.161730265
   }
 ]

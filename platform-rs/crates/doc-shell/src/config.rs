@@ -72,6 +72,15 @@ impl Config {
                 }
             },
         };
+        let name_rule = match e.get("DOC_BOOK_NAME_RULE").map(str::to_string) {
+            None => doc_lookup::booklist::NameRule::Written,
+            Some(r) if r == "written" => doc_lookup::booklist::NameRule::Written,
+            Some(r) if r == "doc" => doc_lookup::booklist::NameRule::Doc,
+            Some(r) => {
+                e.problems.push(format!("DOC_BOOK_NAME_RULE={r:?} must be written or doc"));
+                doc_lookup::booklist::NameRule::Written
+            }
+        };
         let user_agent = e.get("USER_AGENT_STR").unwrap_or("wa-doc").trim_matches('"').to_string();
         let xrw = e.get("X_REQUESTED_WITH_VALUE").unwrap_or("WA-Tool-Doc").trim_matches('"').to_string();
         let raw_cors = e.get("BACKEND_CORS_ORIGINS").map(str::to_string);
@@ -111,6 +120,7 @@ impl Config {
             default_mode: mode,
             request_deadline: e.secs("DOC_SHELL_REQUEST_DEADLINE_SECS", 300),
             as_built_failure_memory: catalog.ttl,
+            name_rule,
         };
         let addr = e.get("DOC_SHELL_ADDR").unwrap_or("127.0.0.1:8081").to_string();
         let log_json = e.get("DOC_SHELL_LOG_FORMAT").is_some_and(|v| v.eq_ignore_ascii_case("json"));

@@ -591,6 +591,58 @@ jobs:
           path: ci-out
           retention-days: 14
 
+  # The standing rule keeps the book names translators wrote; DOC's own UI test for Amharic reads DOC's normalised form (`2 ኛ ቆሮንቶስ`, with a space). This one
+  # shard (the file that has that test) runs with DOC's rule switched on, to show that the single difference in the table above is that rule and nothing else.
+  e2e-ui-rs-docnames:
+    name: DOC frontend tests on the Rust stack with DOC's book-name rule (shard 1/4)
+    needs: [plan, build, build-ui-tests]
+    if: ${{ always() && needs.build.result == 'success' && needs.build-ui-tests.result == 'success' && needs.plan.outputs.e2e_ui == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      DOC_BOOK_NAME_RULE: doc
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: "{image-*,uiimage-tests}"
+          path: ${{ runner.temp }}/images
+          merge-multiple: true
+      - name: Load images
+        run: for f in "${{ runner.temp }}"/images/*.tar; do docker load -i "$f"; done
+      - name: Start the stack
+        working-directory: platform-rs
+        run: |
+          mkdir -p -m 0777 ../ci-out ../e2e-results
+          docker compose up -d --no-build
+          bash ci/wait-healthy.sh 300 valkey pyworker api worker gateway frontend
+      - name: DOC's Playwright tests, shard 1 of 4, with DOC's book-name rule
+        run: |
+          start=$(date +%s)
+          set +e
+          docker run --rm --network host --ipc host -e CI=true -e PLAYWRIGHT_SHARD="1/4" \
+            -e PLAYWRIGHT_JUNIT_OUTPUT_NAME=/results/junit.xml -v "$PWD/e2e-results:/results" wycliffeassociates/doc-ui-tests:local \
+            sh -c 'exec npx playwright test --shard="$PLAYWRIGHT_SHARD" --reporter=list,junit doc_test' 2>&1 | tee ci-out/playwright.txt
+          code=${PIPESTATUS[0]}
+          echo "playwright_seconds=$(( $(date +%s) - start )) exit=$code" | tee ci-out/timing.txt "$GITHUB_STEP_SUMMARY"
+          exit "$code"
+      - name: Logs and state
+        if: always()
+        working-directory: platform-rs
+        run: |
+          cp ../e2e-results/*.xml ../ci-out/ 2>/dev/null || true
+          docker compose logs --no-color --timestamps > ../ci-out/compose-logs.txt 2>&1
+      - name: Tear down
+        if: always()
+        working-directory: platform-rs
+        run: docker compose down -v
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: uinames-doc-1
+          path: ci-out
+          retention-days: 14
+
   e2e-ui-doc:
     name: DOC frontend tests on DOC's own stack (shard ${{ matrix.shard }}/4)
     needs: [plan, build, build-baseline, build-ui-tests]

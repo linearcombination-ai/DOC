@@ -1,7 +1,59 @@
-# Runbook: `doc-jobd` (Rust shell, P6)
+# Runbook: `doc-jobd` (Rust shell, P6 and P7)
 
 For whoever is on call. Everything here was exercised by the test suite or the commands in `README.md` unless it says
 **not exercised**. Paths are relative to `p6rs/`; `redis-cli` can be `valkey-cli` (same protocol).
+
+## 0. The container deployment (P7)
+
+Everything in sections 1 to 8 below describes `doc-jobd` itself and still holds; this section is how it runs as a stack of containers from
+`docker-compose.yml` (compose project name `doc-rs`). Evidence tags as in `COMPARISON.md`; what CI ran is in its "Docker and CI" section.
+
+```
+browser -> :8001 frontend  (DOC's own SvelteKit image, built from frontend/Dockerfile unchanged)
+        -> :5005 gateway --> api:8081     (doc-jobd, DOC_JOBD_ROLE=api)        :8089 gateway --> output volume (read-only, DOC's file URLs)
+api, worker <--> valkey:6379 (AOF everysec, noeviction, volume valkey-data)
+worker (doc-jobd, DOC_JOBD_ROLE=worker) --> git clones (volume assets) --> core child process --> HTTP --> pyworker:9100 (Python docx + PDF: Prince, WeasyPrint fallback, fonts)
+volumes: output (/app/document_output, shared by api, worker, pyworker, gateway), assets (git clones: the 30-minute cache), valkey-data
+```
+
+| Service | Image | Memory limit | CPUs | Restart | Stop grace | Health check |
+|---|---|---|---|---|---|---|
+| `valkey` | `valkey/valkey:9.2.0-alpine` | 256 MB | 1 | unless-stopped | 20 s | `valkey-cli ping` |
+| `pyworker` | `doc-rs/pyworker` (python 3.13, Prince 16.1, WeasyPrint, fonts) | 3 GB | 2 | unless-stopped | 150 s | `GET /readyz` |
+| `api` | `doc-rs/core` (Rust, 187 MB) | 768 MB | 1 | unless-stopped | 30 s | `GET /health/status` |
+| `worker` | `doc-rs/core` (same image, other role) | 1 GB | 2 | unless-stopped | 180 s | `GET :8082/health/status` |
+| `gateway` | `doc-rs/gateway` (nginx unprivileged) | 128 MB | 0.5 | unless-stopped | default | `/gateway/health` on both ports |
+| `frontend` | `doc-rs/frontend` (DOC's) | 384 MB | 1 | unless-stopped | default | `GET /health` |
+
+All limits can be overridden by environment variables (`.env.example`). The application containers run as uid 10001 (non-root); the gateway is nginx-unprivileged;
+`init: true` gives every container a reaper. Only 8001, 5005 and 8089 are published.
+
+**Commands** (from `platform-rs/`):
+
+| Task | Command |
+|---|---|
+| Start, building what is missing | `docker compose up --build -d` (wait for `docker compose ps` to show every service healthy; about 30 s after the images exist) |
+| State, health | `docker compose ps`; `curl localhost:5005/health/status` (API and queue), `curl localhost:5005/metrics` |
+| Logs of one service, one request | `docker compose logs -f worker`; `docker compose logs worker pyworker \| grep '"request_id":"<id>"'` |
+| More workers | `docker compose up -d --scale worker=3` (each one claims jobs from the same queue; `pyworker` is the bottleneck for PDF: raise `PYWORKER_CONCURRENCY` and its memory limit together) |
+| Graceful stop of one service | `docker compose stop worker` (SIGTERM: the running jobs finish for up to 120 s, then are handed back to the queue; exit code 0) |
+| Everything down, data kept / removed | `docker compose down` / `docker compose down -v` |
+| Roll the application back | `docker tag doc-rs/core:<good tag> doc-rs/core:rollback && DOC_RS_TAG=rollback docker compose up -d --no-build api worker` (same volumes, same Valkey: earlier documents are still served and queued jobs survive); `DOC_RS_TAG=<normal tag> docker compose up -d --no-build api worker` goes back |
+| Look inside Valkey | `docker compose exec valkey valkey-cli` (keys under `docjobs:`) |
+
+**What the engine does by itself (RAN in CI, `ops` job; numbers in `COMPARISON.md`):** a crash inside a container (an out-of-memory kill, a segfault) is
+restarted by `restart: unless-stopped` and the interrupted job is recovered (stalled-job path, a retry); `docker kill` and `docker stop` are *manual stops*
+and are **not** restarted (start the service again); Valkey restarts with its append-only file and queued, running and finished jobs are intact; the API
+answers a typed 503 while Valkey is away and recovers without a restart. A PDF request that Prince cannot make (missing, crashed, hung) is made with
+WeasyPrint and the document's findings file (`<key>.findings.json`) carries `pdf_engine_fallback`.
+
+**Prince and its licence.** `doc-rs/pyworker` installs the Prince `.deb` exactly as DOC's own Dockerfile does (same version, same source). There is no licence
+file, so Prince runs in its non-commercial mode and puts its notice on the first page, as DOC's PDFs do today. Where Prince has no package for the image's CPU
+architecture the build does not fail: the service makes PDFs with WeasyPrint and the findings file says so. Installing a licence file is the captain's decision
+(not built here, INFERRED: Prince reads `license.dat` from its `license/` directory).
+
+**Not exercised in containers:** a container hitting its memory limit (the engine's OOM kill), CPU throttling, multi-host, arm64 images (CI built the
+x86_64 Prince package in CI; the Dockerfile asks for the package of its own architecture and falls back to WeasyPrint when there is none, which CI did not exercise), registry pushes, image scanning.
 
 ## 1. What runs
 
@@ -42,7 +94,8 @@ redacted, status 0, or the problems, status 2). DOC's own names are kept where D
 | `DOC_JOBD_JOB_CEILING_MS` | `1800000` | One attempt's ceiling over all stages. |
 | `DOC_JOBD_STAGE_{LOCATE,PROVISION,PARSE,ASSEMBLE}_MS` | 300000 / 900000 / 300000 / 300000 | Per-stage deadlines (generous: a request should end with a document). |
 | `DOC_JOBD_DRAIN_DEADLINE_MS` | `120000` | On SIGTERM: how long running jobs may finish before they are handed back to the queue. |
-| `DOC_DOCX_MODE` | `per_job` | `per_job` (a Python process per document) or `persistent` (a pool, `DOC_DOCX_POOL_SIZE` = concurrency). |
+| `DOC_DOCX_MODE` | `per_job` | `per_job` (a Python process per document), `persistent` (a pool, `DOC_DOCX_POOL_SIZE` = concurrency) or `remote` (an HTTP call to the Python service at `DOC_PYWORKER_URL`: the container deployment). `DOC_PDF_ENGINE` = `none`, `weasyprint`, `prince` (child processes) or `remote` (same service). |
+| `DOC_BOOK_NAME_RULE` | `written` | `written` keeps the book names translators wrote (a finding says what DOC's rule would show); `doc` applies DOC's normalisation (`2ኛ ቆሮንቶስ` becomes `2 ኛ ቆሮንቶስ`), which DOC's own UI test for Amharic reads. |
 | `DOC_DOCX_RECYCLE_AFTER` / `DOC_DOCX_RSS_CEILING_MB` | 200 / 512 | A pooled worker is replaced after N jobs or when its resident size passes the ceiling. |
 | `DOC_JOBD_DOCX_DEADLINE_MS` | `300000` | One docx job; past it the worker and its process group are killed. |
 | `DOC_CORE_MODE` | `child` | `child` (killable process, `DOC_JOBD_CORE_DEADLINE_MS`) or `inline` (blocking pool; not cancellable). |
@@ -112,7 +165,7 @@ Follow one request: `grep '"request_id":"<id>"' log`.
 Error codes in `attempt failed` and in the FAILURE result: transient (retried): `catalog_unavailable`, `repo_unavailable`,
 `docx_worker_timeout`, `docx_worker_crashed`, `docx_worker_failed`, `docx_output_invalid`, `core_timeout`, `core_crashed`,
 `stage_timeout`, `job_ceiling`, `disk_space_low`, `output_io`, `scratch_io`, `email_retry`, `internal_panic`; permanent:
-`resource_not_found`, `book_not_found`, `invalid_request`, `docx_input_rejected`, `core_rejected`, `resource_unreadable`,
+`resource_unavailable` (every requested book is absent from the repository that holds it; a request whose language or resource the catalog does not have is *not* an error: it is left out of the document and `resource_not_in_catalog` is in the findings), `book_not_found`, `invalid_request`, `docx_input_rejected`, `core_rejected`, `resource_unreadable`,
 `usfm_unreadable`, `worker_lost_repeatedly` (the job took workers down more than max attempts + 2 times).
 
 ## 6. Metrics (`GET /metrics`, Prometheus text 0.0.4) and what each alarms on
@@ -146,7 +199,7 @@ its last catalog fetch), `catalog.last_success_unix_s`, `disk`. `status` stays `
 |---|---|---|
 | Requests get 503 `queue_unavailable` (with `Retry-After`) | Redis down or unreachable | Restore Redis. Nothing else: the API and workers retry with backoff and resume; polling keeps working after. If Redis lost its data see section 8. |
 | 503 `disk_space_low` | Output filesystem below `DOC_JOBD_MIN_FREE_MB` | Free space (the janitor already deletes expired outputs; lower `ASSET_CACHING_PERIOD` or `DOC_JOBD_OUTPUT_GRACE_MS`), or enlarge the volume. Requests resume by themselves. |
-| 501 `pdf_not_implemented` | `generate_pdf=true` on `POST /documents` | By design in this build: PDF is not implemented; send `generate_pdf=false` for HTML. |
+| 501 `pdf_not_implemented` | `generate_pdf=true` on `POST /documents` while the API role has no PDF engine configured (`DOC_PDF_ENGINE`) | Set `DOC_PDF_ENGINE=remote` and `DOC_PYWORKER_URL` on **both** the API and the worker (the compose file does); a PDF request is accepted by the API only when it knows an engine exists. |
 | Jobs stay `PENDING` | No live worker (see `doc_workers_alive`), or the queue is long, or the id is unknown (Redis lost its data) | Start workers; check `/health/status` `problems`. |
 | Many `attempt failed (transient)` with `catalog_unavailable` | The data API is down | Nothing to do; jobs retry with jittered backoff up to `max` attempts over minutes; raise `DOC_JOBD_MAX_ATTEMPTS` for longer outages. Reads are served from the stale catalog for up to 24 h (`serving the stale catalog`). |
 | `repo_unavailable` | Git host down, repository missing (`Repository not found` is not retried within a request), or a clone timeout | Check the host; the stale copy is used when there is one. |
