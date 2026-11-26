@@ -697,6 +697,7 @@ jobs:
           docker stats --no-stream --format 'table {{.Name}}\t{{.MemUsage}}\t{{.MemPerc}}\t{{.CPUPerc}}\t{{.PIDs}}' | tee ../ci-out/ops-stats-at-rest.txt
       - name: Scenarios
         working-directory: platform-ts
+        shell: bash
         run: OUT=../ci-out bash ci/ops.sh 2>&1 | tee ../ci-out/ops.txt
       - name: Summary
         if: always()

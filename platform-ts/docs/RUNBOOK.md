@@ -1,8 +1,52 @@
-# RUNBOOK: the TypeScript shell beside DOC's FastAPI
+# RUNBOOK: the TypeScript build as a container deployment (P7)
 
 For whoever is on call. Everything here was run on this prototype; commands are copy-paste. Evidence tags: RAN (executed in this task), READ (read in code or docs), INFERRED (reasoning, not executed).
 
-## 1. What runs
+## 0. The container deployment (P7)
+
+One file, `platform-ts/docker-compose.yml`, starts the whole system. Evidence: every statement marked RAN was executed in GitHub Actions on the fork (run URLs in `COMPARISON.md`); nothing here was run with a container engine on the authoring host (it has none).
+
+| Service | Image (built from) | Ports (host) | Volumes | Limits (default, override with the variable) | Health check |
+|---|---|---|---|---|---|
+| `valkey` | `valkey/valkey:9` (BSD-3) | none (internal 6379) | `valkey-data` (AOF `everysec`, `noeviction`; `docker/valkey.conf`) | 256 MB (`VALKEY_MEM_LIMIT`), 1 CPU | `valkey-cli ping` every 5 s |
+| `volume-init` | the worker image, runs once | none | the three data volumes | 64 MB | exits 0 when the volumes are writable by uid 1000 (api and worker wait for it) |
+| `api` | `docker/Dockerfile.shell` (node 26, light wasm module, no Python, no git) | none (internal 18301, reached through `gateway`) | `assets`, `output`, `work` | 768 MB (`API_MEM_LIMIT`), 1 CPU | `GET /health/status` |
+| `worker` | `docker/Dockerfile.worker` (python 3.13 + node + full wasm module + Prince + fonts) | none (internal 18302 health) | `assets`, `output`, `work` | 3 GB (`WORKER_MEM_LIMIT`), 2 CPUs; `WORKER_CONCURRENCY` 2, `DOCX_POOL_SIZE` 2 | worker heartbeat `/health` |
+| `gateway` | `docker/gateway` (nginx:alpine, DOC's file-server config plus the API reverse proxy) | **5005** (API), **8089** (files) | `output` read only | 128 MB | `/gateway-health` |
+| `frontend` | DOC's own `frontend/Dockerfile`, unchanged | **8001** | none | 512 MB | `/health` |
+
+Commands (run in `platform-ts/`):
+
+| Task | Command |
+|---|---|
+| First start (builds the images) | `docker compose up --build` ; open http://localhost:8001 |
+| Start detached and wait | `docker compose up -d --build && bash ci/wait-healthy.sh 300 valkey api worker gateway frontend` |
+| What runs, what is unhealthy | `docker compose ps -a` ; `docker stats --no-stream` |
+| Logs of one service (JSON lines, one per stage and attempt, with the request id) | `docker compose logs -f --since 10m worker` |
+| One request end to end | `bash ci/smoke.sh` (health, lookups, docx, html, pdf, UI) |
+| Graceful stop | `docker compose stop` (the worker gets 135 s to finish running jobs: `stop_grace_period`) ; `docker compose down` keeps the volumes, `down -v` removes documents, clones and queue |
+| Restart one service | `docker compose restart api` (restart policy `unless-stopped` also brings a crashed service back) |
+| Use Redis 8 instead of Valkey | `docker compose` with the `valkey` service's image replaced by `redis:8` (the suite passes on both; Redis 8's licence is RSALv2/SSPLv1/AGPLv3 at the operator's choice) |
+
+**Volumes and ownership.** Both application images run as the same non-root user (uid 1000). A named volume can come up owned by root, or by whichever container mounted it first, so the `volume-init` one-shot (a) makes the three data directories writable for uid 1000 before `api` and `worker` start, and (b) every secondary mount of `output` (the gateway, a test runner) uses `nocopy: true`: without it, the first read-only mount copied another image's ownership into the empty volume and every document failed with `EACCES` at placement (found in CI run 5). RAN.
+
+**Rollback (RAN, ops job).** Images are tagged by `IMAGE_TAG` (`doc-ts/api:<tag>`, `doc-ts/worker:<tag>`). To go back: `IMAGE_TAG=<previous> docker compose up -d --no-build api worker`. The volumes (documents, clones, the queue in Valkey) are the same, so an earlier document is still served and the queue is not lost; the `ops` CI job exercises exactly this switch (and back).
+
+**Resource limits and what happens at them.** A container over its memory limit is killed by the engine and restarted by the restart policy; the job it was running is recovered as stalled by the restarted worker (the same path as a `kill -9`, below). The worker's own per-format ceilings (`PDF_MEMORY_CEILING_MB`, `DOCX_MEMORY_CEILING_MB`) kill a runaway Python process first and retry the job; Prince runs as a child process inside the worker container and counts against the container's limit.
+
+**PDF engine.** `PDF_ENGINE=auto` (default): Prince when the request sets `use_prince` and the binary is installed, else WeasyPrint; a `PdfEngineFallback` finding says when Prince was wanted but not used. Prince is installed the way DOC's own Dockerfile installs it (the `.deb` from princexml.com, no licence file, so its non-commercial notice appears on the first page); on a CPU architecture without that package the image still builds and uses WeasyPrint.
+
+**Failure drills (what to expect, RAN in the `ops` job unless marked).**
+
+| Drill | Command | Expected |
+|---|---|---|
+| SIGTERM the worker mid-job | `docker compose stop -t 130 worker` | log `shutting down: no new jobs, draining the running ones`; exit 0; the job finishes (or a restarted worker recovers it); the document arrives |
+| SIGKILL the worker mid-job | `docker kill -s KILL $(docker compose ps -q worker)` | `unless-stopped` restarts it; the job is recovered as stalled after the lock expires (about 30 s); the document arrives |
+| Valkey restart | `docker compose restart valkey` | AOF replay; earlier task records still answer; a job in flight finishes |
+| API killed or stopped | `docker kill ...api` / `docker compose stop api` | restarts; SIGTERM exits 0 within seconds; clients retry (the UI polls) |
+| Roll to another image tag | `IMAGE_TAG=<tag> docker compose up -d --no-build api worker` | same volumes, same queue; earlier documents still served |
+
+## 1. What runs (processes; the container map is in section 0)
 
 ```
 client --> [gateway] --> API process   (node src/main.ts)        light wasm module, Hono, no job work
