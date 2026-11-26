@@ -248,7 +248,8 @@ class Service:
                 res = self._run(script, job_file, deadline_s, request_id, kind)
                 if kind == "pdf" and engine == "prince" and self._outcome(res) not in ("ok", "rejected"):
                     # Prince failed or hung on this document: a request must still end with a PDF.
-                    _log("warn", "engine_fallback", request_id, reason=f"prince {self._outcome(res)}", exit=res.get("exit") if isinstance(res.get("exit"), int) else None)
+                    first_exit = res.get("exit")
+                    _log("warn", "engine_fallback", request_id, reason=f"prince {self._outcome(res)}", exit=first_exit if isinstance(first_exit, int) else None)
                     engine, fallback = "weasyprint", True
                     self._write_engine(job_file, engine)
                     res = self._run(script, job_file, deadline_s, request_id, kind)

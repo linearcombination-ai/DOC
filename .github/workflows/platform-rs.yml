@@ -98,11 +98,14 @@ jobs:
           restore-keys: |
             cargo-${{ runner.os }}-${{ env.RUST_TOOLCHAIN }}-
 
-      - name: Redis server for the integration tests
+      - name: Python environment (mypy, WeasyPrint for the PDF test) and a Redis server for the integration tests
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq redis-server > /dev/null
           redis-server --version
           echo "DOC_SERVER_BIN=$(command -v redis-server)" >> "$GITHUB_ENV"
+          python3 -m venv ../.venv-ci
+          ../.venv-ci/bin/pip install -q mypy==2.4.1 weasyprint check-jsonschema pyyaml jsonschema
+          echo "DOC_TEST_PYTHON=$GITHUB_WORKSPACE/.venv-ci/bin/python" >> "$GITHUB_ENV"
 
       - name: Clippy
         run: |
@@ -114,18 +117,14 @@ jobs:
           set -o pipefail
           /usr/bin/time -v cargo test --workspace --locked -- --test-threads=2 2>&1 | tee ../cargo-test.log | tail -60
 
-      - name: Python types (mypy --strict) and the seam service
+      - name: Python types (mypy --strict)
         run: |
-          python3 -m venv ../.venv-ci && . ../.venv-ci/bin/activate
-          pip install -q mypy==2.4.1
-          mypy --strict python/seam_server.py python/docx_worker.py python/pdf_worker.py 2>&1 | tee ../mypy.log | tail -20
+          MYPYPATH=python/docx ../.venv-ci/bin/mypy --strict python/seam_server.py python/docx_worker.py python/pdf_worker.py ci/check_compose.py 2>&1 | tee ../mypy.log | tail -20
 
       - name: Static checks of container and compose files
         run: |
-          . ../.venv-ci/bin/activate
-          pip install -q check-jsonschema pyyaml
           curl -fsSL https://raw.githubusercontent.com/compose-spec/compose-spec/main/schema/compose-spec.json -o ../compose-spec.json
-          check-jsonschema --schemafile ../compose-spec.json docker-compose.yml docker-compose.e2e.yml 2>&1 | tee ../compose-schema.log
+          ../.venv-ci/bin/python ci/check_compose.py ../compose-spec.json docker-compose.yml docker-compose.e2e.yml ci/baseline-e2e.yml 2>&1 | tee ../compose-schema.log
           curl -fsSL -o ../hadolint https://github.com/hadolint/hadolint/releases/download/v2.12.0/hadolint-Linux-x86_64 && chmod +x ../hadolint
           ../hadolint --config .hadolint.yaml containers/core.Dockerfile containers/pyworker.Dockerfile containers/gateway/Dockerfile 2>&1 | tee ../hadolint.log
 

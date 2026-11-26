@@ -59,7 +59,7 @@ def _exit_when_orphaned(parent: int) -> None:
 
 
 def _weasyprint(src: Path, dst: Path) -> None:
-    from weasyprint import HTML  # type: ignore[import-untyped]  # noqa: PLC0415 (imported late: the module is heavy)
+    from weasyprint import HTML  # type: ignore[import-untyped,import-not-found,unused-ignore]  # noqa: PLC0415 (imported late: the module is heavy)
 
     HTML(filename=str(src)).write_pdf(str(dst))
 
