@@ -52,9 +52,19 @@ struct Input {
     usfm: Vec<UsfmIn>,
     #[serde(default = "default_compat")]
     bug_compat: String,
+    /// DOC's `CHECK_USFM` setting: repair USFM known to be defective (default on).
+    #[serde(default = "yes")]
+    check_usfm: bool,
+    /// DOC's `CHECK_ALL_BOOKS_FOR_LANGUAGE` setting: repair every book of a language with any known defective resource (default on).
+    #[serde(default = "yes")]
+    check_all_books_for_language: bool,
     /// DOC's `found_resource_lookup_dtos` for the title page, in request order (every resolved request, USFM or not). Absent: the simplified title.
     #[serde(default)]
     titles: Vec<TitleDto>,
+}
+
+fn yes() -> bool {
+    true
 }
 
 #[derive(Deserialize)]
@@ -206,6 +216,18 @@ pub fn parse_json(input: &str) -> String {
             &stitched
         } else {
             &book.source
+        };
+        // DOC repairs the USFM of resources it knows to be defective, chapter by chapter, before converting it (CHECK_USFM and CHECK_ALL_BOOKS_FOR_LANGUAGE, both on in DOC's .env)
+        let repaired;
+        let source: &str = if parsed.check_usfm && doc_canon::usfm_fixes::needs_fixing(&book.lang_code, &book.resource_type, &book.book_code, parsed.check_all_books_for_language) {
+            let labelled = if flag(req, "use_chapter_labels", false) { source.to_string() } else { doc_canon::usfm_fixes::remove_chapter_labels(source) };
+            repaired = doc_canon::usfm_fixes::fix_book(&labelled);
+            if repaired != source {
+                findings.push(json!({"code": "usfm_repaired", "severity": "info", "lang": book.lang_code, "book": book.book_code, "detail": "this resource is known to have USFM defects; DOC's repair rules were applied before parsing"}));
+            }
+            &repaired
+        } else {
+            source
         };
         let model = doc_canon::usfm::parse_book(source);
         let chapters: Vec<Value> = model

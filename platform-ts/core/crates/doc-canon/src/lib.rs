@@ -96,6 +96,8 @@ pub mod look;
 pub mod repairs;
 pub mod stitch;
 pub mod usfm;
+pub mod usfm_fixes;
+mod usfm_fixes_tables;
 
 pub fn fold(s: &str) -> String {
     canon::fold(s)
