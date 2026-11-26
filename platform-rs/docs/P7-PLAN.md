@@ -107,3 +107,35 @@ command that needs more than 3 GB.
 
 STET and Passages (tests excluded and listed in the report), randomized suites, the Sefer/kitchen fork question, merging or a pull request,
 registry pushes, Kubernetes, opening anything in Word (the captain's check).
+
+## 9. Deviations from this plan, and why (written as they happened)
+
+1. **Which jobs run is chosen by markers in the commit message** (`[e2e]`, `[e2e-ui]`, `[ops]`, `[all]`), not by `workflow_dispatch` inputs and not by the `[ci: ...]` list of the first draft:
+   `workflow_dispatch` only works for a workflow file on the default branch and I may touch no other branch. A run whose message contains `[e2e` is never cancelled by a later push.
+   (The TypeScript build found the same limit; the job layout, the `ci/` scripts and the compose overrides of this build follow its, which was finished first.)
+2. **No `volume-init` one-shot.** All application images run as uid 10001, so the first mount of a named volume cannot give it to the wrong owner; the gateway's and the test runner's
+   mounts of the output volume are `nocopy: true` (the TypeScript build's run 5 found that a secondary read-only mount of the still-empty volume copies the image's ownership into it).
+3. **The API role needs the PDF engine setting too** (`DOC_PDF_ENGINE=remote`, `DOC_PYWORKER_URL`): without it the API answers a typed 501 to every `generate_pdf` request. Found by the first local run of
+   DOC's `test_api.py` (every PDF test failed with `KeyError: 'task_id'`); the compose file and `scripts/stack-p7.sh` now give the shared environment to both roles.
+4. **The test runner is DOC's own API image built from DOC's own Dockerfile with only the Calibre step and the `mypy` lines removed** (`ci/make-baseline-dockerfile.sh`; DOC's Calibre installer failed in CI on 2026-11-24
+   and upstream is removing ePub). The same image is DOC's FastAPI baseline.
+5. **A request the catalog cannot resolve is no longer a permanent failure.** DOC drops it and builds the document (its own e2e test for `fa` expects a file); so does this build, and the findings say
+   `resource_not_in_catalog`. Only "every resource that resolved is a USFM book its repository has no file for" is permanent (`resource_unavailable`). Two P6 tests that pinned the old behaviour were rewritten.
+6. **`DOC_BOOK_NAME_RULE=written|doc`** (default `written`, the standing rule). DOC's own UI test for Amharic reads DOC's normalised book name (`2 ኛ ቆሮንቶስ`); with the rule on `doc` that test passes (proof job in CI).
+7. **The worker id is unique per process start.** The container operations run found that a restarted container had the same pid, hence the same worker id, as its dead predecessor, and the reaper skipped the
+   dead worker's job for good. Fixed (`w<pid>-<token>`) with a unit test; the operations run is repeated.
+8. **Valkey image** `valkey/valkey:9.2.0-alpine` for the stack; the Rust job copies the `valkey-server` binary out of the Debian image `valkey/valkey:9.2.0` for the integration tests.
+
+## 10. Status against the milestones (final)
+
+| # | Milestone | Status and proof |
+|---|---|---|
+| M0 | plan, branch, workspace | done; this file written first, commit `32f98194` |
+| M1 | container files, compose, gateway, remote Python seam | done; hadolint 2.15.1, actionlint, compose-spec schema, mypy `--strict`, `nginx -t` and the whole stack as plain processes (RAN on the authoring host) |
+| M2 | first green CI: images build, stack healthy | done; run 2 https://github.com/linearcombination-ai/DOC/actions/runs/45740243168 (healthy in 26 s, smoke incl. Prince) |
+| M3 | parity: DOC's `tests/e2e/doc` against DOC's FastAPI baseline | done; same run: **334 / 0 / 132 on both stacks, 0 tests differ** |
+| M4 | the frontend end to end: DOC's Playwright tests | done; run 3: 17 / 1 / 10 against 18 / 0 / 10; the one difference is the book-name rule, proved by run 4 (18 / 0 / 10 with `DOC_BOOK_NAME_RULE=doc`) |
+| M5 | operations in containers | done; run 5: every scenario passes (the first execution, run 3, found the worker-id bug); numbers in `COMPARISON.md` |
+| M6 | report and handover | `../report.md` (data directory), README, RUNBOOK section 0, COMPARISON |
+
+Risks that materialised: (a) the CI iterations were cheap (a full pass of DOC's API tests on both stacks takes 8 minutes), so the "images take 10 to 20 minutes" risk did not bite; (b) parity was large but fell to a small number of causes; (c) the container environment found a defect the host could not (section 9, item 7).

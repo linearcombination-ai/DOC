@@ -101,6 +101,7 @@ jobs:
         run: |
           curl -fsSL https://raw.githubusercontent.com/compose-spec/compose-spec/main/schema/compose-spec.json -o "$RUNNER_TEMP/compose-spec.json"
           python ci/check_compose.py "$RUNNER_TEMP/compose-spec.json" docker-compose.yml docker-compose.e2e.yml ci/baseline-e2e.yml ci/docker-compose.doc-baseline.yml ci/docker-compose.doc-ui-baseline.yml
+          python ci/check_build_paths.py docker-compose.yml
           docker compose -f docker-compose.yml config --quiet
           docker compose -f docker-compose.yml -f docker-compose.e2e.yml config --quiet
       - name: shell scripts
@@ -111,7 +112,7 @@ jobs:
       - name: mypy --strict, no typing.Any
         working-directory: platform-rs
         run: |
-          MYPYPATH=python/docx mypy --strict python/seam_server.py python/docx_worker.py python/pdf_worker.py e2e/e2e_remote.py ci/check_compose.py ci/e2e_table.py ci/loadgen.py ci/stats_summary.py
+          MYPYPATH=python/docx mypy --strict python/seam_server.py python/docx_worker.py python/pdf_worker.py e2e/e2e_remote.py ci/check_compose.py ci/check_build_paths.py ci/e2e_table.py ci/loadgen.py ci/stats_summary.py
           python ci/check_no_any.py python ci e2e scripts
 
   # ---------------------------------------------------------------------------------------------------------------------------------------------

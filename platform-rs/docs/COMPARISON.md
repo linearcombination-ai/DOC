@@ -1,8 +1,10 @@
-# Comparison sheet: Rust shell, P6 (`doc-p6-rs`)
+# Comparison sheet: Rust shell, P7 (`doc-full-rs`): the full system in containers
 
-Same headings as the TypeScript build. Evidence tags: **RAN** (executed on this host, output kept under `results/`), **READ** (source or
-document read), **INFERRED** (reasoning only). DOC commit `50de21cd3bab5c6f48961da64257118f6f0ead0e`. Host: 4 CPUs, 11.9 GB shared with the other build;
-the 1-minute load average is recorded next to every measurement. No docker.
+Same headings as the TypeScript build's file (the P6 headings, then three new ones: **Docker and CI**, **DOC e2e pass table**, **Memory at rest and under load per container**).
+Evidence tags: **RAN** (executed, output kept under `results/` or named), **READ** (source or document read), **INFERRED** (reasoning only). DOC commit
+`50de21cd3bab5c6f48961da64257118f6f0ead0e`. Two places ran things: the authoring host (4 CPUs, 11.9 GB, **no container engine ever run on it**; the P6 numbers below were measured there) and
+**GitHub Actions on the fork** `linearcombination-ai/DOC` (ubuntu-24.04 runners, Docker 28.0.4, Compose v2.38.2; every container number is from there, with the run URL).
+Sections written for P6 and not touched by P7 keep their P6 numbers and say so.
 
 Pinned versions (registry facts READ from crates.io / npm on 2026-11-25, `results/registry-versions.txt`): rustc/cargo 1.100.0; `redis` crate 1.8.3
 (latest; 136M downloads); tokio 1.54.1; axum 0.8.9; reqwest 0.13.5; rustls 0.23.46; tokio-rustls 0.26.6; base64 0.23.1; nix 0.31.4 (0.32.0 exists, not
@@ -12,7 +14,8 @@ needed); utoipa 6.0.0; tracing 0.1.44; Redis 8.12.0 and Valkey 9.2.0 (latest tag
 
 ## Run it
 
-* **RAN.** README commands, from a clean copy (`results/readme-run.log`, section at the end): environment, kitchen clone, release build, `stack_up`, then the requests.
+* **Containers (P7, RAN in CI):** `cd platform-rs && docker compose up --build`, then http://localhost:8001 (DOC's UI), API `:5005`, files `:8089`. In CI, with the images loaded, **every service is healthy 26 s after `docker compose up -d`** (run 2: `up_seconds=26`), then the smoke test (catalog lookups, docx 2.2 s, html 1.1 s, PDF through WeasyPrint 2.2 s, PDF through Prince 1.1 s with no fallback finding, the UI) takes 17 s. A first `docker compose up --build` on a 4 vCPU runner builds the four images in parallel in about 5 minutes (core 279 s cold, the slowest); on the captain's machine: INFERRED, not measured. `README.md` is the shortest path.
+* **Without containers (P6, RAN on the authoring host).** README commands, from a clean copy (`results/readme-run.log`, section at the end): environment, kitchen clone, release build, `stack_up`, then the requests.
 * Time to first response from a cold start of the stack (`stack_up`): about 2 s (Redis 0.5 s, mirror, daemon listening). **Time to first document, cold process, fake git:** 0.35 s per-job docx mode, 0.21 s persistent mode (`results/bench-*.json`, load 1.9 to 2.0). With the **real catalog and the real content host, cold, empty cache**: 10.8 s for English ULB + Translation Notes (Jude), docx (`results/real/real-network.json`, load 0.8; includes the clone of `en_tn`, 132 MB). Then 0.31 s for the HTML of the same request, 0.31 s for a new key, 0.054 s for a cache hit.
 * Local stack pieces: `scripts/stack.sh` (functions), `scripts/mock_data_api.py` (a data API mirror; SIGUSR1 toggles 503), `scripts/fake_smtp.py`, `scripts/build-servers.sh`.
 * Clean release build: 5 m 38 s (section "Build and test cycle times").
@@ -22,29 +25,13 @@ needed); utoipa 6.0.0; tracing 0.1.44; Redis 8.12.0 and Valkey 9.2.0 (latest tag
 * **Endpoints (RAN, `contract/openapi.json`, 15 paths):** the seven read endpoints and the four `/findings/...` routes (P4), `POST /documents_docx`, `POST /documents`, `GET /task_status/{id}`, `GET /health/status`, `GET /metrics`. One definition per type in `doc-contract` (serde for the bytes, utoipa for the document); the job endpoints' request and responses are in `crates/doc-contract/src/jobs.rs`.
 * **Legacy strings (RAN, golden e2e from P5, still green):** `PENDING`, `Receiving request`, `Locating assets`, `Provisioning asset files`, `Parsing asset files`, `Assembling content`, `Converting to Docx`, plus DOC's `Sending email` and `Converting to PDF`, then `{"state":"SUCCESS","result":"<key>"}` or `{"state":"FAILURE","result":{code,message,retryable}}` (the result is added to FAILURE; the legacy body has none). An unknown id is `PENDING`, as with Celery. A retrying job keeps its last progress string, so the UI never sees a false FAILURE (RAN).
 * **Findings:** `/findings/...` routes plus `X-Doc-Findings: N` (P4, RAN); each document has `<key>.findings.json` next to it; email problems and "no verses" notices are appended to it.
-* **Typed errors (RAN):** 422 FastAPI-shaped `detail` list; 413 over `DOC_JOBD_MAX_BODY_BYTES`; 503 `queue_unavailable` and `disk_space_low` with `Retry-After` and `retryable:true`; 501 `pdf_not_implemented` (when no PDF engine is configured).
+* **Typed errors (RAN):** 422 FastAPI-shaped `detail` list; 413 over `DOC_JOBD_MAX_BODY_BYTES`; 503 `queue_unavailable` and `disk_space_low` with `Retry-After` and `retryable:true`; 501 `pdf_not_implemented` (when the API role has no PDF engine configured: in the stack both roles are given `DOC_PDF_ENGINE=remote`).
 * **Request shapes (RAN, `results/shapes.json`, test `the_request_shapes_the_ui_can_post...`):** 17 shapes, each as docx and as HTML, all through the same pipeline: ULB alone; ULB+TN by book (lbo) and by chapter (blo); print layout; ULB+TN+BC; TN only; condensed TN only; BC only; ULB+TW as links, with definitions included, and with only the words used (`tw_mode`, a new optional field: the captain's "include or link"); Spanish ULB+TQ; two languages by book; two languages by chapter in two columns; the UI's body exactly as sent (with `generate_epub`, `use_prince`, and a field DOC's model does not have); by-verse (lvo, bvo; the backend capability the UI hides). 34 of 34 outputs valid (docx: valid package by `check_docx.py`; HTML: closing tags, verse markup). The negative control (a resource the catalog lacks) is a typed permanent failure `resource_not_found`. **Not verified:** that the *content* of each is what the content team wants; nobody opened any output in Word.
-* **HTML output (RAN):** DOC's `compose_document`, the "no verses" notice, DOC's header templates (rendered by a 40-line renderer of the three Jinja constructs they use, from DOC's own files), `enclose_html_content`; chapters in DOC's own markup (`div.chapter`, `span.verse`). Deliberate differences: titles are HTML-escaped (DOC does not escape); the `<script>`-free header is DOC's. **PDF (stretch, RAN):** `POST /documents` with `generate_pdf=true` runs the HTML then `python/pdf_worker.py` with WeasyPrint (default) or Prince (`DOC_PDF_ENGINE`), same supervision as docx; test `pdf_through_the_python_seam_and_a_hung_engine_is_killed` (a hung engine killed at its deadline, the retry produced a valid PDF, emailed once). **Prince is not exercised** (no binary here); `use_prince` in the request is ignored when the engine is WeasyPrint.
+* **HTML output (RAN):** DOC's `compose_document`, the "no verses" notice, DOC's header templates (rendered by a 40-line renderer of the three Jinja constructs they use, from DOC's own files), `enclose_html_content`; chapters in DOC's own markup (`div.chapter`, `span.verse`). Deliberate differences: titles are HTML-escaped (DOC does not escape); the `<script>`-free header is DOC's. **PDF (RAN):** `POST /documents` with `generate_pdf=true` runs the HTML, then the Python service converts it with Prince when the request says `use_prince` (WeasyPrint otherwise, and as the fallback when Prince is missing, fails or hangs, with `pdf_engine_fallback` in the findings); test `pdf_through_the_python_seam_and_a_hung_engine_is_killed` (a hung engine killed at its deadline, the retry produced a valid PDF, emailed once). **Prince ran in CI** (the `.deb` DOC's Dockerfile installs, version 16.1, no licence file): the smoke test's PDF with `use_prince` carries no fallback finding, and DOC's `test_use_prince` / `test_stream_pdf` PDF tests are in the 334.
 * **Email (RAN):** after the document, idempotent per task (section "Fault tolerance").
 * **Frontend types (G, RAN, `results/frontend-types.log`):** `contract/api.d.ts` generated by openapi-typescript 7.13.0 (0.18 s). `contract/frontend-dropin.ts` states how `frontend/src` calls the endpoints (store types copied from `SettingsStore.ts:8-27`, the request built as `GenerateDocument.svelte:78-100`, `poll()`, the error path) and compiles under `tsc --strict` 5.9.3 without changing the frontend. **Two mismatches** (`contract/frontend-mismatch.ts`, fails on purpose): (1) `assemblyStrategyKindStore` is typed `Writable<string>` (`SettingsStore.ts:9`), the contract's field is the union `'lbo'|'blo'|'lvo'|'bvo'|'stet'` (TS2322); (2) the UI sends `show_rg_chapter_commentary` (`GenerateDocument.svelte:99`), a field DOC's `DocumentRequest` does not have (pydantic ignores it; an object literal typed to the contract rejects it, TS2561). The UI's `res.json()` is `any`, so the poll and error paths type-check trivially. The health response gained fields; a client reading `[0].status` and `[1]` is unaffected.
-* **DOC's own API e2e tests (F, RAN, `results/e2e-*.log`):** `tests/e2e/doc/test_api.py` (42 tests, 11 skipped by DOC), unmodified, pointed at a service by the plugin `scripts/e2e/e2e_remote.py` (replaces `fastapi.testclient.TestClient` with an httpx client; the tests read the output directory). Real catalog and real git for both. Baseline: DOC's FastAPI + Celery (2 workers) + the .NET sidecar + Redis, started by `scripts/e2e/baseline.sh` (PATH includes the venv so `weasyprint` resolves; **no Prince binary on this host**).
-
-| | passed | failed | skipped by DOC | wall |
-|---|---|---|---|---|
-| DOC FastAPI + Celery (baseline) | 23 | 8 | 11 | 3 m 51 s |
-| doc-jobd (this build) | 18 | 13 | 11 | 8 m 32 s (clones cold) |
-
-Every difference, classified (31 tests; 0 tests fail in both):
-
-| Class | Tests | Cause |
-|---|---|---|
-| **Baseline fails, doc-jobd passes (8)** | the fr/pt-br `..._1c_c` and `1c` tests with TQ/TN | environmental on the baseline: DOC shells out to `prince` (`use_prince` default true in the UI body) and there is none here (`FileNotFoundError: 'prince'`); doc-jobd ignores `use_prince` and uses WeasyPrint. Not a regression in either; a Prince-equipped DOC would pass these. |
-| **doc-jobd fails, baseline passes (13)** | | |
-| A. resources outside the Primary catalog (7 tests: en TQ/TW with sw; fa ULB+TN) | `...en_tq...sw_tw...` x6, `fa_ulb_tn` | The pipeline locates resources from the *Primary* catalog query (as P4's read endpoints do); `en_tq`/`en_tw` for these requests resolve through DOC's other lookup path (many `en_tq` repositories exist with status Active, not Primary). Error `resource_not_found: no repository for en tq`. **A real gap**, not fixed. |
-| B. Writer per-book repositories (5 tests: bys, bjz) | `bys_*`, `bjz_*` | `book_not_found: has no USFM file for col/eph`. I added "prefer the repository named for the book" and a `.txt`-USFM fallback to the locator; the five still fail (the repository chosen or its file layout is still not DOC's). **A real gap**, not fixed. |
-| C. TN chapter intro (counted inside A's list: two sw/en TN-by-chapter tests) | | `resource_unreadable: FileNotFoundError tit/01/intro.md`: the core asks for a chapter intro file DOC tolerates when absent. **A core gap** (P3b reader), not fixed. |
-
-So the pass rate against the baseline is **18 of 31 (58 %) against 23 of 31 (74 %)**, and the baseline's own 8 failures are a missing Prince binary. The slice that works end to end is the interleaved ULB + TN/TQ/TW/BC for languages whose resources are in the primary catalog. **Not run:** the other test files (`test_assemble_by_*`, about 9,000 lines), `tests/e2e/stet` and `passages`, and the randomized suites; the PDF-specific tests were run (they pass through WeasyPrint) but the Prince ones cannot be.
+* **DOC's own API e2e tests (P7, RAN in CI, run 2 https://github.com/linearcombination-ai/DOC/actions/runs/45740243168):** `tests/e2e/doc`, unmodified, in DOC's own image, pointed at the gateway by the plugin `e2e/e2e_remote.py`; DOC's CI marker expression; 3 groups; the same tests on DOC's FastAPI + Celery + sidecar stack in the same run. **334 passed / 0 failed / 132 skipped on both stacks; 0 tests differ.** The per-file table is in "DOC e2e pass table". In P6 the same selection of `test_api.py` was 18 of 31 (DOC's stack 23 of 31 on a host without Prince); P7 closed the three gaps found then (resources outside the primary catalog, Writer per-book repositories, TN chapter intros) by porting DOC's `resource_lookup_dto`, its USFM file discovery and Writer stitching, and tolerating absent files, and added DOC's on-the-fly USFM repairs (98 languages), title page strings and localized book names.
+* **DOC's Playwright tests (P7, RAN in CI, run 3 https://github.com/linearcombination-ai/DOC/actions/runs/45741220207):** `frontend/tests/e2e/doc_test_*.ts` against DOC's own UI image, 4 shards: **17 passed / 1 failed / 10 skipped; DOC's own stack 18 / 0 / 10.** The one difference is a captain decision, not a defect: the test waits for the Amharic book name `2 ኛ ቆሮንቶስ` (DOC's normalisation inserts the space); the standing rule keeps the name as the translators wrote it (`2ኛ ቆሮንቶስ`). With `DOC_BOOK_NAME_RULE=doc` that test passes (proof job, run 4, see "DOC e2e pass table").
 
 ## Core boundary
 
@@ -65,6 +52,7 @@ So the pass rate against the baseline is **18 of 31 (58 %) against 23 of 31 (74 
 
 ## Docx seam
 
+* **P7: a third mode, `remote` (RAN in CI).** In the container stack the worker calls the Python service in its own container over HTTP (`POST /v1/docx`, `POST /v1/pdf`; job files on the shared volume; `python/seam_server.py`, 374 lines, mypy `--strict` clean). The service enforces the deadline (the conversion runs in its own process group and is killed at the deadline), caps concurrency (`PYWORKER_CONCURRENCY`), drains on SIGTERM, and falls back from Prince to WeasyPrint for one document when Prince is missing, fails or hangs (the finding `pdf_engine_fallback` is written next to the document). The client maps every failure to the transient or permanent codes of the child-process modes. What a separate container costs: one HTTP round trip per document (not isolated as a number); what it buys: the Python process and its memory are limited and restarted by the engine on their own (a crash of the Python service mid-PDF was recovered in 8 s in CI, see "Fault tolerance").
 * Two modes behind one switch (`DOC_DOCX_MODE=per_job|persistent`), one job format (`DocxJob` v2, with the request id): per-job = a `python3 -I docx_worker.py --job FILE` process per document (P5); persistent = a pool of `--serve` workers (JSON lines on stdin, answers and per-job `rss_kb`/`jobs_done` on stdout, JSON logs on stderr).
 * Pool supervision (RAN, four tests): a crash mid-job (SIGSEGV) is detected by the closed pipe, the worker replaced and the job retried; a hung worker plus its grandchild are killed with the process group at the per-job deadline and replaced; a worker is recycled after N jobs (`restarts.recycle >= 2` for 5 jobs with N = 2) and when its resident size passes the ceiling (30 MB leaked per job, ceiling 70 MB: retired); metrics and `/health/status` show the restarts by reason.
 * **Measured cost per job (RAN, release build, fake git, load 1.9 to 2.0, `results/bench-per_job.json`, `bench-persistent.json`, `seam-cost.json`):**
@@ -109,6 +97,23 @@ Every fault test, all RAN, against Redis 8.12.0 **and** Valkey 9.2.0 (`results/s
 | Bad configuration (8 problems at once) | all eight named, exit 2, nothing started |
 | Hung PDF engine | killed at its deadline, retry produced the PDF |
 
+**P7: the same faults in containers (RAN in CI, the `ops` job, `ci/ops.sh`; run 5 https://github.com/linearcombination-ai/DOC/actions/runs/45744949895, "OPS: all scenarios passed"; evidence in `results/run5-ops/`).** The P6 rows above stay as measured on the host.
+
+| Scenario (in the compose stack) | Result |
+|---|---|
+| Limits applied | memory limits valkey 256 MB, pyworker 3 GB, api 768 MB, worker 1 GB, gateway 128 MB, frontend 384 MB; restart `unless-stopped` on all six; stop timeouts 20 / 150 / 30 / 180 s (`docker inspect`) |
+| SIGTERM to the worker with a job in flight (`docker compose stop`) | exit 0 after 11 s, log line `draining`, the job finished (SUCCESS) |
+| `docker kill -s KILL` of the worker mid-job | the engine does **not** restart it (a manual stop; stated in the runbook); started by hand, healthy after 63 s; the job was taken back once its lease lapsed and the document arrived, 64 s after the kill (the default lease is 60 s) |
+| Crash of the worker process **inside** its container (what an out-of-memory kill looks like) | restarted by the policy (restart count 0 to 1), healthy after 6 s; the job recovered in 62 s |
+| Crash of the Python service mid-PDF | restarted by the policy in 7 s; the worker's call failed as a transient error and the retry produced the PDF, 8 s after the kill |
+| Valkey restart (`docker compose restart valkey`) with an old record and a job in flight | old record SUCCESS, in-flight job SUCCESS, a new job SUCCESS (append-only file on); 8 s |
+| API crash, then `docker compose stop api` | restarted by the policy in 6 s, a new job SUCCESS; SIGTERM exit 0 in 0 s |
+| 24 different documents at once | 24 of 24, 0 failed, wall 2.3 s, p50 1.0 s, p95 2.0 s |
+| Rollback: the application containers run another image tag on the same volumes | earlier document still served (HTTP 200), a new document SUCCESS, files 63 to 65 on the volume; switched back |
+| Soak, 10 minutes, 1 request per second, mixed docx / HTML / PDF, three in four repeats | 600 requests, **0 failed**, p95 1.51 s, max 2.51 s, **0 restarts of any container**; memory in the "Memory" section |
+
+**The first execution of this job found a real bug** (run 3, https://github.com/linearcombination-ai/DOC/actions/runs/45741220207): a job in flight when the worker crashed, or was killed, was never recovered and stayed in `Locating assets` (the kill and crash scenarios timed out after 240 s; in the soak six requests coalesced onto such stuck jobs and failed after 600 s). The worker id was `w<pid>`; in a container the process runs under an init process and has pid 7 on every start, so the restarted worker had the id of its dead predecessor, and the reaper (which, correctly, never takes back a delivery held by the calling worker's own id while the job is running) skipped the dead worker's job for good. The id is now unique per start (`w<pid>-<token>`, unit test); run 5 repeats every scenario green. None of the P6 host tests could see it (a restart on the host gets another pid).
+
 **Email (RAN, five tests, a fake SMTP server):** (1) normal: one message with the docx attached and a `Message-ID` derived from the task id; (2) the server refuses RCPT twice (450): the job retries the step and exactly **one** message goes out; (3) the worker is killed (SIGABRT hook) right after the server accepted the message, both before and after the store record was written: the redelivered job sends **nothing more** (1 message in all; in the first window the claim is in doubt and the document's findings say `email_in_doubt`); (4) the worker dies between the claim and the send: **0** messages, `email_in_doubt`, document delivered; (5) the server reads the whole message and closes without the final 250: ambiguous, not retried, `email_in_doubt`. Decision recorded: **at most once** (never twice) at the price of a possible lost email that is reported, because SMTP cannot make the last step exactly-once. A second *request* for the same document is a second email (the key is the task id).
 
 ## Observability
@@ -142,23 +147,118 @@ Dependencies (READ, `Cargo.lock`): about 290 crates for `doc-jobd` (P5: 283; P6 
 * Full test run: **100 tests, 1 m 36 s warm** (Valkey run) to 4 m 06 s (Redis run that included recompiling); the 15 P5 fault tests take about 25 s, the 25 P6 integration tests about 50 s.
 * Redis 8.12.0 from source: about 9 minutes (the LTO link dominates); Valkey 9.2.0: about 6 minutes.
 
+## Docker and CI
+
+All RAN on GitHub Actions on the fork `linearcombination-ai/DOC`, workflow `platform-rs`, branch `exp/platform-rs` (images are built into the runner and passed between jobs as tarballs; no registry, no secrets). Tool versions read from the runs: Docker engine 28.0.4, Compose v2.38.2, Rust 1.100.0, Python 3.13.18 (image) , Prince 16.1, WeasyPrint 68.1, Valkey 9.2.0, hadolint 2.15.1, actionlint 1.7.12, mypy 2.4.1, Playwright image v1.41.1 (DOC's own `testsDockerfile`), kitchen v0.1.24 `0090c0be`.
+
+**Image sizes** (`docker image ls`, run 2) against DOC's own images built from DOC's Dockerfiles in the same run:
+
+| This build | Size | DOC's stack | Size |
+|---|---:|---|---:|
+| `doc-rs/core` (api and worker, one image, two roles) | 187 MB | `wycliffeassociates/doc` (FastAPI and the Celery worker, one image; Calibre step removed) | 1,574 MB |
+| `doc-rs/pyworker` (Python 3.13, Prince, WeasyPrint, fonts) | 746 MB | `doc-usfmparser` (.NET sidecar) | 294 MB |
+| `doc-rs/gateway` (nginx) | 54 MB | `doc-fileserver` (nginx) | 142 MB |
+| `doc-rs/frontend` (DOC's, unchanged) | 968 MB | frontend (the same image) | 968 MB |
+| **Total for the stack** | **1,955 MB** (plus Valkey alpine) | **Total** | **2,978 MB** (plus Redis, Flower from the same API image) |
+
+**Build times** (job wall seconds, `build-info` artifacts): cold cache (run 1) core **279 s**, frontend 123 s, DOC api 186 s, DOC usfmparser 52 s, gateway 5 s, DOC fileserver 5 s; pyworker cold: its apt, Prince and font layers took under a minute and the rest 90 s (run 1's build failed at the pip step, run 2 reused the earlier layers: 90 s; a fully cold pyworker build was not timed, INFERRED about 2.5 minutes). Warm (layer cache from the previous run, only the Rust sources changed in run 4): core 140 s (the cargo-chef dependency layer is reused, the workspace crates recompile), otherwise 18 to 110 s. The image build is not what costs time in this build; the Rust compile is.
+
+**CI runs** (run URLs under https://github.com/linearcombination-ai/DOC/actions/runs/):
+
+| Run | Commit | What it proved | Wall |
+|---|---|---|---:|
+| 45739179994 | `31a34eef` | Rust job green (clippy, 117 tests against Valkey, 3 m 51 s cold); core image built; two red findings: hadolint 2.15 (JSON-form `HEALTHCHECK`) and `pip -c` refusing the extras in DOC's `requirements.txt` | 10 min 40 s |
+| **45740243168** | `276ccb6f` | **M2: stack up and healthy in 26 s, smoke passed (Prince PDF, no fallback)**; **M3: DOC's `tests/e2e/doc` 334 / 0 / 132 on this stack and on DOC's FastAPI stack, 0 tests differ** | **7 min 54 s** |
+| 45741220207 | `38b714d3` | DOC's Playwright tests: 17 / 1 / 10 against DOC's 18 / 0 / 10 (the book-name rule); ops run: **found the worker-id bug** (job lost after a container crash) | 31 min 53 s (ops) |
+| 45744743681 | `62a6eb4b` | the proof job: with `DOC_BOOK_NAME_RULE=doc` the failing shard passes (7 of 7) | 9 min 47 s |
+| 45744949895 | `6f17edd3` | worker-id fix; ops scenarios repeated (see "Fault tolerance") | see below |
+
+Jobs of run 2 (seconds): Plan 3, Static checks 38, Rust tests 185 (cache warm), builds 23 to 127 (cache warm), smoke 102 (includes loading the images), e2e on this stack 295 / 315 / 321 per group, e2e on DOC's stack 330 / 340 / 274, pass table 15. The whole workflow without `ops` and the UI jobs is **7 min 54 s**; with the UI jobs about 10 minutes; `ops` (with its 10-minute soak) about 30 minutes.
+
+**What the first CI runs found that no host test could:** (1) the API role of the compose file had no `DOC_PDF_ENGINE` (every PDF request was a typed 501), found by the first local e2e run before any container existed; (2) hadolint 2.15's `DL3025` (the host had 2.12); (3) `pip` refuses `fonttools[woff]` in a constraints file; (4) **the worker id collision after a container restart** (below).
+
+## DOC e2e pass table
+
+DOC's own `tests/e2e/doc` (pytest; marker expression `not all and not randomized and not english_randomized`, 3 groups with `pytest-split` and `-n auto` as in DOC's CI), STET and Passages (`tests/e2e/stet`, `tests/e2e/passages`) **excluded and not run** (out of this phase). 466 test cases collected. Run 2, https://github.com/linearcombination-ai/DOC/actions/runs/45740243168. RS = this build, DOC = DOC's FastAPI + Celery + .NET sidecar stack, same run, same live catalog and content hosts. The skips are DOC's own markers and are identical.
+
+| test file | tests | RS pass | RS fail | RS skip | DOC pass | DOC fail | DOC skip |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| test_api.py | 42 | 31 | 0 | 11 | 31 | 0 | 11 |
+| test_assemble_by_book.py | 42 | 35 | 0 | 7 | 35 | 0 | 7 |
+| test_assemble_by_book_docx.py | 19 | 19 | 0 | 0 | 19 | 0 | 0 |
+| test_assemble_by_book_udb.py | 3 | 0 | 0 | 3 | 0 | 0 | 3 |
+| test_assemble_by_book_udb_docx.py | 3 | 0 | 0 | 3 | 0 | 0 | 3 |
+| test_assemble_by_chapter.py | 37 | 37 | 0 | 0 | 37 | 0 | 0 |
+| test_assemble_by_chapter_udb.py | 3 | 0 | 0 | 3 | 0 | 0 | 3 |
+| test_assemble_by_verse_book_at_a_time.py | 1 | 0 | 0 | 1 | 0 | 0 | 1 |
+| test_assemble_by_verse_chapter_at_a_time.py | 2 | 0 | 0 | 2 | 0 | 0 | 2 |
+| test_assembly_by_chapter_sl_sr.py | 3 | 0 | 0 | 3 | 0 | 0 | 3 |
+| test_biel_helper.py | 1 | 1 | 0 | 0 | 1 | 0 | 0 |
+| test_dynamic_usfm_fixes.py | 306 | 208 | 0 | 98 | 208 | 0 | 98 |
+| test_resource_lookup.py | 1 | 1 | 0 | 0 | 1 | 0 | 0 |
+| test_send_email.py | 1 | 1 | 0 | 0 | 1 | 0 | 0 |
+| test_stream_pdf.py | 1 | 1 | 0 | 0 | 1 | 0 | 0 |
+| test_use_prince.py | 1 | 0 | 0 | 1 | 0 | 0 | 1 |
+| **total** | **466** | **334** | **0** | **132** | **334** | **0** | **132** |
+
+**Tests whose outcome differs between the stacks: 0.** Pytest seconds per group (1/2/3): this build 171 / 171 / 193, DOC's stack 174 / 200 / 183 (pytest's own time; the job totals above include starting the stack). The file list names `test_anchor_linking.py` (no test functions) and `test_english_combinatoric.py`, `test_randomized_combinatoric.py` (excluded by DOC's marker expression), which collect to nothing in this selection.
+
+**DOC's Playwright tests** (`frontend/tests/e2e/doc_test_*.ts`; `passages_test*.ts` and `stet_test*.ts` excluded, listed as not run), 4 shards, against each stack:
+
+| test file | tests | RS pass | RS fail | RS skip | DOC pass | DOC fail | DOC skip |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| doc_test_1.ts | 5 | 4 | **1** | 0 | 5 | 0 | 0 |
+| doc_test_2.ts | 5 | 2 | 0 | 3 | 2 | 0 | 3 |
+| doc_test_3.ts | 4 | 3 | 0 | 1 | 3 | 0 | 1 |
+| doc_test_4.ts | 3 | 3 | 0 | 0 | 3 | 0 | 0 |
+| doc_test_5.ts | 7 | 1 | 0 | 6 | 1 | 0 | 6 |
+| doc_test_6.ts | 2 | 2 | 0 | 0 | 2 | 0 | 0 |
+| doc_test_7.ts | 2 | 2 | 0 | 0 | 2 | 0 | 0 |
+| **total** | **28** | **17** | **1** | **10** | **18** | **0** | **10** |
+
+The one difference (`doc_test_1.ts`, "books retained in basket on back button to languages and then forward") is **classified: a captain decision, not a defect.** The test selects Amharic and waits for the book name `2 ኛ ቆሮንቶስ` in the list. DOC normalises every name it reads (`normalize_localized_book_name`), which inserts the space between the digit and the ordinal sign; the standing rule says names are kept as written (`2ኛ ቆሮንቶስ`) and findings say what DOC would have shown. **Proof that this is the only cause:** `DOC_BOOK_NAME_RULE=doc` (a setting of the stack, default `written`) makes that shard pass 7 of 7 in CI (run 4, https://github.com/linearcombination-ai/DOC/actions/runs/45744743681, job "with DOC's book-name rule"), so with the rule on the table is 18 / 0 / 10 as DOC's. Playwright seconds per shard (run 3): this build 282 (the two 2-minute timeouts of the failing test) / 20 / 34 / 14, DOC's stack 137 / 69 / 117 / 50.
+
+## Memory at rest and under load per container
+
+RAN in CI (`docker stats`; at rest after the smoke test in run 2; under load sampled every 5 s through each e2e group, three groups pooled, run 2). A container's memory is what Docker reports (cgroup, includes page cache of its files).
+
+| Container | At rest, after the smoke test (limit) | Under DOC's e2e load: median / peak |
+|---|---|---|
+| `api` (Rust) | 206 MiB (768 MiB) | 5 / 116 MiB |
+| `worker` (Rust runner, git, core child) | 96 MiB (1 GiB) | 305 / 444 MiB |
+| `pyworker` (Python docx, Prince, WeasyPrint) | 14 MiB (3 GiB) | 83 / 861 MiB |
+| `valkey` | 5 MiB (256 MiB) | 5 / 5 MiB |
+| `gateway` (nginx) | 5 MiB (128 MiB) | 6 / 6 MiB |
+| `frontend` (DOC's) | 48 MiB (384 MiB) | not sampled in the API jobs |
+| **Rust stack, sum of the peaks** | | **about 1.43 GB** (the peaks do not coincide) |
+| DOC `worker` (Celery) | | 786 / 1,805 MiB |
+| DOC `api` (FastAPI) | | 243 / 244 MiB |
+| DOC `usfmparserapi` | | 50 / 65 MiB |
+| DOC `redis`, `celery-dashboard` (Flower), `fileserver` | | 7 / 8, 40 / 41, 4 / 5 MiB |
+| **DOC stack, sum of the peaks** | | **about 2.17 GB** |
+
+**In the 10-minute soak** (run 5, one request per second, sampled every 10 s, 48 samples per container): `worker` median 116 / peak 118 MiB, `pyworker` 16 / 92, `api` 5 / 5, `frontend` 54 / 59, `valkey` 5 / 6, `gateway` 6 / 6 MiB; CPU peaks pyworker 124 %, worker 24 %. At rest before the ops scenarios: `api` 4, `worker` 4, `pyworker` 14, `valkey` 4, `gateway` 5, `frontend` 56 MiB (a freshly started stack; the catalog is not loaded until a lookup is made).
+
+Notes: the API's 206 MiB after the smoke test is the catalog snapshot (about 21,000 rows, held once a lookup endpoint has been used); under the e2e load the API only enqueues, so it stays small. The pyworker's peak (861 MiB) is Prince and WeasyPrint on whole books; its 3 GiB limit was never approached. **CPU peaks** (percent of one core): pyworker 203, worker 112, api 3; DOC's Celery worker 394. At rest and after the smoke test the whole Rust stack holds about 375 MiB.
+
 ## Weaknesses
 
-* **Parity gaps found by DOC's own tests (above):** resources outside the primary catalog, Writer per-book repositories, TN chapter intros. These are in the P5/P6 pipeline and the P3b reader, not in the runner; they are the honest reason for 18/31.
-* More hand-written code to own: about 1,700 lines of runner, store, lock and Lua, plus the SMTP client. 100 tests, but all written by the same author.
-* Email is at most once, not exactly once (stated above).
-* The core child costs about 10 ms per job and forces `Assembling content` to be published after it returns.
-* Prince is untested; WeasyPrint output was only checked as a valid PDF, not visually.
-* A pooled docx worker leaks nothing measurable in 31 minutes (recycled every 300 jobs), but the generator is the stdlib one; DOC's python-docx path (large imports, 131 MB) behind the same seam was not measured.
-* Redis without persistence loses queued state (documented, tested); Sentinel/Cluster not tried (the Lua touches keys outside `KEYS`; INFERRED that cluster mode would need hash tags).
-* The soak ran against fixtures, not the real network; real-network evidence is one cold run.
-* `DOC_TEMPLATES_DIR` ties the service to DOC's template files; the HTML header is DOC's, so a changed template changes the output.
+* **One of DOC's 28 UI tests differs by default** (the book-name rule, above): a captain decision with a one-line switch and a CI proof, but the default table reads 17 / 1 / 10 until the captain says whether DOC's normalisation or the translators' text should be the default.
+* **The docx is still the hand-written generator** (the proposed look's Word styles), not DOC's python-docx output; DOC's docx tests are text-based and pass, but nothing was opened in Word (the captain's check). HTML and PDF are DOC's own markup and CSS.
+* More hand-written code to own than the other build's queue library would be: about 1,700 lines of runner, store, lock and Lua, plus the SMTP client; 118 tests, all written by the same author.
+* **A deterministic environment found a bug the host could not:** the worker id was the process id, and in a container the process id repeats on every restart (the reaper then never took a dead worker's job back). Fixed and unit-tested, but it shows that the P6 fault tests (which restart with a different pid) did not cover "same identity after restart"; the ops run found it on its first execution.
+* Email is at most once, not exactly once (stated above). The core child costs about 10 ms per job and forces `Assembling content` to be published after it returns.
+* Prince runs in its non-commercial mode (a notice on page one), as DOC's own image does; the licence is not decided. Where the CPU architecture has no Prince package the build succeeds and PDFs come from WeasyPrint with a finding (CI built x86_64 only).
+* Redis or Valkey without persistence loses queued state (documented, tested in P6); the stack runs Valkey with the append-only file, and the Valkey restart scenario passed in CI; Sentinel and Cluster were not tried.
+* Disk: the output and assets volumes grow until the janitor and the 30-minute window expire them; no volume size limit is set in compose.
+* `DOC_TEMPLATES_DIR` ties the service to DOC's template files (copied into the image from `backend/templates/html`); a changed template changes the output.
 
 ## What was not done
 
-* Opening any output in Word, or visually comparing HTML/PDF with DOC's (the captain's check).
-* The e2e table covers `test_api.py` only (31 runnable tests); other e2e files, STET and Passages, and the randomized suites were not run. The three parity gaps above are not fixed.
-* Prince (no binary); PDF page-level checks.
-* Docker, Sentinel/Cluster, a gateway deployment (designed in RUNBOOK section 9, not built).
-* A soak with real-network clones; benchmarks above load 3; PSS memory; FastAPI throughput.
-* The TypeScript build was read only through its checkpoint (`data/doc-p6-ts/checkpoint.md`, 05:21Z): nothing in it applied to this build that was not already planned.
+* Opening any output in Word, or visually comparing HTML/PDF with DOC's (the captain's check); the OOXML validator on the P7 docx.
+* STET and Passages: routes and tests (`tests/e2e/stet`, `tests/e2e/passages`, `frontend/tests/e2e/stet_test*.ts`, `passages_test*.ts`) are out of this phase and were not run.
+* DOC's randomized and `all` e2e selections (excluded by DOC's own marker expression), DOC's `tests/unit`.
+* `docker compose up` on the captain's own machine, arm64 images, Docker Desktop on macOS or Windows (CI built and ran x86_64 on Linux runners only); a fresh-clone rehearsal of the README on a second machine (CI starts from a clean checkout, which covers the compose path, not the README text).
+* A container hitting its memory limit (the engine's OOM kill), CPU throttling, soaks longer than 10 minutes in containers (the P6 host soak was 31 minutes), faults injected during a soak, more than 24 documents at once in containers, multi-host, image vulnerability scanning, Kubernetes.
+* The Redis 8 suite in containers (CI ran Valkey 9.2.0; P6 passed the suite on both on the host).
+* The TypeScript build's own pass numbers were read (its report and checkpoint), not re-run; its code was not copied except where the report names it (CI scripts, the USFM repair module).

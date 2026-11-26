@@ -43,7 +43,14 @@ Optional settings (environment or a `.env` file next to `docker-compose.yml`, se
 
 ## Evidence
 
-CI runs on the fork (`linearcombination-ai/DOC`, workflow `platform-rs`, branch `exp/platform-rs`): images are built on the runner (never pushed), the stack is brought up with `docker compose`, and DOC's own tests run against it next to the same tests on DOC's FastAPI + Celery stack, in the same run. The results are filled in at the end of the work, in `docs/COMPARISON.md` and `../report.md`.
+CI runs on the fork (`linearcombination-ai/DOC`, workflow `platform-rs`, branch `exp/platform-rs`): images are built on the runner (never pushed), the stack is brought up with `docker compose`, and DOC's own tests run against it next to the same tests on DOC's FastAPI + Celery stack, in the same run:
+
+| DOC's own tests | this build | DOC's FastAPI stack |
+|---|---|---|
+| `tests/e2e/doc` (pytest, 466 test cases, DOC's CI marker expression) | **334 passed, 0 failed, 132 skipped** | 334 / 0 / 132 (0 tests differ) |
+| Playwright `frontend/tests/e2e/doc_test_*.ts` (28) | **17 passed, 1 failed, 10 skipped**; **18 / 0 / 10 with `DOC_BOOK_NAME_RULE=doc`** | 18 / 0 / 10 |
+
+Runs: API tests https://github.com/linearcombination-ai/DOC/actions/runs/45740243168 ; UI tests https://github.com/linearcombination-ai/DOC/actions/runs/45741220207 and the proof for the one UI difference https://github.com/linearcombination-ai/DOC/actions/runs/45744743681 ; operations https://github.com/linearcombination-ai/DOC/actions/runs/45744949895 (SIGTERM drain, a crashed worker, API and Python service, Valkey restart, 24 documents at once, rollback to another image tag, a 10-minute soak with 600 requests: all pass). The one UI difference is a decision for you, not a defect: DOC normalises the Amharic book name `2ኛ ቆሮንቶስ` to `2 ኛ ቆሮንቶስ` and its own test reads that; the standing rule keeps the name as the translators wrote it, so the default is `written`. Set `DOC_BOOK_NAME_RULE=doc` in `.env` to get DOC's behaviour. Every number (image sizes, build and CI times, memory per container) is in `docs/COMPARISON.md`; `report.md` (delivered next to this source copy) tells the whole story.
 
 ## What it does not do yet
 
