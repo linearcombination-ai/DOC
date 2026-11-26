@@ -261,6 +261,17 @@ jobs:
           docker compose up -d --no-build
           bash ci/wait-healthy.sh 300 valkey api worker gateway frontend
           echo "up_seconds=$(( $(date +%s) - start ))" | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Versions (docker, compose, runtimes inside the containers)
+        working-directory: platform-ts
+        run: |
+          mkdir -p ../ci-out
+          {
+            docker version --format 'docker server {{.Server.Version}} client {{.Client.Version}}'
+            docker compose version
+            docker compose exec -T worker sh -c 'node --version; python3 --version; prince --version | head -1; python3 -c "import weasyprint, jinja2; print(\"weasyprint\", weasyprint.__version__, \"jinja2\", jinja2.__version__)"'
+            docker compose exec -T api node --version
+            docker compose exec -T valkey valkey-server --version
+          } 2>&1 | tee ../ci-out/versions.txt
       - name: Smoke test
         working-directory: platform-ts
         run: |

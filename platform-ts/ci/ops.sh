@@ -2,7 +2,7 @@
 # Operations scenarios against the running compose stack (run in the directory of docker-compose.yml, after the stack is healthy):
 #   OUT=ci-out SOAK_MINUTES=8 bash ci/ops.sh [scenario ...]        scenarios: limits drain kill valkey api burst rollback soak   (default: all, in that order)
 # One line per check: PASS/FAIL name seconds detail. Exit 1 if any FAIL. Evidence (logs, JSON) goes to $OUT/ops-*.
-# The scenarios are the P6 fault tests carried over to containers: SIGTERM drain, SIGKILL mid-job, Valkey restart, API kill, burst, soak, rollback.
+# The scenarios are the P6 fault tests carried over to containers: SIGTERM drain, SIGKILL mid-job (docker kill and a crash inside the container), Valkey restart, API crash, burst, soak, rollback.
 set -uo pipefail
 API="${API:-http://localhost:5005}"; FILES="${FILES:-http://localhost:8089}"
 OUT="${OUT:-ci-out}"; mkdir -p "$OUT"
@@ -23,6 +23,10 @@ wait_running() { # service seconds: running (and healthy when it has a check)
   done
   return 1
 }
+crash() { # service process-pattern: SIGKILL the service's main process from inside its container (a crash; `docker kill` counts as a manual stop and is not restarted)
+  docker exec "$(cid "$1")" sh -c "for p in /proc/[0-9]*; do pid=\${p#/proc/}; [ \"\$pid\" = \"\$\$\" ] && continue; if tr '\\0' ' ' < \$p/cmdline 2>/dev/null | grep -q '$2'; then kill -9 \$pid; fi; done" >/dev/null 2>&1
+}
+restart_count() { docker inspect -f '{{.RestartCount}}' "$(cid "$1")" 2>/dev/null; }
 until_processing() { # task id, timeout: wait until the job has left the queue and is working (any state but the first two)
   local deadline=$(( $(now) + $2 )) st
   while [ "$(now)" -lt "$deadline" ]; do
@@ -45,10 +49,10 @@ if want limits; then
     for s in valkey api worker gateway frontend; do
       id=$(cid "$s"); [ -z "$id" ] && continue
       mem=$(docker inspect -f '{{.HostConfig.Memory}}' "$id")
-      echo "$s $(( mem / 1048576 )) $(docker inspect -f '{{.HostConfig.NanoCpus}} {{.HostConfig.RestartPolicy.Name}} {{if .Config.StopTimeout}}{{.Config.StopTimeout}}{{else}}default{{end}}' "$id")"
+      echo "$s $(( mem / 1048576 )) $(docker inspect -f '{{.HostConfig.NanoCpus}} {{.HostConfig.RestartPolicy.Name}} {{index .Config "StopTimeout"}}' "$id")"
     done
   } | tee "$OUT/ops-limits.txt"
-  if awk 'NR>1 && $2==0 {exit 1}' "$OUT/ops-limits.txt"; then pass limits-applied "$(( $(now) - t ))" "every service has a memory limit"; else bad limits-applied "$(( $(now) - t ))" "a service runs without a memory limit"; fi
+  if awk 'NR>1 && $2==0 {bad=1} END {exit bad}' "$OUT/ops-limits.txt"; then pass limits-applied "$(( $(now) - t ))" "every service has a memory limit"; else bad limits-applied "$(( $(now) - t ))" "a service runs without a memory limit"; fi
 fi
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------
@@ -68,18 +72,29 @@ fi
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------
 if want kill; then
+  # (a) `docker kill -s KILL`: the engine treats it as a manual stop, so the restart policy does not act; an operator starts the service again. The job must still be recovered.
   t=$(now)
   id=$(lg submit docx 28) && stage=$(until_processing "$id" 60)
-  echo "kill: task $id in state '$stage' when the worker is SIGKILLed"
+  echo "kill: task $id in state '$stage' when the worker is SIGKILLed with docker kill"
   docker kill -s KILL "$(cid worker)" >/dev/null 2>&1; k0=$(now)
-  restarted=no; for _ in $(seq 1 30); do sleep 2; [ "$(docker inspect -f '{{.State.Status}}' "$(cid worker)" 2>/dev/null)" = running ] && { restarted=yes; break; }; done
+  restarted=no; for _ in $(seq 1 15); do sleep 2; [ "$(docker inspect -f '{{.State.Status}}' "$(cid worker)" 2>/dev/null)" = running ] && { restarted=yes; break; }; done
   [ "$restarted" = no ] && docker compose start worker >/dev/null 2>&1
   wait_running worker 120
-  r_s=$(( $(now) - k0 ))
   res=$(lg wait "$id" 240); state=$(echo "$res" | python3 -c 'import sys,json; print(json.load(sys.stdin)["state"])' 2>/dev/null)
   docker compose logs --no-color --timestamps worker > "$OUT/ops-kill-worker.log" 2>&1
-  if [ "$state" = SUCCESS ]; then pass sigkill-midjob-recovery "$(( $(now) - t ))" "document arrived after SIGKILL; restart policy acted by itself: $restarted (worker healthy again after ${r_s}s)"; else bad sigkill-midjob-recovery "$(( $(now) - t ))" "state=$state restarted_by_policy=$restarted $res"; fi
-  [ "$restarted" = yes ] && pass restart-policy "$r_s" "unless-stopped restarted the SIGKILLed worker" || bad restart-policy "$r_s" "the SIGKILLed worker was not restarted by the policy within 60 s (started by hand)"
+  if [ "$state" = SUCCESS ]; then pass sigkill-midjob-recovery "$(( $(now) - t ))" "document arrived after docker kill -s KILL; restart policy acted by itself: $restarted (manual kill: started by hand, healthy after $(( $(now) - k0 ))s)"; else bad sigkill-midjob-recovery "$(( $(now) - t ))" "state=$state restarted_by_policy=$restarted $res"; fi
+  # (b) a crash of the worker process inside its container (what an OOM kill or a segfault looks like to the engine): the restart policy acts and the job is recovered
+  t=$(now)
+  id=$(lg submit docx 26) && stage=$(until_processing "$id" 60)
+  before=$(restart_count worker)
+  echo "crash: task $id in state '$stage' when the worker process is SIGKILLed inside its container"
+  crash worker '^node src/worker-main'; k0=$(now)
+  ok=no; for _ in $(seq 1 30); do sleep 2; [ "$(restart_count worker)" != "$before" ] && [ "$(docker inspect -f '{{.State.Status}}' "$(cid worker)" 2>/dev/null)" = running ] && { ok=yes; break; }; done
+  wait_running worker 120; r_s=$(( $(now) - k0 ))
+  res=$(lg wait "$id" 240); state=$(echo "$res" | python3 -c 'import sys,json; print(json.load(sys.stdin)["state"])' 2>/dev/null)
+  docker compose logs --no-color --timestamps worker > "$OUT/ops-crash-worker.log" 2>&1
+  if [ "$ok" = yes ]; then pass restart-policy-worker "$r_s" "unless-stopped restarted the crashed worker (restart count $before -> $(restart_count worker)), healthy again after ${r_s}s"; else bad restart-policy-worker "$r_s" "no restart by the policy within 60 s"; fi
+  if [ "$state" = SUCCESS ]; then pass crash-midjob-recovery "$(( $(now) - t ))" "document arrived after the worker process crashed mid-job"; else bad crash-midjob-recovery "$(( $(now) - t ))" "state=$state $res"; fi
 fi
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------
@@ -98,15 +113,15 @@ fi
 # ---------------------------------------------------------------------------------------------------------------------------------------------
 if want api; then
   t=$(now)
-  docker kill -s KILL "$(cid api)" >/dev/null 2>&1; k0=$(now)
-  restarted=no; for _ in $(seq 1 30); do sleep 2; [ "$(docker inspect -f '{{.State.Status}}' "$(cid api)" 2>/dev/null)" = running ] && { restarted=yes; break; }; done
-  [ "$restarted" = no ] && docker compose start api >/dev/null 2>&1
-  wait_running api 120
+  before=$(restart_count api)
+  crash api '^node src/main'; k0=$(now)
+  ok=no; for _ in $(seq 1 30); do sleep 2; [ "$(restart_count api)" != "$before" ] && [ "$(docker inspect -f '{{.State.Status}}' "$(cid api)" 2>/dev/null)" = running ] && { ok=yes; break; }; done
+  wait_running api 120; r_s=$(( $(now) - k0 ))
   new=$(lg submit doc 14) && ns=$(lg wait "$new" 120 | python3 -c 'import sys,json; print(json.load(sys.stdin)["state"])' 2>/dev/null)
-  # SIGTERM on the API: exits 0 promptly
+  # SIGTERM on the API (docker compose stop): exits 0 promptly
   s0=$(now); docker compose stop -t 30 api >/dev/null 2>&1; stop_s=$(( $(now) - s0 )); code=$(docker inspect -f '{{.State.ExitCode}}' "$(cid api)" 2>/dev/null)
   docker compose start api >/dev/null 2>&1; wait_running api 120
-  if [ "$ns" = SUCCESS ] && [ "$code" = 0 ]; then pass api-kill-and-sigterm "$(( $(now) - t ))" "restart policy acted: $restarted (healthy after $(( $(now) - k0 - stop_s ))s incl. test); new job $ns; SIGTERM exit $code in ${stop_s}s"; else bad api-kill-and-sigterm "$(( $(now) - t ))" "new=$ns sigterm_exit=$code restarted=$restarted"; fi
+  if [ "$ok" = yes ] && [ "$ns" = SUCCESS ] && [ "$code" = 0 ]; then pass api-crash-and-sigterm "$(( $(now) - t ))" "the policy restarted the crashed API (healthy after ${r_s}s); new job $ns; SIGTERM exit $code in ${stop_s}s"; else bad api-crash-and-sigterm "$(( $(now) - t ))" "restarted=$ok new=$ns sigterm_exit=$code"; fi
 fi
 
 # ---------------------------------------------------------------------------------------------------------------------------------------------

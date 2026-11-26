@@ -91,3 +91,31 @@ At every milestone read `data/doc-full-rs/checkpoint.md` (read only) and record 
 ## 8. Change log
 
 * 2026-11-25 M0: first version.
+* 2026-11-26 M2/M3 (after the host reboot, relaunch): the plan held; deviations, each found by a CI run, are in section 9. Status of every milestone is in section 10.
+
+## 9. What changed from this plan, and why (all found by running, not by reading)
+
+| # | Plan said | What happened | Evidence |
+|---|---|---|---|
+| 1 | api and worker images run as different non-root users | Two images writing the same named volumes raced on first mount and one lost (`EACCES`); then a read-only secondary mount copied another image's ownership into the empty volume. Fixed with one uid (1000), a `volume-init` one-shot and `nocopy: true` on every secondary mount | CI runs 2 and 5 |
+| 2 | `docker compose up --wait` | Replaced by `ci/wait-healthy.sh` (a `--wait` over a one-shot service that exits 0 behaves differently across compose versions) | `ci/wait-healthy.sh` |
+| 3 | api image has no git | It has git: the lookups that read repositories (`book_codes_for_lang_from_usfm_only`, `chapters_in_books`) clone them, as DOC's API does | `docker/Dockerfile.shell` |
+| 4 | e2e jobs run on every push | Too slow for every push: the plan job reads markers in the head commit message (`[e2e]`, `[e2e-ui]`, `[ops]`, `[all]`); `workflow_dispatch` only works for a workflow file on the repository's default branch, so it cannot be used from this branch | `.github/workflows/platform-ts.yml` job `plan` |
+| 5 | HTML in DOC's markup was one of three known gaps | It was six: DOC's header templates and CSS (jinja2 in the worker), `hr` separators, the title page strings (`get_languages_title_page_strings`), localized book names (USFM markers, manifest, `front/title.txt`, Writer repositories stitched first), an empty document when nothing resolves, and **DOC's on-the-fly USFM repairs for 98 languages** (`usfm_error_detection_and_fixes.py`, ported with `fancy-regex`) | CI run 6 (first tables), run 7 (all green) |
+| 6 | DOC's baseline from DOC's Dockerfile minus Calibre | As planned (`ci/make-baseline-dockerfile.sh`); it also served as the test-runner image for both stacks | CI run 4 onward |
+| 7 | the test runner reads the output volume | Same, read only and `nocopy` | `docker-compose.e2e.yml` |
+| 8 | Prince would be checked | Smoke test now makes a PDF with `use_prince: true` and fails if a `PdfEngineFallback` finding exists | `ci/smoke.sh`, run 6 and 7 smoke |
+| 9 | a missing book is a permanent error | DOC builds an empty book; so the pipeline does, with a finding. Only a request where **every** requested book is absent from its repository is a permanent `resource_unavailable` (no content at all) | `src/jobs/pipeline.ts`, `test/job.fault.test.ts` |
+| 10 | on the last attempt a repository that cannot be fetched is an error | The last attempt builds the document from the repositories it has and returns a `RepoNotFetched` finding for each missing one (a request ends with a document); if none could be fetched it is still the transient error | `src/jobs/pipeline.ts` |
+
+## 10. Milestone status
+
+| M | Status | Proof |
+|---|---|---|
+| M0 | done | this file, committed first |
+| M1 | done | container files, compose, workflow; hadolint, compose-spec schema, actionlint clean; stack as plain processes |
+| M2 | done | CI run 3: images build, stack healthy, smoke passes |
+| M3 | done | CI run 7: DOC's `tests/e2e/doc` 334 passed / 0 failed / 124 skipped on this stack and on DOC's FastAPI baseline, 0 tests differ |
+| M4 | done | CI run 7: DOC's Playwright `doc_test_*.ts` 18 / 0 / 10 on both stacks |
+| M5 | see COMPARISON.md "Docker and CI" and the ops results | CI `ops` job |
+| M6 | report, handover | `report.md` |
