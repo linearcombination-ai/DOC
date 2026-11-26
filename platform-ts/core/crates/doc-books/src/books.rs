@@ -68,7 +68,7 @@ impl Failure {
         self.book = Some(book.to_string());
         self
     }
-    fn as_finding(&self, lang: &str) -> Finding {
+    pub(crate) fn as_finding(&self, lang: &str) -> Finding {
         let mut f = Finding::new(self.kind, "error").lang(lang).detail(self.detail.clone());
         if let Some(r) = &self.repo {
             f = f.repo(r);
@@ -184,11 +184,16 @@ fn names_from_usfm(tree: &Tree, located: &Located, lang: &str) -> Result<Vec<(St
 
 /// `get_book_name_from_title_file`: the whole title file, cleaned.
 fn title_file_name(tree: &Tree, located: &Located) -> Result<String, Failure> {
-    let path = format!("{}/front/title.txt", located.dir);
+    title_file_name_in(tree, &located.dir)
+}
+
+/// [`title_file_name`] for a repository directory.
+pub fn title_file_name_in(tree: &Tree, dir: &str) -> Result<String, Failure> {
+    let path = format!("{dir}/front/title.txt");
     if !tree.exists(&path) {
         return Ok(String::new());
     }
-    let raw = read(tree, &path, &located.dir)?.unwrap_or("");
+    let raw = read(tree, &path, dir)?.unwrap_or("");
     Ok(crate::pystr::strip(&names::remove_xml_incompatible_chars(raw)).to_string())
 }
 

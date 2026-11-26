@@ -663,3 +663,58 @@ jobs:
           name: ui-table
           path: ci-out
           retention-days: 30
+
+  # ---------------------------------------------------------------------------------------------------------------------------------------------
+  # Operations in containers (the P6 fault, burst and soak work carried over): limits, SIGTERM drain, SIGKILL mid-job, Valkey restart, API kill,
+  # 24 documents at once, rollback to another image tag on the same volumes, and a soak with memory sampled per container.
+  # ---------------------------------------------------------------------------------------------------------------------------------------------
+  ops:
+    name: Operations scenarios on the compose stack
+    needs: [plan, build]
+    if: ${{ always() && needs.build.result == 'success' && needs.plan.outputs.ops == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      IMAGE_TAG: local
+      SOAK_MINUTES: "10"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: image-*
+          path: ${{ runner.temp }}/images
+          merge-multiple: true
+      - name: Load images
+        run: for f in "${{ runner.temp }}"/images/*.tar; do docker load -i "$f"; done
+      - name: Retag the stack's images for compose
+        run: for i in api worker gateway frontend; do docker tag "doc-ts/$i:ci" "doc-ts/$i:local"; done
+      - name: Start the stack
+        working-directory: platform-ts
+        run: |
+          mkdir -p ../ci-out
+          docker compose up -d --no-build
+          bash ci/wait-healthy.sh 300 valkey api worker gateway frontend
+          docker stats --no-stream --format 'table {{.Name}}\t{{.MemUsage}}\t{{.MemPerc}}\t{{.CPUPerc}}\t{{.PIDs}}' | tee ../ci-out/ops-stats-at-rest.txt
+      - name: Scenarios
+        working-directory: platform-ts
+        run: OUT=../ci-out bash ci/ops.sh 2>&1 | tee ../ci-out/ops.txt
+      - name: Summary
+        if: always()
+        run: |
+          { echo '### Operations scenarios'; echo '```'; cat ci-out/ops.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Logs
+        if: always()
+        working-directory: platform-ts
+        run: |
+          docker compose ps -a > ../ci-out/compose-ps.txt
+          docker compose logs --no-color --timestamps --tail=3000 > ../ci-out/compose-logs.txt 2>&1
+      - name: Tear down
+        if: always()
+        working-directory: platform-ts
+        run: docker compose down -v
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ops-results
+          path: ci-out
+          retention-days: 14

@@ -14,9 +14,9 @@ import { readdir, readFile, statfs, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import type { Redis } from "ioredis";
 import type { Acquirer } from "../acquirer/acquirer.ts";
-import { pythonText } from "../acquirer/listing.ts";
+import { listRepos, pythonText, readTexts } from "../acquirer/listing.ts";
 import type { Config } from "../config.ts";
-import type { LookupDto, Repo } from "../core/seam.ts";
+import type { Listing, LookupDto, Repo, Texts } from "../core/seam.ts";
 import { noMetrics, type Metrics } from "../obs/metrics.ts";
 import type { Lookup } from "../service/lookup.ts";
 import type { Log } from "../util/log.ts";
@@ -197,8 +197,10 @@ export async function runDocumentJob(deps: PipelineDeps, data: JobData, ctx: Job
     await ctx.setState(STAGE.parsing);
     const parsed = await timed(STAGE.parsing, () =>
       stage(STAGE.parsing, jobs.STAGE_PARSE_DEADLINE_MS, ctx.signal, async (signal) => {
-        const { findings: inputFindings, ...input } = await buildParseInput(data.request, found.resolved.filter((r) => !provisioned.missing.has(r.dto.url)), provisioned);
-        const out = await deps.core.parse({ ...input, bug_compat: "fixed" }, signal);
+        const { findings: inputFindings, ...input } = await buildParseInput(deps, data.request, found.resolved.filter((r) => !provisioned.missing.has(r.dto.url)), provisioned);
+        // DOC's title page strings come from every resolved request (found_resource_lookup_dtos), in request order
+        const titles = found.resolved.map((r) => ({ lang_code: r.request.lang_code, lang_name: r.dto.lang_name, localized_lang_name: r.dto.localized_lang_name, resource_type_name: r.dto.resource_type_name, book_code: r.request.book_code }));
+        const out = await deps.core.parse({ ...input, titles, bug_compat: "fixed" }, signal);
         return { ...out, findings: [...inputFindings, ...out.findings] };
       }),
     );
@@ -382,7 +384,7 @@ async function provision(deps: PipelineDeps, resolved: readonly Resolved[], sign
 }
 
 /** The shell's half of the parse call: list and read what the core's readers will look at (a book's subtree of a TN repository; the book's USFM file or its Writer chapter files). */
-async function buildParseInput(request: Record<string, unknown>, resolved: readonly Resolved[], provisioned: Provisioned) {
+async function buildParseInput(deps: PipelineDeps, request: Record<string, unknown>, resolved: readonly Resolved[], provisioned: Provisioned) {
   const dtos: Record<string, unknown>[] = [];
   const tree: Record<string, { files: string[]; texts: Record<string, string | null> }> = {};
   const usfm: Record<string, unknown>[] = [];
@@ -393,7 +395,8 @@ async function buildParseInput(request: Record<string, unknown>, resolved: reado
     const langName = r.repo?.language.english_name ?? r.dto.lang_name;
     if (USFM_TYPES.has(r.request.resource_type)) {
       const found = await findUsfm(root, r.dto.dir, r.request.book_code);
-      const base = { lang_code: r.request.lang_code, lang_name: langName, book_code: r.request.book_code, resource_type_name: r.dto.resource_type_name };
+      const nameInput = await bookNameInput(deps, r, root);
+      const base = { lang_code: r.request.lang_code, lang_name: langName, book_code: r.request.book_code, resource_type: r.request.resource_type, resource_type_name: r.dto.resource_type_name, name_input: nameInput };
       if (found.kind === "none") {
         // DOC builds an empty book (no chapters) and goes on; so do we, and say so
         findings.push({ code: "UsfmNotFound", severity: "warn", lang: r.request.lang_code, book: r.request.book_code, repo: r.dto.url, detail: `${r.dto.url} has no USFM file for ${r.request.book_code}; the book is empty in the document` });
@@ -417,6 +420,17 @@ async function buildParseInput(request: Record<string, unknown>, resolved: reado
     throw new JobError("resource_unavailable", `none of the requested resources has content for the requested books: ${findings.map((f) => f.detail).join("; ")}`, { transient: false, detail: { findings } });
   }
   return { request, dtos, tree, usfm, findings };
+}
+
+/**
+ * What the core's book-name rules read (DOC's `get_localized_book_name`): the repository listed to depth 2 and the texts of its manifest files and
+ * `front/title.txt`. The core applies the rules after it has the book's USFM (stitched, for a Writer repository), so the shell only gathers files.
+ */
+async function bookNameInput(deps: PipelineDeps, r: Resolved, root: string): Promise<{ url: string; dir: string; listing: Listing; texts: Texts; en_rg_dir: string }> {
+  const { listing, real } = await listRepos(new Map([[r.dto.dir, root]]));
+  const wanted = (listing.repos[r.dto.dir]?.entries ?? []).filter((e) => !e.d && /(^|\/)manifest\.(yaml|json)$/.test(e.p)).map((e) => e.p);
+  const texts = await readTexts([...wanted, `${r.dto.dir}/front/title.txt`], real);
+  return { url: r.dto.url, dir: r.dto.dir, listing, texts, en_rg_dir: deps.config.EN_RG_DIR };
 }
 
 type UsfmFound = { kind: "none" } | { kind: "single"; rel: string } | { kind: "writer"; files: [string, string][] };

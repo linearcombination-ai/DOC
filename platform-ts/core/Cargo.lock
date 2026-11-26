@@ -186,6 +186,7 @@ dependencies = [
 name = "doc-job"
 version = "0.0.4"
 dependencies = [
+ "doc-books",
  "doc-canon",
  "doc-md",
  "doc-model",

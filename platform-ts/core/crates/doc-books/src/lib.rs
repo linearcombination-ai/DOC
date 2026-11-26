@@ -3,6 +3,7 @@
 //! through [`api::call`], one JSON-in JSON-out function, so the same core runs native or as wasm.
 
 pub mod api;
+pub mod bookname;
 pub mod books;
 pub mod catalog;
 pub mod findings;
