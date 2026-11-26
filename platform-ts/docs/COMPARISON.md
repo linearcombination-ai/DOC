@@ -173,7 +173,7 @@ The warm and burst gains come from the docx generator and the persistent Python 
 
 wasm 2 min 26 s cold (3 modules: +6 s, +4 s), `tsc --noEmit` about 6 s, full suite about 3 to 4 minutes (155 tests, files one at a time), the Redis build about 9 min and Valkey about 4 min (once), `npm ci` 11 s. No build step for TypeScript (Node strips types).
 
-**P7 (RAN, CI).** Whole workflow run 7: **7 min 23 s** with everything on (see "Docker and CI"). Unit job (wasm build cached, `npm ci`, the whole vitest suite with a Valkey 9.2 binary from the official image) 190 s; static checks 38 s; smoke 87 s; image builds 4 s to 175 s. The local loop on the authoring host (cargo test, wasm build, `tsc`, DOC's e2e files against plain processes) is minutes, not hours, which is what made 9 CI runs enough.
+**P7 (RAN, CI).** Workflow run 7: **7 min 23 s** with the e2e and UI jobs on; run 9: 15 min 50 s with the ops job and its 10-minute soak (see "Docker and CI"). Unit job (wasm build cached, `npm ci`, the whole vitest suite with a Valkey 9.2 binary from the official image) 190 s; static checks 38 s; smoke 87 s; image builds 4 s to 175 s. The local loop on the authoring host (cargo test, wasm build, `tsc`, DOC's e2e files against plain processes) is minutes, not hours, which is what made 9 CI runs enough.
 
 ## Weaknesses
 
@@ -216,7 +216,7 @@ Everything below ran in GitHub Actions on the fork `linearcombination-ai/DOC`, w
 | 8 | https://github.com/linearcombination-ai/DOC/actions/runs/45729996638 | ffbb9b02 | red | first working ops run: all scenarios pass except my own wrong expectation (`docker kill` is a manual stop that the restart policy does not undo); also showed the first two ops scripts had bugs (run 7: the job went green with every scenario broken, because a pipe hid the exit code) |
 | 9 | https://github.com/linearcombination-ai/DOC/actions/runs/45732097074 | be4ba9b7 | **green (M5)** | every ops scenario passes (see "Fault tolerance"): drain, crash and restart policy, Valkey restart, burst, rollback, 10-minute soak; versions of every tool inside the containers |
 
-**CI wall time.** Run 7 (everything: static, unit, 4 + 3 image builds, smoke, API e2e on both stacks in 3 groups each, Playwright on both stacks in 4 shards each, ops build only): **7 min 23 s** from push to the last job (RAN; created 00:28:45Z, finished 00:36:08Z). Per job in run 7 (seconds, whole job including setup and image load): static 38, unit (Valkey, whole vitest suite) 190, smoke 87, API e2e TS groups 288 / 255 / 277 and DOC groups 274 / 304 / 308, Playwright TS shards 195 / 200 / 186 / 202 and DOC shards 278 / 234 / 234 / 176.
+**CI wall time.** Run 7 (static, unit, 4 + 3 + 1 image builds, smoke, API e2e on both stacks in 3 groups each, Playwright on both stacks in 4 shards each; its ops job ran but its scripts were broken, see below): **7 min 23 s** from push to the last job (RAN; created 00:28:45Z, finished 00:36:08Z). Run 9 (ops scenarios with the 10-minute soak, plus static, unit, builds and smoke): **15 min 50 s**, of which the ops job is 14 min 29 s; a run with every marker on is therefore about 16 minutes. Per job in run 7 (seconds, whole job including setup and image load): static 38, unit (Valkey, whole vitest suite) 190, smoke 87, API e2e TS groups 288 / 255 / 277 and DOC groups 274 / 304 / 308, Playwright TS shards 195 / 200 / 186 / 202 and DOC shards 278 / 234 / 234 / 176.
 
 **Image sizes** (`docker image ls`, RAN; uncompressed):
 
