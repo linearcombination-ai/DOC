@@ -57,7 +57,7 @@ if submit pdf /documents "{\"email_address\":null,$REQ_BASE,\"generate_pdf\":tru
 if [ "${SMOKE_PRINCE:-0}" = 1 ]; then
   if submit pdf-prince /documents "{\"email_address\":null,$REQ_BASE,\"generate_pdf\":true,\"generate_docx\":false,\"use_prince\":true}"; then
     fetch pdf-prince "$(cat "$OUT/pdf-prince.key")" pdf 5000 '%PDF'
-    t=$(now); curl -fsS --max-time 30 "$API/findings/documents/$(cat "$OUT/pdf-prince.key")" -o "$OUT/pdf-prince.findings.json" 2>/dev/null || echo '[]' > "$OUT/pdf-prince.findings.json"
+    t=$(now); curl -fsS --max-time 30 "$FILES/$(cat "$OUT/pdf-prince.key").findings.json" -o "$OUT/pdf-prince.findings.json" 2>/dev/null || echo '[]' > "$OUT/pdf-prince.findings.json"
     if grep -q pdf_engine_fallback "$OUT/pdf-prince.findings.json"; then bad pdf-prince-engine "Prince was not used: $(head -c 300 "$OUT/pdf-prince.findings.json")"; else ok pdf-prince-engine "$t" "no fallback finding"; fi
   fi
 fi

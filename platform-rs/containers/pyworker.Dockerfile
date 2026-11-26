@@ -37,12 +37,13 @@ RUN wget -nv "https://www.princexml.com/download/${PRINCE_DEB}" \
  && rm -rf /tmp/ScriptureAppBuilder-pipeline \
  && fc-cache -f
 
-# WeasyPrint at DOC's pinned versions (backend/requirements.txt used as a constraints file).
+# WeasyPrint at DOC's pinned versions (backend/requirements.txt as a constraints file; pip refuses extras such as `fonttools[woff]` there).
 COPY backend/requirements.txt /tmp/doc-requirements.txt
 RUN python -m venv /opt/venv \
+ && sed -E 's/\[[^]]*\]//' /tmp/doc-requirements.txt > /tmp/constraints.txt \
  && /opt/venv/bin/pip install --no-cache-dir --upgrade pip \
- && /opt/venv/bin/pip install --no-cache-dir -c /tmp/doc-requirements.txt weasyprint \
- && rm /tmp/doc-requirements.txt
+ && /opt/venv/bin/pip install --no-cache-dir -c /tmp/constraints.txt weasyprint \
+ && rm /tmp/doc-requirements.txt /tmp/constraints.txt
 ENV PATH=/opt/venv/bin:${PATH}
 
 RUN groupadd --system --gid 10001 doc \

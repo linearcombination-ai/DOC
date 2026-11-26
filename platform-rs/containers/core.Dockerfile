@@ -66,6 +66,6 @@ WORKDIR /app
 USER 10001:10001
 EXPOSE 8081 8082
 HEALTHCHECK --interval=10s --timeout=5s --start-period=15s --retries=6 \
-  CMD curl -fsS "${DOC_HEALTH_URL}" > /dev/null || exit 1
+  CMD ["sh", "-c", "curl -fsS \"$DOC_HEALTH_URL\" > /dev/null"]
 STOPSIGNAL SIGTERM
 ENTRYPOINT ["/usr/local/bin/doc-jobd"]
