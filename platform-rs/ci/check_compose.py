@@ -18,10 +18,12 @@ def main(argv: list[str]) -> int:
     if len(argv) < 3:
         print(__doc__)
         return 2
-    schema: object = json.load(open(argv[1], encoding="utf-8"))
+    with open(argv[1], encoding="utf-8") as f:
+        schema: dict[str, object] = json.load(f)
     bad = 0
     for path in argv[2:]:
-        doc: object = yaml.safe_load(open(path, encoding="utf-8"))
+        with open(path, encoding="utf-8") as f:
+            doc: object = yaml.safe_load(f)
         errors = sorted(jsonschema.Draft7Validator(schema).iter_errors(doc), key=lambda e: list(map(str, e.path)))
         if errors:
             bad += 1

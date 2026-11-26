@@ -1,0 +1,290 @@
+[
+  {
+    "shape": "ulb only, lbo, 1 column",
+    "output": "docx",
+    "outcome": "SUCCESS",
+    "detail": "",
+    "output_valid": true,
+    "seconds": 0.386117005
+  },
+  {
+    "shape": "ulb + tn, lbo",
+    "output": "docx",
+    "outcome": "SUCCESS",
+    "detail": "",
+    "output_valid": true,
+    "seconds": 0.603860781
+  },
+  {
+    "shape": "ulb + tn, blo (by chapter)",
+    "output": "docx",
+    "outcome": "SUCCESS",
+    "detail": "",
+    "output_valid": true,
+    "seconds": 0.675884345
+  },
+  {
+    "shape": "ulb + tn, layout for print (compact)",
+    "output": "docx",
+    "outcome": "SUCCESS",
+    "detail": "",
+    "output_valid": true,
+    "seconds": 0.738261719
+  },
+  {
+    "shape": "ulb + tn + bc",
+    "output": "docx",
+    "outcome": "SUCCESS",
+    "detail": "",
+    "output_valid": true,
+    "seconds": 0.933096847
+  },
+  {
+    "shape": "tn only",
+    "output": "docx",
+    "outcome": "SUCCESS",
+    "detail": "",
+    "output_valid": true,
+    "seconds": 1.002404031
+  },
+  {
+    "shape": "tn-condensed only",
+    "output": "docx",
+    "outcome": "SUCCESS",
+    "detail": "",
+    "output_valid": true,
+    "seconds": 1.101281094
+  },
+  {
+    "shape": "bc only",
+    "output": "docx",
+    "outcome": "SUCCESS",
+    "detail": "",
+    "output_valid": true,
+    "seconds": 1.214530443
+  },
+  {
+    "shape": "ulb + tw, links (default)",
+    "output": "docx",
+    "outcome": "SUCCESS",
+    "detail": "",
+    "output_valid": true,
+    "seconds": 1.789597815
+  },
+  {
+    "shape": "ulb + tw, definitions included",
+    "output": "docx",
+    "outcome": "SUCCESS",
+    "detail": "",
+    "output_valid": true,
+    "seconds": 2.120357922
+  },
+  {
+    "shape": "ulb + tw, only the words used",
+    "output": "docx",
+    "outcome": "SUCCESS",
+    "detail": "",
+    "output_valid": true,
+    "seconds": 2.190704867
+  },
+  {
+    "shape": "es-419 ulb + tq",
+    "output": "docx",
+    "outcome": "SUCCESS",
+    "detail": "",
+    "output_valid": true,
+    "seconds": 2.248512747
+  },
+  {
+    "shape": "two languages, lbo",
+    "output": "docx",
+    "outcome": "SUCCESS",
+    "detail": "",
+    "output_valid": true,
+    "seconds": 2.350748379
+  },
+  {
+    "shape": "two languages, blo, 2 columns scripture left/right",
+    "output": "docx",
+    "outcome": "SUCCESS",
+    "detail": "",
+    "output_valid": true,
+    "seconds": 2.407640416
+  },
+  {
+    "shape": "the UI's body as sent (all fields, epub flag, an extra field)",
+    "output": "docx",
+    "outcome": "SUCCESS",
+    "detail": "",
+    "output_valid": true,
+    "seconds": 2.48774338
+  },
+  {
+    "shape": "by verse (lvo), backend capability the UI hides",
+    "output": "docx",
+    "outcome": "SUCCESS",
+    "detail": "",
+    "output_valid": true,
+    "seconds": 2.5506557819999998
+  },
+  {
+    "shape": "by verse (bvo), backend capability the UI hides",
+    "output": "docx",
+    "outcome": "SUCCESS",
+    "detail": "",
+    "output_valid": true,
+    "seconds": 2.613449402
+  },
+  {
+    "shape": "a resource the catalog does not have (es-419 bc)",
+    "output": "docx",
+    "outcome": "SUCCESS",
+    "detail": "",
+    "output_valid": true,
+    "seconds": 2.6661792010000003
+  },
+  {
+    "shape": "ulb only, lbo, 1 column",
+    "output": "html",
+    "outcome": "SUCCESS",
+    "detail": "",
+    "output_valid": true,
+    "seconds": 0.266346163
+  },
+  {
+    "shape": "ulb + tn, lbo",
+    "output": "html",
+    "outcome": "SUCCESS",
+    "detail": "",
+    "output_valid": true,
+    "seconds": 0.390863872
+  },
+  {
+    "shape": "ulb + tn, blo (by chapter)",
+    "output": "html",
+    "outcome": "SUCCESS",
+    "detail": "",
+    "output_valid": true,
+    "seconds": 0.389986214
+  },
+  {
+    "shape": "ulb + tn, layout for print (compact)",
+    "output": "html",
+    "outcome": "SUCCESS",
+    "detail": "",
+    "output_valid": true,
+    "seconds": 0.411165821
+  },
+  {
+    "shape": "ulb + tn + bc",
+    "output": "html",
+    "outcome": "SUCCESS",
+    "detail": "",
+    "output_valid": true,
+    "seconds": 0.577794912
+  },
+  {
+    "shape": "tn only",
+    "output": "html",
+    "outcome": "SUCCESS",
+    "detail": "",
+    "output_valid": true,
+    "seconds": 0.885434122
+  },
+  {
+    "shape": "tn-condensed only",
+    "output": "html",
+    "outcome": "SUCCESS",
+    "detail": "",
+    "output_valid": true,
+    "seconds": 0.883079004
+  },
+  {
+    "shape": "bc only",
+    "output": "html",
+    "outcome": "SUCCESS",
+    "detail": "",
+    "output_valid": true,
+    "seconds": 0.922459604
+  },
+  {
+    "shape": "ulb + tw, links (default)",
+    "output": "html",
+    "outcome": "SUCCESS",
+    "detail": "",
+    "output_valid": true,
+    "seconds": 1.76398515
+  },
+  {
+    "shape": "ulb + tw, definitions included",
+    "output": "html",
+    "outcome": "SUCCESS",
+    "detail": "",
+    "output_valid": true,
+    "seconds": 2.037705795
+  },
+  {
+    "shape": "ulb + tw, only the words used",
+    "output": "html",
+    "outcome": "SUCCESS",
+    "detail": "",
+    "output_valid": true,
+    "seconds": 2.0337796360000002
+  },
+  {
+    "shape": "es-419 ulb + tq",
+    "output": "html",
+    "outcome": "SUCCESS",
+    "detail": "",
+    "output_valid": true,
+    "seconds": 2.031916231
+  },
+  {
+    "shape": "two languages, lbo",
+    "output": "html",
+    "outcome": "SUCCESS",
+    "detail": "",
+    "output_valid": true,
+    "seconds": 2.024459959
+  },
+  {
+    "shape": "two languages, blo, 2 columns scripture left/right",
+    "output": "html",
+    "outcome": "SUCCESS",
+    "detail": "",
+    "output_valid": true,
+    "seconds": 2.03983174
+  },
+  {
+    "shape": "the UI's body as sent (all fields, epub flag, an extra field)",
+    "output": "html",
+    "outcome": "SUCCESS",
+    "detail": "",
+    "output_valid": true,
+    "seconds": 2.148618289
+  },
+  {
+    "shape": "by verse (lvo), backend capability the UI hides",
+    "output": "html",
+    "outcome": "SUCCESS",
+    "detail": "",
+    "output_valid": true,
+    "seconds": 2.166891445
+  },
+  {
+    "shape": "by verse (bvo), backend capability the UI hides",
+    "output": "html",
+    "outcome": "SUCCESS",
+    "detail": "",
+    "output_valid": true,
+    "seconds": 2.259999505
+  },
+  {
+    "shape": "a resource the catalog does not have (es-419 bc)",
+    "output": "html",
+    "outcome": "SUCCESS",
+    "detail": "",
+    "output_valid": true,
+    "seconds": 2.259461007
+  }
+]

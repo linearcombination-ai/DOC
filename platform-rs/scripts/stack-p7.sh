@@ -66,12 +66,13 @@ p7_up() {
     "DATA_API_URL=$P7_DATA_API" "DOC_JOBD_REDIS_URL=redis://127.0.0.1:6399/0" "DOC_JOBD_STORE=redis" "DOC_JOBD_OUTPUT_DIR=$OUT"
     "DOC_SHELL_CACHE_DIR=$ASSETS" "DOC_SHELL_LOG_FORMAT=json" "DOC_TEMPLATES_DIR=$WT/backend/templates/html" "RUST_LOG=${RUST_LOG:-info}"
     "BACKEND_CORS_ORIGINS=[\"http://localhost:8001\",\"http://127.0.0.1:8001\"]" "PATH=$PATH"
+    "DOC_DOCX_MODE=remote" "DOC_PDF_ENGINE=remote" "DOC_PYWORKER_URL=http://127.0.0.1:9100"
     "DOC_JOBD_LEASE_TTL_MS=${LEASE_MS:-10000}" "DOC_JOBD_REAP_EVERY_MS=1000" "DOC_JOBD_BEAT_EVERY_MS=1000"
   )
   if [ -z "${REAL:-}" ]; then common+=("DOC_SHELL_GIT_BIN=$PR/scripts/fake-git.sh" "FAKEGIT_CONTENT=$PR/fixtures/content"); fi
   env "${common[@]}" "DOC_JOBD_ROLE=api" "DOC_SHELL_ADDR=127.0.0.1:8081" "$@" "$BIN" > "$LOGS/api.log" 2>&1 & echo $! > "$S7/api.pid"
   env "${common[@]}" "DOC_JOBD_ROLE=worker" "DOC_JOBD_OPS_ADDR=127.0.0.1:8082" "DOC_SHELL_ADDR=127.0.0.1:8083" "DOC_JOBD_CONCURRENCY=${WORKER_CONCURRENCY:-2}" \
-      "DOC_DOCX_MODE=remote" "DOC_PDF_ENGINE=remote" "DOC_PYWORKER_URL=http://127.0.0.1:9100" "DOC_JOBD_DRAIN_DEADLINE_MS=${DRAIN_MS:-20000}" "$@" "$BIN" > "$LOGS/worker.log" 2>&1 & echo $! > "$S7/worker.pid"
+      "DOC_JOBD_DRAIN_DEADLINE_MS=${DRAIN_MS:-20000}" "$@" "$BIN" > "$LOGS/worker.log" 2>&1 & echo $! > "$S7/worker.pid"
   if [ -x "$NGINX_BIN" ]; then
     p7_render_gateway
     "$NGINX_BIN" -t -c "$S7/nginx/nginx.conf" -p "$S7/nginx/" > "$LOGS/nginx-t.log" 2>&1 || { echo "nginx -t failed:"; cat "$LOGS/nginx-t.log"; return 1; }

@@ -340,15 +340,16 @@ async fn metrics_endpoint_is_valid_prometheus_text_and_every_family_moves() {
     assert!(v("doc_catalog_last_success_timestamp_seconds") > 1_700_000_000.0);
     assert_eq!(v("doc_store_up"), 1.0);
 
-    // a failure moves the failure family, with its code
-    let bad = jude_request(json!({"resource_requests": [{"lang_code": "xx", "resource_type": "ulb", "book_code": "jud"}]}));
+    // a failure moves the failure family, with its code: the repository exists but has nothing for the requested book (a language the catalog
+    // does not have is not a failure: DOC leaves it out and builds the document)
+    let bad = jude_request(json!({"resource_requests": [{"lang_code": "en", "resource_type": "ulb", "book_code": "mat"}]}));
     let fid = rig.submit(&d, &bad).await;
     let (_, last) = watch(&rig.c, &d.base(), &fid, Duration::from_secs(30)).await;
     assert_eq!(last["state"], "FAILURE");
-    assert_eq!(last["result"]["code"], "resource_not_found");
+    assert_eq!(last["result"]["code"], "resource_unavailable");
     let (_, text) = get_text(&rig.c, &format!("{}/metrics", d.base())).await;
     let m = doc_jobs::metrics::validate_exposition(&text).unwrap();
-    assert_eq!(m.get("doc_job_failures_total{code=\"resource_not_found\",kind=\"permanent\"}"), Some(&1.0));
+    assert_eq!(m.get("doc_job_failures_total{code=\"resource_unavailable\",kind=\"permanent\"}"), Some(&1.0));
     assert!(m.get("doc_jobs_total{outcome=\"failed\"}").copied().unwrap_or(0.0) >= 1.0);
 }
 
@@ -533,7 +534,7 @@ async fn html_output_for_post_documents_and_the_typed_501_for_pdf() {
     std::fs::copy(rig.out().join(format!("{key}.parts.json")), Path::new(env!("CARGO_MANIFEST_DIR")).join("../../results/sample-html-parts.json")).unwrap();
     assert!(html.starts_with("<!DOCTYPE html"), "DOC's header template");
     assert!(html.ends_with("</body></html>"));
-    assert!(html.contains("<h2>English</h2>") && html.contains("generated on "), "title page and timestamp rendered: {}", &html[html.len().saturating_sub(300)..]);
+    assert!(html.contains("<h2>English (English): Unlocked Literal Bible, Translation Notes for Jude</h2>") && html.contains("generated on "), "title page (DOC's get_languages_title_page_strings) and timestamp rendered: {}", &html[html.len().saturating_sub(300)..]);
     assert!(html.contains("class=\"verse\""), "verses are in the document");
     assert!(html.contains("Jude") || html.contains("jud"));
     assert!(rig.out().join(format!("{key}.findings.json")).exists());

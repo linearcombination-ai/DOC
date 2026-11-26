@@ -197,6 +197,28 @@ fn title_file_name(ws: &Workspace, dir: &str, mode: Mode, repo: &str, findings: 
     }
 }
 
+/// The name DOC shows for a USFM book in a document (`get_localized_book_name` then `maybe_correct_book_name`, `parsing.py:591`): the
+/// book's own markers (`source` is its USFM, stitched for a Writer repository), else the repository's manifest, else `front/title.txt` of a
+/// repository whose name has more than two parts. Empty when none gives a name; the caller then uses the English name of the book code.
+/// The marker name is normalised the way DOC does for a document title (DOC's tests read it); what could not be read comes back as findings.
+pub fn usfm_book_name(ws: &Workspace, repo: &RepoRef, lang: &str, book: &str, source: &str) -> (String, Vec<Finding>) {
+    let mut findings = Vec::new();
+    let mut name = book_name_from_frontmatter(&usfm_frontmatter(source), lang, &repo.resource_type, true);
+    if name.is_empty() {
+        if let Ok(list) = manifest_names(ws, &repo.segment, Mode::Fixed, &repo.url, &mut findings) {
+            if let Some((_, Title::Text(t))) = list.iter().find(|(c, _)| c == book) {
+                name = t.clone();
+            }
+        }
+        if name.is_empty() && repo.segment.split('_').count() > 2 && USFM_RESOURCE_TYPES.contains(&repo.resource_type.as_str()) {
+            if let Ok(t) = title_file_name(ws, &repo.segment, Mode::Fixed, &repo.url, &mut findings) {
+                name = t;
+            }
+        }
+    }
+    (maybe_correct_book_name(lang, &name), findings)
+}
+
 /// `get_book_names_from_usfm_metadata`: `(code, name)` in file order, a repeated code keeping its
 /// first position and last value (a Python dict).
 fn usfm_metadata_names(ws: &Workspace, repo: &RepoRef, lang: &str, mode: Mode, findings: &mut Vec<Finding>) -> Result<Vec<(String, String)>, Abort> {

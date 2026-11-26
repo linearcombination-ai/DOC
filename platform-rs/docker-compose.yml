@@ -24,6 +24,10 @@ x-core-env: &core-env
   ASSET_CACHING_PERIOD: ${ASSET_CACHING_PERIOD:-30}
   BACKEND_CORS_ORIGINS: '${BACKEND_CORS_ORIGINS:-["http://localhost:8001","http://127.0.0.1:8001"]}'
   RUST_LOG: ${RUST_LOG:-info}
+  # The API role must know the PDF engine too: it answers a typed 501 for `generate_pdf` when none is configured.
+  DOC_DOCX_MODE: remote
+  DOC_PDF_ENGINE: remote
+  DOC_PYWORKER_URL: http://pyworker:9100
 
 services:
   valkey:
@@ -93,9 +97,6 @@ services:
       DOC_JOBD_ROLE: worker
       DOC_JOBD_OPS_ADDR: 0.0.0.0:8082
       DOC_HEALTH_URL: http://127.0.0.1:8082/health/status
-      DOC_DOCX_MODE: remote
-      DOC_PDF_ENGINE: remote
-      DOC_PYWORKER_URL: http://pyworker:9100
       DOC_JOBD_CONCURRENCY: ${WORKER_CONCURRENCY:-2}
       DOC_JOBD_DRAIN_DEADLINE_MS: "120000"
       FROM_EMAIL_ADDRESS: ${FROM_EMAIL_ADDRESS:-foo@example.com}
@@ -129,7 +130,14 @@ services:
       - "${API_HOST_PORT:-5005}:5005"
       - "${FILESERVER_HOST_PORT:-8089}:8089"
     volumes:
-      - output:/app/document_output:ro
+      # nocopy: a secondary mount of the still-empty volume must never copy its image's directory ownership into it (found by the other build, run 5:
+      # the test runner's read-only mount did, and the worker could no longer write). The gateway image has no such directory; this keeps it that way.
+      - type: volume
+        source: output
+        target: /app/document_output
+        read_only: true
+        volume:
+          nocopy: true
     depends_on:
       api:
         condition: service_healthy

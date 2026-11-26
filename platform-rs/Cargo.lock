@@ -533,8 +533,10 @@ dependencies = [
  "canon",
  "doc-interleave",
  "doc-model",
+ "fancy-regex 0.14.0",
  "mise",
  "serde_json",
+ "unicode-general-category",
  "usfm_onion",
 ]
 

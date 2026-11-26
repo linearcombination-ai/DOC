@@ -17,6 +17,8 @@ canon = { path = "../../_exp/kitchen/canon" }
 doc-model = { path = "../doc-model" }
 doc-interleave = { path = "../doc-interleave" }
 serde_json = "1"
+fancy-regex = "0.14"
+unicode-general-category = "1"
 usfm_onion = { path = "../../_exp/kitchen/onion" }
 bttwriter = { path = "../../_exp/kitchen/bttwriter" }
 mise = { path = "../../_exp/kitchen/mise" }

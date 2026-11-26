@@ -1,0 +1,13 @@
+# Override on top of DOC's docker-compose.yml + docker-compose.frontend-test.yml for the BASELINE run of DOC's Playwright tests on DOC's own stack:
+#   IMAGE_TAG=local PLAYWRIGHT_SHARD=1/4 docker compose -f docker-compose.yml -f docker-compose.frontend-test.yml -f platform-ts/ci/docker-compose.doc-ui-baseline.yml run --rm -T frontend-test-runner
+# Only doc_test_*.ts run (STET and Passages are out of scope in this phase) and a junit file is written next to the list output.
+services:
+  frontend-test-runner:
+    command:
+      - sh
+      - -c
+      - exec npx playwright test --shard="$$PLAYWRIGHT_SHARD" --reporter=list,junit doc_test
+    environment:
+      - PLAYWRIGHT_JUNIT_OUTPUT_NAME=/results/junit.xml
+    volumes:
+      - ./e2e-results:/results

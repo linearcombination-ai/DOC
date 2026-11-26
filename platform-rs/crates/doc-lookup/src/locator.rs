@@ -178,6 +178,54 @@ pub fn repos_to_clone(lang: &str, repos: &[RepoEntry], mode: Mode) -> (Vec<RepoR
     (out, findings)
 }
 
+/// DOC's `resource_lookup_dto` (`resource_lookup.py:1059`) over the augmented primary catalog rows, in catalog order: which repository
+/// holds `resource_type` of `book` for `lang`. Three tiers, the first that has any candidate wins: a `.docx` last segment (the English
+/// Reviewer's Guide, dead today: no catalog URL ends so), then repositories whose name has more than two components and names this book
+/// (`bys_eph_text_reg`, one repository per book), then two-component names (`sw_ulb`, one repository per language and type). A resource
+/// type DOC has no name for raises `KeyError` inside DOC's try block, which stops the loop with what it had. `None` is "DOC returns None":
+/// the request is left out of the document.
+pub fn resource_lookup(lang: &str, resource_type: &str, book: &str, rows: &[RepoEntry]) -> Option<RepoRef> {
+    const ZMQ_USER: &str = "faustin_azaza";
+    let known = |t: &str| RESOURCE_TYPE_CODES_AND_NAMES.iter().any(|(c, _)| *c == t);
+    let make = |entry: &RepoEntry, segment: &str, components: Vec<String>| RepoRef {
+        url: entry.repo_url.clone(),
+        segment: segment.to_string(),
+        resource_type: resource_type.to_string(),
+        components,
+        language: entry.language.clone(),
+    };
+    let (mut rg, mut more, mut two): (Option<RepoRef>, Option<RepoRef>, Option<RepoRef>) = (None, None, None);
+    for entry in rows {
+        if entry.language.ietf_code != lang {
+            continue;
+        }
+        let last = get_last_segment(&entry.repo_url, lang);
+        if last.ends_with("docx") {
+            if !known(resource_type) {
+                break;
+            }
+            rg.get_or_insert_with(|| make(entry, &last, Vec::new()));
+            continue;
+        }
+        let comps = update_repo_components(&last.split('_').map(str::to_string).collect::<Vec<_>>());
+        if comps.len() > 2 {
+            let book_ = comps.get(1).map(String::as_str).unwrap_or("");
+            if (entry.repo_url.contains(book_) || entry.repo_url.contains(ZMQ_USER)) && resource_type == entry.resource_type && known(&entry.resource_type) && book_ == book {
+                if !known(resource_type) {
+                    break;
+                }
+                more.get_or_insert_with(|| make(entry, &last, comps));
+            }
+        } else if comps.len() == 2 && resource_type == entry.resource_type {
+            if !known(resource_type) {
+                break;
+            }
+            two.get_or_insert_with(|| make(entry, &last, comps));
+        }
+    }
+    rg.or(more).or(two)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -228,6 +276,30 @@ mod tests {
         assert_eq!(fixed[0].components[1], "col");
         let (built, _) = repos_to_clone("nan-x-teochi", std::slice::from_ref(&entry), Mode::AsBuilt);
         assert_eq!(built[0].components[1], "nan-x-teochi");
+    }
+
+    fn entry(url: &str, rtype: &str, lang: &str) -> RepoEntry {
+        RepoEntry {
+            repo_url: url.into(),
+            resource_type: rtype.into(),
+            language: Language { english_name: "L".into(), ietf_code: lang.into(), national_name: "N".into(), direction: "ltr".into() },
+        }
+    }
+
+    /// DOC's three tiers: a per-book repository (`bys_eph_text_reg`) wins over a language-wide one, and a book it does not name is not found.
+    #[test]
+    fn lookup_tiers() {
+        let rows = vec![
+            entry("https://c.org/WA-Catalog/sw_ulb", "ulb", "sw"),
+            entry("https://c.org/Bayan/bys_eph_text_reg", "reg", "bys"),
+            entry("https://c.org/Bayan/bys_gal_text_reg", "reg", "bys"),
+        ];
+        assert_eq!(resource_lookup("sw", "ulb", "jud", &rows).map(|r| r.segment), Some("sw_ulb".to_string()));
+        assert_eq!(resource_lookup("bys", "reg", "eph", &rows).map(|r| r.segment), Some("bys_eph_text_reg".to_string()));
+        assert_eq!(resource_lookup("bys", "reg", "gal", &rows).map(|r| r.segment), Some("bys_gal_text_reg".to_string()));
+        assert!(resource_lookup("bys", "reg", "mat", &rows).is_none());
+        assert!(resource_lookup("sw", "tq", "jud", &rows).is_none());
+        assert!(resource_lookup("fa", "ulb", "eph", &rows).is_none());
     }
 
     #[test]

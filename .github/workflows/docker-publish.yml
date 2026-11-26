@@ -1,6 +1,9 @@
 name: Docker
 
-on: [push, pull_request]
+# DISABLED on the experiment branch exp/platform-rs (task doc-full-rs): this workflow pushes images to a registry and is red by design on the
+# fork (no registry credentials). The experiment's own workflow is platform-rs.yml. Manual runs only.
+on:
+  workflow_dispatch:
 
 # Cancel superseded runs on the same ref so they don't compete for runners/cache
 concurrency:

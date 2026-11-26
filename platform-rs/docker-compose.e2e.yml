@@ -18,16 +18,17 @@ services:
         condition: service_healthy
     entrypoint: pytest
     command:
-      - -vv
-      - --log-cli-level=INFO
       - -p
       - e2e_remote
+      - -vv
+      - --tb=short
+      - --log-cli-level=INFO
       - -m
       - "${E2E_MARKER:-not all and not randomized and not english_randomized}"
       - -k
       - "${E2E_K:-}"
       - -n
-      - "4"
+      - ${PYTEST_WORKERS:-auto}
       - --splits
       - "${PYTEST_SPLITS:-1}"
       - --group
@@ -35,6 +36,8 @@ services:
       - --durations-path
       - /app/tests/.test_durations
       - --junitxml=/results/junit.xml
+      - -o
+      - junit_family=xunit2
       - /app/tests/e2e/doc
     environment:
       E2E_TARGET: http://gateway:5005
@@ -45,6 +48,13 @@ services:
       SMTP_PORT: "111"
       SEND_EMAIL: "False"
     volumes:
-      - output:/app/document_output
       - ./e2e:/e2e:ro
+      # nocopy matters: without it the first mount copies the image's /app/document_output ownership (DOC's appuser) into the still-empty
+      # volume and the worker can no longer write its documents (the other build's CI run 5: every job failed with EACCES at placement)
+      - type: volume
+        source: output
+        target: /app/document_output
+        read_only: true
+        volume:
+          nocopy: true
       - ${E2E_RESULTS_DIR:-./e2e-results}:/results

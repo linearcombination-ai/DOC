@@ -149,14 +149,23 @@ async fn transient_failures_retry_with_jittered_backoff_and_the_job_still_ends_w
 async fn permanent_errors_fail_at_once_with_the_extended_result_and_the_legacy_shape_elsewhere() {
     let rig = Rig::new("perm").await;
     let d = rig.daemon("d", &[]).await;
-    // a language the catalog does not have: permanent
+    // a language the catalog does not have: DOC leaves the request out and builds the document anyway (its own e2e test expects a file);
+    // so does this build, and the findings say why
     let body = json!({"assembly_strategy_kind": "lbo", "document_request_source": "ui", "generate_docx": true, "resource_requests": [{"lang_code": "fr", "resource_type": "ulb", "book_code": "jud"}]});
     let id = rig.submit(&d, &body).await;
     let (_, last) = watch(&rig.c, &d.base(), &id, Duration::from_secs(30)).await;
+    assert_eq!(last["state"], "SUCCESS", "{last}");
+    let key = last["result"].as_str().unwrap().to_string();
+    let findings = std::fs::read_to_string(rig.setup().output.join(format!("{key}.findings.json"))).unwrap();
+    assert!(findings.contains("resource_not_in_catalog"), "the request left out is reported: {findings}");
+    // a repository the catalog has, with no file for the requested book: nothing to build a document from, and waiting will not change that: permanent
+    let body = json!({"assembly_strategy_kind": "lbo", "document_request_source": "ui", "generate_docx": true, "resource_requests": [{"lang_code": "en", "resource_type": "ulb", "book_code": "mat"}]});
+    let id = rig.submit(&d, &body).await;
+    let (_, last) = watch(&rig.c, &d.base(), &id, Duration::from_secs(30)).await;
     assert_eq!(last["state"], "FAILURE");
-    assert_eq!(last["result"]["code"], "resource_not_found");
+    assert_eq!(last["result"]["code"], "resource_unavailable");
     assert_eq!(last["result"]["retryable"], false);
-    assert!(last["result"]["message"].as_str().unwrap().contains("fr ulb"));
+    assert!(last["result"]["message"].as_str().unwrap().contains("none of the requested resources"));
     assert_eq!(last.as_object().unwrap().len(), 2, "legacy shape: state and result only");
     assert_eq!(rig.hget(&id, "attempt").await.as_deref(), Some("1"), "no retry for a permanent error");
     assert!(retry_delays(&d.log_text()).is_empty());

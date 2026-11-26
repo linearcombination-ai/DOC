@@ -230,6 +230,14 @@ impl<C: Catalog, A: Acquirer> App<C, A> {
         self.locate(lang, Mode::Fixed, deadline, false, false).await
     }
 
+    /// The primary catalog rows plus DOC's augmentation, in catalog order: what DOC's `resource_lookup_dto` walks (fixed mode).
+    pub async fn catalog_rows(&self, deadline: Deadline) -> Result<Vec<RepoEntry>, AppError> {
+        match self.repos(Query::Primary, Mode::Fixed, deadline).await? {
+            Some(r) => Ok(locator::augmented(&r.repos)),
+            None => Ok(Vec::new()),
+        }
+    }
+
     /// P5: the acquirer, so a job can fetch exactly the repositories it needs and see each failure.
     pub fn acquirer(&self) -> &A {
         &self.acquirer

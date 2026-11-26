@@ -1,0 +1,980 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+    <title>Bible</title>
+    <style media="all" type="text/css">
+      /* Weasyprint/princexml page directives for headers and footers */
+      :root {
+        /* Universal fallback stack for body text + margin boxes */
+        --universal-font:
+          "Noto Sans", "Noto Serif", "Noto Sans Tibetan", "Noto Serif Tibetan",
+          "Noto Sans Lao", "Noto Serif Lao", "Noto Sans Devanagari",
+          "Noto Serif Devanagari", "Noto Sans Arabic", "Noto Naskh Arabic",
+          "Noto Sans Khmer", "Noto Serif Khmer", "Noto Sans Thai",
+          "Noto Serif Thai", "Noto Sans Myanmar", "Noto Serif Myanmar",
+          "Noto Sans Ethiopic", "Noto Serif Ethiopic", "Noto Sans CJK SC",
+          "Noto Serif CJK SC", serif, sans-serif;
+      }
+      @page {
+        size: letter;
+        @top-center {
+          content: string(bookstring);
+          font-family: var(--universal-font);
+          font-size: 0.8em;
+          color: gray;
+        }
+        @top-right {
+          content: string(chapterstring);
+          font-size: 0.8em;
+          color: gray;
+        }
+        /* @top-right {
+           content: string(subchapterstring);
+           font-size: 0.8em;
+           color: gray;
+           } */
+        @bottom-center {
+          content: "Page " counter(page) " of " counter(pages);
+          font-size: 0.7em;
+          color: gray;
+        }
+        @bottom-right {
+          content: " generated on Thu Nov 26 01:46:45 2026";
+          font-size: 0.5em;
+          color: gray;
+        }
+      }
+
+      @media screen {
+        /* Important for superscript verse markers in HTML view */
+        sup {
+          font-size: 30%;
+          color: #999999;
+          position: relative;
+          top: -0.5em;
+        }
+      }
+
+      .logo {
+        height: 40px;
+        width: 100px;
+      }
+
+      /* .chapterlabel { */
+      /* page-break-before: always; */
+      /* string-set: chapterstring content(); */
+      /* } */
+
+      .book-name {
+        string-set: bookstring content();
+      }
+
+      h4 {
+        string-set: subchapterstring content();
+      }
+
+      /* End of Weasyprint/Princexml page directives for headers and footers */
+
+      body {
+        /* Browsers typically default to 16px, let's make our default 12px */
+        font-size: 75%;
+        /* Set font fallback for Princexml (bo language is the case that prompted this) */
+        font-family: var(--universal-font);
+      }
+
+      a {
+        color: #000000; /* Makes the text black */
+        text-decoration: underline; /* Ensures the underline is visible */
+        padding: 2px 4px; /* Optional: Adds a little breathing room around the highlight */
+        border-radius: 3px; /* Optional: Softens the edges of the highlight */
+      }
+
+      h1 {
+        text-align: center;
+      }
+
+      /* Makes list of translation words left justified after an h2 (the resource type name: Translation Words) */
+      h2 + ul {
+        margin-left: 0;
+        padding-left: 0;
+      }
+
+      /*
+      h5 {
+        padding-bottom: 0;
+        margin-bottom: 0;
+      }
+      */
+
+      /* Decrease vertical space between paragraph that follows h5 */
+      /*
+      h5 + p {
+        margin-top: 0;
+        padding-top: 0;
+      }
+      */
+
+      /*
+      hr {
+        display: block;
+        height: 1px;
+        border: 0;
+        border-top: 1px solid #ccc;
+        margin: 1em 0;
+        padding: 0;
+      }
+      */
+
+      /*
+      .end-of-chapter {
+        break-after: page;
+      }
+      */
+
+      /*
+      .chunk-break {
+        display: block;
+      }
+      */
+
+      /*
+      .indent-0 {
+        margin-left: 0em;
+        margin-bottom: 0em;
+        margin-top: 0em;
+      }
+      */
+
+      /*
+      .indent-1 {
+        margin-left: 0em;
+        margin-bottom: 0em;
+        margin-top: 0em;
+      }
+      */
+
+      /*
+      .indent-2 {
+        margin-left: 1em;
+        margin-bottom: 0em;
+        margin-top: 0em;
+      }
+      */
+
+      /*
+      .indent-3 {
+        margin-left: 2em;
+        margin-bottom: 0em;
+        margin-top: 0em;
+      }
+      */
+
+      /*
+      .tetragrammaton {
+        font-variant: small-caps;
+      }
+      */
+
+      /*
+      .footnotes {
+        font-size: 0.8em;
+      }
+
+      .footnotes-hr {
+        width: 90%;
+      }
+      */
+
+      .column {
+        float: left;
+        width: 50%;
+      }
+
+      .column-left {
+        float: left;
+        width: 50%;
+      }
+
+      .column-right {
+        float: right;
+        width: 50%;
+      }
+
+      .row:after {
+        content: "";
+        display: table;
+        clear: both;
+      }
+      /* USFMToolsSharp.Renderers.HTML style rules begin */
+      /* Format Styles */
+      .small-text {
+        font-size: 16px;
+      }
+
+      .med-text {
+        font-size: 22px;
+      }
+
+      .large-text {
+        font-size: 29px;
+      }
+
+      .sectionbreak {
+        page-break-before: always;
+        clear: both;
+        mso-break-type: section-break;
+      }
+
+      .pagebreak {
+        page-break-after: auto;
+        page-break-after: always;
+      }
+
+      hr {
+        border-top: 1px solid lightgray;
+        border-bottom: none;
+        border-left: none;
+        border-right: none;
+      }
+
+      @media print {
+        .pagebreak {
+          page-break-after: always;
+        }
+        /* page-break-after works, as well */
+        .sectionbreak {
+          page-break-before: always;
+          clear: both;
+        }
+        /* .chapter:not(:first-of-type) {
+           page-break-before: always;
+           } */
+      }
+
+      .single-space {
+        line-height: 1;
+      }
+
+      .one-half-space {
+        line-height: 150%;
+      }
+
+      .double-space {
+        line-height: 2;
+      }
+
+      .two-half-space {
+        line-height: 250%;
+      }
+
+      .triple-space {
+        line-height: 3;
+      }
+
+      .justified {
+        text-align: justify;
+        text-justify: inter-word;
+      }
+
+      .right-align {
+        text-align: right;
+      }
+
+      .center-align {
+        text-align: center;
+      }
+
+      .rtl-direct {
+        direction: rtl;
+      }
+
+      @page FooterSection {
+        size: 8.5in 11in;
+        margin: 1in 1in 1in 1in;
+        mso-header-margin: 0.5in;
+        mso-footer-margin: 0.5in;
+        mso-header: h1;
+        mso-footer: f1;
+        mso-first-header: h1;
+        mso-first-footer: f1;
+        mso-paper-source: 0;
+        mso-page-numbers: 1;
+      }
+
+      div.one-column {
+        column-count: 1;
+        mso-columns: 1;
+        page: ColumnOne;
+      }
+
+      div.two-column {
+        column-count: 2;
+        mso-columns: 2 even 0.5in;
+        page: Column2;
+      }
+
+      p.MsoFooter,
+      li.MsoFooter,
+      div.MsoFooter {
+        margin: 0in;
+        margin-bottom: 0.0001pt;
+        mso-pagination: widow-orphan;
+        tab-stops: center 3in right 6in;
+        font-size: 12pt;
+      }
+
+      div.FooterSection {
+        page: FooterSection;
+      }
+
+      table#hrdftrtbl {
+        margin: 0in 0in 0in 900in;
+        width: 900px;
+        height: 1px;
+        tab-stops: center 3in right 6in;
+        overflow: hidden;
+      }
+
+      /* Marker Specific Styling */
+
+      /* Header */
+      .header {
+        margin-top: 1em;
+        font-size: 1.5em;
+        font-weight: bold;
+        display: inline-block;
+      }
+
+      .acrostic-heading {
+        display: block;
+        font-size: 1.2em;
+        font-weight: bold;
+        margin-top: 2em;
+        margin-bottom: 1em;
+      }
+
+      /* Major Title */
+      .majortitle-1 {
+        display: none;
+        font-size: inherit;
+      }
+
+      .majortitle-2 {
+        display: none;
+        font-size: inherit;
+      }
+
+      .majortitle-3 {
+        display: none;
+        font-size: inherit;
+      }
+
+      /* Footnotes */
+      .footnotecaller {
+        font-size: 0.5em;
+        vertical-align: top;
+        mso-text-raise: 40%;
+      }
+
+      .footnotes {
+        font-size: 0.75em;
+      }
+
+      .footnote-header {
+        font-size: 1.2em;
+      }
+
+      .footnote-alternate-translation {
+        font-style: italic;
+      }
+
+      /* Chapter */
+      .chapter {
+        margin-top: 1em;
+        font-size: inherit;
+        position: relative;
+      }
+
+      /* Follow chapter with hr element */
+      /*
+      .chapter::after {
+        content: "";
+        display: block;
+        width: 100%;
+        border-top: 1px solid lightgray;
+        border-bottom: none;
+        border-left: none;
+        border-right: none;
+      }
+      */
+
+      .chaptermarker {
+        font-size: 1.5em;
+        font-weight: bold;
+        display: block;
+        float: left;
+        margin-right: 0.25em;
+        string-set: chapterstring "§ " content();
+      }
+
+      /* Poetry */
+      .poetry-1 {
+        font-size: inherit;
+        line-break: normal;
+        display: block;
+        margin-left: 1.5em;
+      }
+
+      .poetry-2 {
+        font-size: inherit;
+        line-break: normal;
+        display: block;
+        margin-left: 3em;
+      }
+
+      .poetry-3 {
+        font-size: inherit;
+        line-break: normal;
+        display: block;
+        margin-left: 4.5em;
+      }
+
+      .poetry-outdent-1 {
+        margin-left: -1.5em;
+      }
+
+      .poetry-outdent-2 {
+        margin-left: -3em;
+      }
+
+      .selah-text {
+        font-style: italic;
+        text-align: right;
+      }
+
+      /* Verse */
+      .verse {
+        font-size: inherit;
+        font-weight: normal;
+      }
+
+      .verse + .verse::before {
+        content: " ";
+      }
+
+      .versemarker {
+        font-size: 0.5em;
+        vertical-align: top;
+        mso-text-raise: 60%;
+      }
+
+      [class^="poetry-"] .versemarker {
+        position: absolute;
+        left: 0;
+      }
+
+      .intro-para-flush-indent,
+      .para-flush-indent {
+        display: block;
+        margin-left: 0;
+        text-indent: 0;
+      }
+
+      .closing {
+        text-align: right;
+      }
+
+      .reference {
+        font-style: italic;
+      }
+
+      /* Section */
+      .sectionhead-1 {
+        margin-top: 2em;
+        font-size: 1.2em;
+        font-weight: bold;
+        display: block;
+        text-align: center;
+        text-transform: uppercase;
+      }
+
+      .sectionhead-2 {
+        margin-top: 1em;
+        font-size: 1.1em;
+        font-weight: bold;
+        display: block;
+      }
+
+      .sectionhead-3 {
+        margin-top: 1em;
+        font-size: 1.05em;
+        font-weight: bold;
+        display: block;
+      }
+
+      .section-reference {
+      }
+
+      /* List */
+      .list-1 {
+        line-break: normal;
+        display: block;
+        text-indent: 0px !important;
+      }
+
+      .list-2 {
+        line-break: normal;
+        display: block;
+        text-indent: 30px !important;
+      }
+
+      .list-3 {
+        line-break: normal;
+        display: block;
+        text-indent: 50px !important;
+      }
+
+      /* Special Strings */
+      .quoted-book {
+        font-style: italic;
+      }
+
+      .additions {
+        font-style: italic;
+      }
+
+      .transliterated {
+        font-style: italic;
+      }
+
+      .small-caps {
+        text-transform: uppercase;
+        font-size: 0.75em;
+      }
+
+      .center-paragraph {
+        text-align: center;
+      }
+
+      .descriptive-text {
+        font-style: italic;
+        font-size: 85%;
+      }
+
+      .word-entry {
+        font-size: 1em;
+      }
+
+      /* Cross Reference */
+      .caller {
+        font-size: 0.5em;
+        vertical-align: top;
+        mso-text-raise: 40%;
+      }
+
+      .cross-ref-quote {
+        font-style: italic;
+      }
+
+      .cross-ref {
+        font-weight: bold;
+      }
+
+      .cross-header {
+        font-size: 1.2em;
+      }
+
+      .toc2-ref {
+        display: inline;
+        visibility: hidden;
+      }
+
+      /* Table Markers */
+      .table-block {
+        width: 50%;
+      }
+
+      .table-head {
+        font-style: italic;
+      }
+
+      .table-head-right {
+        font-style: italic;
+        text-align: right;
+      }
+
+      .table-cell {
+      }
+
+      .table-cell-right {
+        text-align: right;
+      }
+      /* End of USFMToolsSharp.Renderers.HTML style rules */
+
+      .pb-6 {
+        padding-bottom: 6px;
+      }
+      .pt-6 {
+        padding-top: 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="pagebreak">
+      
+      <h2>English (English): Unlocked Literal Bible, Translation Notes for Jude</h2>
+        
+    </div>
+    <div class="pb-6">
+      ©2026 Wycliffe Associates<br />
+      Released under a Creative Commons Attribution-ShareAlike 4.0 International
+      License.
+    </div>
+
+    <!-- <div class="pb-6">
+         Bible Text: The English Unlocked Literal Bible (ULB)<br />
+         ©2017 Wycliffe Associates<br />
+         Available at https://bibleineverylanguage.org/translations<br />
+         The English Unlocked Literal Bible is based on the unfoldingWord® Literal
+         Text, CC BY-SA 4.0. The original work of the unfoldingWord® Literal Text
+         is available at https://unfoldingword.bible/ult/.<br />
+         The ULB is licensed under the Creative Commons Attribution-ShareAlike 4.0
+         International License.
+         </div>
+
+         <div class="pb-6">
+         Notes: English ULB Translation Notes<br />
+         ©2017 Wycliffe Associates<br />
+         Available at https://bibleineverylanguage.org/translations<br />
+         The English ULB Translation Notes is based on the unfoldingWord
+         translationNotes, under CC BY-SA 4.0. The original unfoldingWord work is
+         available at https://unfoldingword.bible/utn.<br />
+         The ULB Notes is licensed under the Creative Commons
+         Attribution-ShareAlike 4.0 International License.
+         </div>
+    -->
+    <div class="pb-6">
+      To view a copy of the CC BY-SA 4.0 license visit
+      http://creativecommons.org/licenses/by-sa/4.0/
+    </div>
+
+    <div class="pb-6">
+      Below is a human-readable summary of (and not a substitute for) the
+      license.<br />
+      <b>You are free to:</b><br />
+      <ul>
+        <li>
+          <b>Share</b> — copy and redistribute the material in any medium or
+          format.
+        </li>
+        <li>
+          <b>Adapt</b> — remix, transform, and build upon the material for any
+          purpose, even commercially.
+        </li>
+      </ul>
+      The licensor cannot revoke these freedoms as long as you follow the
+      license terms.<br />
+      Under the following conditions:<br />
+      <ul>
+        <li>
+          <b>Attribution</b> — You must attribute the work as follows: "Original
+          work available at https://BibleInEveryLanguage.org." Attribution
+          statements in derivative works should not in any way suggest that we
+          endorse you or your use of this work.
+        </li>
+        <li>
+          <b>ShareAlike</b> — If you remix, transform, or build upon the
+          material, you must distribute your contributions under the same
+          license as the original.
+        </li>
+        <li>
+          <b>No additional restrictions</b> — You may not apply legal terms or
+          technological measures that legally restrict others from doing
+          anything the license permits.
+        </li>
+      </ul>
+    </div>
+    <div class="pagebreak">
+      <div class="pb-6">
+        <b>Notices:</b><br />
+        You do not have to comply with the license for elements of the material
+        in the public domain or where your use is permitted by an applicable
+        exception or limitation.<br />
+
+        No warranties are given. The license may not give you all of the
+        permissions necessary for your intended use. For example, other rights
+        such as publicity, privacy, or moral rights may limit how you use the
+        material.<br />
+      </div>
+      <img
+        class="logo"
+        src="data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9Im5vIj8+CjwhLS0gQ3JlYXRlZCB3aXRoIElua3NjYXBlIChodHRwOi8vd3d3Lmlua3NjYXBlLm9yZy8pIC0tPgo8c3ZnCiAgIHhtbG5zOmRjPSJodHRwOi8vcHVybC5vcmcvZGMvZWxlbWVudHMvMS4xLyIKICAgeG1sbnM6Y2M9Imh0dHA6Ly93ZWIucmVzb3VyY2Uub3JnL2NjLyIKICAgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIgogICB4bWxuczpzdmc9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIgogICB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciCiAgIHhtbG5zOnNvZGlwb2RpPSJodHRwOi8vc29kaXBvZGkuc291cmNlZm9yZ2UubmV0L0RURC9zb2RpcG9kaS0wLmR0ZCIKICAgeG1sbnM6aW5rc2NhcGU9Imh0dHA6Ly93d3cuaW5rc2NhcGUub3JnL25hbWVzcGFjZXMvaW5rc2NhcGUiCiAgIHdpZHRoPSIxMjAiCiAgIGhlaWdodD0iNDIiCiAgIGlkPSJzdmcyNzU5IgogICBzb2RpcG9kaTp2ZXJzaW9uPSIwLjMyIgogICBpbmtzY2FwZTp2ZXJzaW9uPSIwLjQ1K2RldmVsIgogICB2ZXJzaW9uPSIxLjAiCiAgIHNvZGlwb2RpOmRvY25hbWU9ImJ5LXNhLnN2ZyIKICAgaW5rc2NhcGU6b3V0cHV0X2V4dGVuc2lvbj0ib3JnLmlua3NjYXBlLm91dHB1dC5zdmcuaW5rc2NhcGUiPgogIDxkZWZzCiAgICAgaWQ9ImRlZnMyNzYxIiAvPgogIDxzb2RpcG9kaTpuYW1lZHZpZXcKICAgICBpZD0iYmFzZSIKICAgICBwYWdlY29sb3I9IiNmZmZmZmYiCiAgICAgYm9yZGVyY29sb3I9IiM4YjhiOGIiCiAgICAgYm9yZGVyb3BhY2l0eT0iMSIKICAgICBncmlkdG9sZXJhbmNlPSIxMDAwMCIKICAgICBndWlkZXRvbGVyYW5jZT0iMTAiCiAgICAgb2JqZWN0dG9sZXJhbmNlPSIxMCIKICAgICBpbmtzY2FwZTpwYWdlb3BhY2l0eT0iMC4wIgogICAgIGlua3NjYXBlOnBhZ2VzaGFkb3c9IjIiCiAgICAgaW5rc2NhcGU6em9vbT0iMSIKICAgICBpbmtzY2FwZTpjeD0iMTc5IgogICAgIGlua3NjYXBlOmN5PSI4OS41Njk5MDQiCiAgICAgaW5rc2NhcGU6ZG9jdW1lbnQtdW5pdHM9InB4IgogICAgIGlua3NjYXBlOmN1cnJlbnQtbGF5ZXI9ImxheWVyMSIKICAgICB3aWR0aD0iMTIwcHgiCiAgICAgaGVpZ2h0PSI0MnB4IgogICAgIGlua3NjYXBlOnNob3dwYWdlc2hhZG93PSJmYWxzZSIKICAgICBpbmtzY2FwZTp3aW5kb3ctd2lkdGg9IjExOTgiCiAgICAgaW5rc2NhcGU6d2luZG93LWhlaWdodD0iNjI0IgogICAgIGlua3NjYXBlOndpbmRvdy14PSI0ODgiCiAgICAgaW5rc2NhcGU6d2luZG93LXk9IjQwMSIgLz4KICA8bWV0YWRhdGEKICAgICBpZD0ibWV0YWRhdGEyNzY0Ij4KICAgIDxyZGY6UkRGPgogICAgICA8Y2M6V29yawogICAgICAgICByZGY6YWJvdXQ9IiI+CiAgICAgICAgPGRjOmZvcm1hdD5pbWFnZS9zdmcreG1sPC9kYzpmb3JtYXQ+CiAgICAgICAgPGRjOnR5cGUKICAgICAgICAgICByZGY6cmVzb3VyY2U9Imh0dHA6Ly9wdXJsLm9yZy9kYy9kY21pdHlwZS9TdGlsbEltYWdlIiAvPgogICAgICA8L2NjOldvcms+CiAgICA8L3JkZjpSREY+CiAgPC9tZXRhZGF0YT4KICA8ZwogICAgIGlua3NjYXBlOmxhYmVsPSJMYXllciAxIgogICAgIGlua3NjYXBlOmdyb3VwbW9kZT0ibGF5ZXIiCiAgICAgaWQ9ImxheWVyMSI+CiAgICA8ZwogICAgICAgdHJhbnNmb3JtPSJtYXRyaXgoMC45OTM3ODA3LDAsMCwwLjk5MzY2OTQsLTE3Ny42OTQwOSwtNzQuNDM2NDA5KSIKICAgICAgIGlkPSJnMjg3IgogICAgICAgaW5rc2NhcGU6ZXhwb3J0LWZpbGVuYW1lPSIvbW50L2hnZnMvQm92L0RvY3VtZW50cy9Xb3JrLzIwMDcvY2MvaWRlbnRpdHkvc3JyIGJ1dHRvbnMvYmlnL2J5LXNhLnBuZyIKICAgICAgIGlua3NjYXBlOmV4cG9ydC14ZHBpPSIzMDAuMjMwMTMiCiAgICAgICBpbmtzY2FwZTpleHBvcnQteWRwaT0iMzAwLjIzMDEzIj4KCTxwYXRoCiAgIGlkPSJwYXRoMzgxN18yXyIKICAgbm9kZXR5cGVzPSJjY2NjY2NjIgogICBkPSJNIDE4Mi4yMzUzMiw3NS4zOTAxNCBMIDI5Ni4yOTkyOCw3NS41OTMyNiBDIDI5Ny44OTMwMyw3NS41OTMyNiAyOTkuMzE2ODYsNzUuMzU2NDQgMjk5LjMxNjg2LDc4Ljc3MzQ0IEwgMjk5LjE3NzIxLDExNi4zNDAzMyBMIDE3OS4zNTY5LDExNi4zNDAzMyBMIDE3OS4zNTY5LDc4LjYzMzc5IEMgMTc5LjM1NjksNzYuOTQ5MjIgMTc5LjUxOTk5LDc1LjM5MDE0IDE4Mi4yMzUzMiw3NS4zOTAxNCB6IgogICBzdHlsZT0iZmlsbDojYWFiMmFiIiAvPgoKCTxnCiAgIGlkPSJnNTkwOF8yXyIKICAgdHJhbnNmb3JtPSJtYXRyaXgoMC44NzI5MjEsMCwwLDAuODcyOTIxLDUwLjEyNTM2LDE0My4yMTQ0KSI+CgkJCgkJCTxwYXRoCiAgIGlkPSJwYXRoNTkwNl8yXyIKICAgY3g9IjI5Ni4zNTQxNiIKICAgcnk9IjIyLjkzOTU0OCIKICAgY3k9IjI2NC4zNTc3IgogICB0eXBlPSJhcmMiCiAgIHJ4PSIyMi45Mzk1NDgiCiAgIGQ9Ik0gMTg3LjIwOTQ0LC01NS42NzkyIEMgMTg3LjIxNTAyLC00Ni45OTg5NiAxODAuMTgxNTgsLTM5Ljk1ODI1IDE3MS41MDEzNCwtMzkuOTUyMTIgQyAxNjIuODIxMTMsLTM5Ljk0NzA4IDE1NS43NzkyOSwtNDYuOTc5OTggMTU1Ljc3NDI2LC01NS42NjAxNiBDIDE1NS43NzQyNiwtNTUuNjY2ODcgMTU1Ljc3NDI2LC01NS42NzI0OSAxNTUuNzc0MjYsLTU1LjY3OTIgQyAxNTUuNzY5MjIsLTY0LjM2MDU0IDE2Mi44MDIwOSwtNzEuNDAxMjUgMTcxLjQ4MjMzLC03MS40MDYzMSBDIDE4MC4xNjM2NywtNzEuNDExOTMgMTg3LjIwNDQxLC02NC4zNzg0MiAxODcuMjA5NDQsLTU1LjY5ODI0IEMgMTg3LjIwOTQ0LC01NS42OTI2MyAxODcuMjA5NDQsLTU1LjY4NTkxIDE4Ny4yMDk0NCwtNTUuNjc5MiB6IgogICBzdHlsZT0iZmlsbDojZmZmZmZmIiAvPgoKCQk8ZwogICBpZD0iZzU3MDZfMl8iCiAgIHRyYW5zZm9ybT0idHJhbnNsYXRlKC0yODkuNjE1Nyw5OS4wNjUzKSI+CgkJCTxwYXRoCiAgIGlkPSJwYXRoNTcwOF8yXyIKICAgZD0iTSA0NzMuODg0NTUsLTE2Ny41NDcyNCBDIDQ3Ny4zNjk5NiwtMTY0LjA2MTI4IDQ3OS4xMTI5NCwtMTU5Ljc5MzMzIDQ3OS4xMTI5NCwtMTU0Ljc0NDUxIEMgNDc5LjExMjk0LC0xNDkuNjk1MTMgNDc3LjQwMDE0LC0xNDUuNDczMDMgNDczLjk3NDYsLTE0Mi4wNzcxNSBDIDQ3MC4zMzkyOSwtMTM4LjUwMDU1IDQ2Ni4wNDI4MSwtMTM2LjcxMjgzIDQ2MS4wODUxMywtMTM2LjcxMjgzIEMgNDU2LjE4NzM2LC0xMzYuNzEyODMgNDUxLjk2NTI2LC0xMzguNDg1NDQgNDQ4LjQyMDAzLC0xNDIuMDMyMzggQyA0NDQuODc0MTksLTE0NS41NzgxOSA0NDMuMTAxNTgsLTE0OS44MTUzNyA0NDMuMTAxNTgsLTE1NC43NDQ1MSBDIDQ0My4xMDE1OCwtMTU5LjY3MzEgNDQ0Ljg3NDE5LC0xNjMuOTQwNDkgNDQ4LjQyMDAzLC0xNjcuNTQ3MjQgQyA0NTEuODc1MjMsLTE3MS4wMzM3NSA0NTYuMDk3MjgsLTE3Mi43NzYxOCA0NjEuMDg1MTMsLTE3Mi43NzYxOCBDIDQ2Ni4xMzM0MiwtMTcyLjc3NjE4IDQ3MC4zOTkxNCwtMTcxLjAzMzc1IDQ3My44ODQ1NSwtMTY3LjU0NzI0IHogTSA0NTAuNzY2NTcsLTE2NS4yMDIzOSBDIDQ0Ny44MTk4MiwtMTYyLjIyNjAxIDQ0Ni4zNDcwMSwtMTU4LjczOTUgNDQ2LjM0NzAxLC0xNTQuNzQwMDUgQyA0NDYuMzQ3MDEsLTE1MC43NDE3IDQ0Ny44MDUyOSwtMTQ3LjI4NDg1IDQ1MC43MjEyNSwtMTQ0LjM2OTM4IEMgNDUzLjYzNzc4LC0xNDEuNDUyODggNDU3LjEwOTc0LC0xMzkuOTk0NjIgNDYxLjEzODMsLTEzOS45OTQ2MiBDIDQ2NS4xNjY4MywtMTM5Ljk5NDYyIDQ2OC42Njg0OCwtMTQxLjQ2NzQzIDQ3MS42NDQ4NiwtMTQ0LjQxMzYzIEMgNDc0LjQ3MDc2LC0xNDcuMTQ5NDcgNDc1Ljg4NDI3LC0xNTAuNTkwNjkgNDc1Ljg4NDI3LC0xNTQuNzQwMDUgQyA0NzUuODg0MjcsLTE1OC44NTgwOSA0NzQuNDQ3ODEsLTE2Mi4zNTI5NyA0NzEuNTc2NTksLTE2NS4yMjQ3OSBDIDQ2OC43MDU5NSwtMTY4LjA5NTQ2IDQ2NS4yMjY3MSwtMTY5LjUzMTMxIDQ2MS4xMzgzLC0xNjkuNTMxMzEgQyA0NTcuMDQ5OTMsLTE2OS41MzEzMSA0NTMuNTkxOTIsLTE2OC4wODgxMyA0NTAuNzY2NTcsLTE2NS4yMDIzOSB6IE0gNDU4LjUyMTA2LC0xNTYuNDk5MjcgQyA0NTguMDcwNzQsLTE1Ny40ODA5IDQ1Ny4zOTY3MywtMTU3Ljk3MTUgNDU2LjQ5NzgxLC0xNTcuOTcxNSBDIDQ1NC45MDg2NywtMTU3Ljk3MTUgNDU0LjExNDM5LC0xNTYuOTAxOTggNDU0LjExNDM5LC0xNTQuNzYzIEMgNDU0LjExNDM5LC0xNTIuNjIzNDEgNDU0LjkwODY3LC0xNTEuNTUzODkgNDU2LjQ5NzgxLC0xNTEuNTUzODkgQyA0NTcuNTQ3MTksLTE1MS41NTM4OSA0NTguMjk2NzYsLTE1Mi4wNzUxOSA0NTguNzQ2NDcsLTE1My4xMTkwMSBMIDQ2MC45NDkyMywtMTUxLjk0NTk4IEMgNDU5Ljg5OTMsLTE1MC4wODA1IDQ1OC4zMjQxNywtMTQ5LjE0Njk3IDQ1Ni4yMjM3NCwtMTQ5LjE0Njk3IEMgNDU0LjYwMzg0LC0xNDkuMTQ2OTcgNDUzLjMwNjExLC0xNDkuNjQzNjcgNDUyLjMzMTY4LC0xNTAuNjM2NTMgQyA0NTEuMzU1NjEsLTE1MS42Mjk5NCA0NTAuODY4OTQsLTE1Mi45OTkyNiA0NTAuODY4OTQsLTE1NC43NDQ1IEMgNDUwLjg2ODk0LC0xNTYuNDYwMDggNDUxLjM3MTIzLC0xNTcuODIxNTkgNDUyLjM3NjQyLC0xNTguODMwMTMgQyA0NTMuMzgxNjEsLTE1OS44MzgwNiA0NTQuNjMzNDcsLTE2MC4zNDI2NCA0NTYuMTM0MjMsLTE2MC4zNDI2NCBDIDQ1OC4zNTQzNSwtMTYwLjM0MjY0IDQ1OS45NDQwNywtMTU5LjQ2Nzc2IDQ2MC45MDUwNCwtMTU3LjcxOTc4IEwgNDU4LjUyMTA2LC0xNTYuNDk5MjcgeiBNIDQ2OC44ODQ0LC0xNTYuNDk5MjcgQyA0NjguNDMzNTMsLTE1Ny40ODA5IDQ2Ny43NzI5MiwtMTU3Ljk3MTUgNDY2LjkwMjAxLC0xNTcuOTcxNSBDIDQ2NS4yODA5NSwtMTU3Ljk3MTUgNDY0LjQ2OTg4LC0xNTYuOTAxOTggNDY0LjQ2OTg4LC0xNTQuNzYzIEMgNDY0LjQ2OTg4LC0xNTIuNjIzNDEgNDY1LjI4MDk1LC0xNTEuNTUzODkgNDY2LjkwMjAxLC0xNTEuNTUzODkgQyA0NjcuOTUzMDQsLTE1MS41NTM4OSA0NjguNjg5MTgsLTE1Mi4wNzUxOSA0NjkuMTA5MjUsLTE1My4xMTkwMSBMIDQ3MS4zNjEyNiwtMTUxLjk0NTk4IEMgNDcwLjMxMzAxLC0xNTAuMDgwNSA0NjguNzQwMDcsLTE0OS4xNDY5NyA0NjYuNjQzNTgsLTE0OS4xNDY5NyBDIDQ2NS4wMjU4NywtMTQ5LjE0Njk3IDQ2My43MzA5NSwtMTQ5LjY0MzY3IDQ2Mi43NTcxMSwtMTUwLjYzNjUzIEMgNDYxLjc4NDk0LC0xNTEuNjI5OTQgNDYxLjI5NzczLC0xNTIuOTk5MjYgNDYxLjI5NzczLC0xNTQuNzQ0NSBDIDQ2MS4yOTc3MywtMTU2LjQ2MDA4IDQ2MS43OTIyMSwtMTU3LjgyMTU5IDQ2Mi43ODA2MSwtMTU4LjgzMDEzIEMgNDYzLjc2ODQzLC0xNTkuODM4MDYgNDY1LjAyNTg4LC0xNjAuMzQyNjQgNDY2LjU1NDA4LC0xNjAuMzQyNjQgQyA0NjguNzcwMjcsLTE2MC4zNDI2NCA0NzAuMzU3NzYsLTE1OS40Njc3NiA0NzEuMzE1NCwtMTU3LjcxOTc4IEwgNDY4Ljg4NDQsLTE1Ni40OTkyNyB6IiAvPgoKCQk8L2c+CgoJPC9nPgoKCTxwYXRoCiAgIGQ9Ik0gMjk3LjI5NjM5LDc0LjkxMDY0IEwgMTgxLjA2Njg4LDc0LjkxMDY0IEMgMTc5LjgyMDMsNzQuOTEwNjQgMTc4LjgwNjE0LDc1LjkyNTI5IDE3OC44MDYxNCw3Ny4xNzE4NyBMIDE3OC44MDYxNCwxMTYuNjY3NDggQyAxNzguODA2MTQsMTE2Ljk0OTIyIDE3OS4wMzQ2NiwxMTcuMTc4MjIgMTc5LjMxNjM5LDExNy4xNzgyMiBMIDI5OS4wNDYzOSwxMTcuMTc4MjIgQyAyOTkuMzI4MTMsMTE3LjE3ODIyIDI5OS41NTcxMywxMTYuOTQ5MjIgMjk5LjU1NzEzLDExNi42Njc0OCBMIDI5OS41NTcxMyw3Ny4xNzE4OCBDIDI5OS41NTcxMyw3NS45MjUyOSAyOTguNTQyOTcsNzQuOTEwNjQgMjk3LjI5NjM5LDc0LjkxMDY0IHogTSAxODEuMDY2ODgsNzUuOTMyMTMgTCAyOTcuMjk2MzksNzUuOTMyMTMgQyAyOTcuOTc5OTgsNzUuOTMyMTMgMjk4LjUzNTY1LDc2LjQ4ODI4IDI5OC41MzU2NSw3Ny4xNzE4OCBDIDI5OC41MzU2NSw3Ny4xNzE4OCAyOTguNTM1NjUsOTMuMDkxMzEgMjk4LjUzNTY1LDEwNC41OTAzNCBMIDIxNS40NjE5LDEwNC41OTAzNCBDIDIxMi40MTY5OCwxMTAuMDk1NzEgMjA2LjU1MDc3LDExMy44MzM5OSAxOTkuODE4MzUsMTEzLjgzMzk5IEMgMTkzLjA4MywxMTMuODMzOTkgMTg3LjIxODI1LDExMC4wOTkxMyAxODQuMTc0OCwxMDQuNTkwMzQgTCAxNzkuODI2NjYsMTA0LjU5MDM0IEMgMTc5LjgyNjY2LDkzLjA5MTMyIDE3OS44MjY2Niw3Ny4xNzE4OCAxNzkuODI2NjYsNzcuMTcxODggQyAxNzkuODI2NjQsNzYuNDg4MjggMTgwLjM4MzI5LDc1LjkzMjEzIDE4MS4wNjY4OCw3NS45MzIxMyB6IgogICBpZD0icGF0aDI5NCIgLz4KCgk8ZwogICBlbmFibGUtYmFja2dyb3VuZD0ibmV3ICAgICIKICAgaWQ9ImcyOTYiPgoJCTxwYXRoCiAgIGQ9Ik0gMjY1LjYwOTg2LDExMi44ODMzIEMgMjY1LjY4OTk0LDExMy4wMzkwNiAyNjUuNzk3MzYsMTEzLjE2NTA0IDI2NS45MzExNSwxMTMuMjYxNzIgQyAyNjYuMDY0OTQsMTEzLjM1NzkxIDI2Ni4yMjExOSwxMTMuNDI5NjkgMjY2LjQwMDg4LDExMy40NzYwOCBDIDI2Ni41ODE1NCwxMTMuNTIyOTYgMjY2Ljc2ODA3LDExMy41NDYzOSAyNjYuOTYwNDUsMTEzLjU0NjM5IEMgMjY3LjA5MDMzLDExMy41NDYzOSAyNjcuMjI5OTgsMTEzLjUzNTY1IDI2Ny4zNzk0LDExMy41MTM2OCBDIDI2Ny41Mjc4NCwxMTMuNDkyMiAyNjcuNjY3NDksMTEzLjQ0OTcyIDI2Ny43OTgzNSwxMTMuMzg3NyBDIDI2Ny45MjgyMywxMTMuMzI1NjkgMjY4LjAzNzYxLDExMy4yMzk3NSAyNjguMTIzNTUsMTEzLjEzMDg2IEMgMjY4LjIxMTQ0LDExMy4wMjE5NyAyNjguMjU0NDEsMTEyLjg4Mzc5IDI2OC4yNTQ0MSwxMTIuNzE1MzMgQyAyNjguMjU0NDEsMTEyLjUzNTE1IDI2OC4xOTY3OSwxMTIuMzg5MTYgMjY4LjA4MTU2LDExMi4yNzY4NSBDIDI2Ny45NjczLDExMi4xNjQ1NSAyNjcuODE1OTQsMTEyLjA3MTc3IDI2Ny42Mjk0MSwxMTEuOTk2NTggQyAyNjcuNDQzODYsMTExLjkyMjM2IDI2Ny4yMzE5NSwxMTEuODU2OTMgMjY2Ljk5NjYsMTExLjgwMDc4IEMgMjY2Ljc2MDI3LDExMS43NDQ2MyAyNjYuNTIxMDEsMTExLjY4MjYyIDI2Ni4yNzg4MywxMTEuNjEzNzcgQyAyNjYuMDI5ODEsMTExLjU1MTc2IDI2NS43ODc2MiwxMTEuNDc1NTkgMjY1LjU1MTI5LDExMS4zODUyNSBDIDI2NS4zMTU5NCwxMTEuMjk1NDEgMjY1LjEwNDAyLDExMS4xNzgyMiAyNjQuOTE3NSwxMTEuMDM1MTUgQyAyNjQuNzMwOTgsMTEwLjg5MjA4IDI2NC41ODA1OSwxMTAuNzEzMzcgMjY0LjQ2NTM1LDExMC40OTg1MyBDIDI2NC4zNTEwOSwxMTAuMjgzNjkgMjY0LjI5MzQ3LDExMC4wMjM5MiAyNjQuMjkzNDcsMTA5LjcxOTIzIEMgMjY0LjI5MzQ3LDEwOS4zNzY0NiAyNjQuMzY2NzEsMTA5LjA3OTU4IDI2NC41MTIyMiwxMDguODI3NjMgQyAyNjQuNjU4NywxMDguNTc1NjggMjY0Ljg1MDExLDEwOC4zNjU3MiAyNjUuMDg2NDQsMTA4LjE5NzI2IEMgMjY1LjMyMTc5LDEwOC4wMjkyOSAyNjUuNTg5MzcsMTA3LjkwNDc4IDI2NS44ODgyLDEwNy44MjM3MiBDIDI2Ni4xODYwNSwxMDcuNzQzMTUgMjY2LjQ4NDg4LDEwNy43MDI2MyAyNjYuNzgyNzMsMTA3LjcwMjYzIEMgMjY3LjEzMTM2LDEwNy43MDI2MyAyNjcuNDY1MzUsMTA3Ljc0MTY5IDI2Ny43ODU2NiwxMDcuODE5ODIgQyAyNjguMTA1LDEwNy44OTc0NiAyNjguMzkwMTUsMTA4LjAyMzkyIDI2OC42MzgyLDEwOC4xOTgyNCBDIDI2OC44ODcyMiwxMDguMzcyNTYgMjY5LjA4NDQ5LDEwOC41OTUyMSAyNjkuMjMwOTcsMTA4Ljg2NjIxIEMgMjY5LjM3NjQ4LDEwOS4xMzcyMSAyNjkuNDQ5NzIsMTA5LjQ2NTgyIDI2OS40NDk3MiwxMDkuODUxNTYgTCAyNjguMDI3ODQsMTA5Ljg1MTU2IEMgMjY4LjAxNTE0LDEwOS42NTIzNCAyNjcuOTczMTUsMTA5LjQ4NzMgMjY3LjkwMjg0LDEwOS4zNTY5MyBDIDI2Ny44MzE1NSwxMDkuMjI2MDcgMjY3LjczNjgyLDEwOS4xMjM1MyAyNjcuNjE5NjQsMTA5LjA0ODM0IEMgMjY3LjUwMTQ4LDEwOC45NzQxMiAyNjcuMzY2NzEsMTA4LjkyMDkgMjY3LjIxNTM0LDEwOC44OTAxNCBDIDI2Ny4wNjMsMTA4Ljg1ODg5IDI2Ni44OTc5NiwxMDguODQzMjYgMjY2LjcxODI3LDEwOC44NDMyNiBDIDI2Ni42MDEwOCwxMDguODQzMjYgMjY2LjQ4MjkyLDEwOC44NTU5NiAyNjYuMzY1NzMsMTA4Ljg4MDM3IEMgMjY2LjI0NzU3LDEwOC45MDU3NiAyNjYuMTQxMTIsMTA4Ljk0OTIyIDI2Ni4wNDU0MiwxMDkuMDExMjMgQyAyNjUuOTQ4NzQsMTA5LjA3MzczIDI2NS44Njk2NCwxMDkuMTUxMzcgMjY1LjgwODEyLDEwOS4yNDQ2MyBDIDI2NS43NDY2LDEwOS4zMzgzOCAyNjUuNzE1MzUsMTA5LjQ1NjU0IDI2NS43MTUzNSwxMDkuNTk5NjEgQyAyNjUuNzE1MzUsMTA5LjczMDQ3IDI2NS43Mzk3NiwxMDkuODM2NDMgMjY1Ljc4OTU3LDEwOS45MTY5OSBDIDI2NS44MzkzNywxMDkuOTk4MDQgMjY1LjkzODAxLDExMC4wNzI3NSAyNjYuMDgzNTIsMTEwLjE0MTExIEMgMjY2LjIyOTAzLDExMC4yMDk0NyAyNjYuNDMxMTgsMTEwLjI3ODMyIDI2Ni42ODg5OSwxMTAuMzQ2NjggQyAyNjYuOTQ2OCwxMTAuNDE1MDQgMjY3LjI4MzcyLDExMC41MDI0NCAyNjcuNzAwNzEsMTEwLjYwNzkxIEMgMjY3LjgyNDczLDExMC42MzI4MSAyNjcuOTk2NjEsMTEwLjY3ODIyIDI2OC4yMTczMSwxMTAuNzQzNjUgQyAyNjguNDM4MDEsMTEwLjgwOTA4IDI2OC42NTY3NiwxMTAuOTEzMDggMjY4Ljg3NDU0LDExMS4wNTYxNSBDIDI2OS4wOTIzMSwxMTEuMTk5NyAyNjkuMjc5ODEsMTExLjM5MTExIDI2OS40Mzg5OSwxMTEuNjMwMzcgQyAyNjkuNTk3MTksMTExLjg3MDEyIDI2OS42NzYyOSwxMTIuMTc2NzYgMjY5LjY3NjI5LDExMi41NTAyOSBDIDI2OS42NzYyOSwxMTIuODU1NDcgMjY5LjYxNjcyLDExMy4xMzg2NyAyNjkuNDk4NTYsMTEzLjM5OTkgQyAyNjkuMzgwNCwxMTMuNjYxNjIgMjY5LjIwNDYxLDExMy44ODcyIDI2OC45NzEyMiwxMTQuMDc2NjYgQyAyNjguNzM3ODIsMTE0LjI2NzA5IDI2OC40NDg3NiwxMTQuNDE0NTUgMjY4LjEwNDAzLDExNC41MjA1MSBDIDI2Ny43NTgzMywxMTQuNjI2NDcgMjY3LjM1Nzk0LDExNC42NzkyIDI2Ni45MDQ4MSwxMTQuNjc5MiBDIDI2Ni41Mzc2MiwxMTQuNjc5MiAyNjYuMTgxMTgsMTE0LjYzMzc5IDI2NS44MzU0NywxMTQuNTQzNDYgQyAyNjUuNDkwNzQsMTE0LjQ1MzEzIDI2NS4xODUwOCwxMTQuMzExMDQgMjY0LjkyMDQzLDExNC4xMTc2OCBDIDI2NC42NTY3NiwxMTMuOTI0MzIgMjY0LjQ0NjgsMTEzLjY3Nzc0IDI2NC4yOTA1NSwxMTMuMzc4OTEgQyAyNjQuMTM1MjgsMTEzLjA3OTU5IDI2NC4wNjEwNiwxMTIuNzI1MSAyNjQuMDY2OTIsMTEyLjMxMzk3IEwgMjY1LjQ4ODgsMTEyLjMxMzk3IEMgMjY1LjQ4ODc3LDExMi41MzgwOSAyNjUuNTI4ODEsMTEyLjcyODAzIDI2NS42MDk4NiwxMTIuODgzMyB6IgogICBpZD0icGF0aDI5OCIKICAgc3R5bGU9ImZpbGw6I2ZmZmZmZiIgLz4KCgkJPHBhdGgKICAgZD0iTSAyNzMuODY2NywxMDcuODY2NyBMIDI3Ni4zNTk4NiwxMTQuNTMwNzYgTCAyNzQuODM3NCwxMTQuNTMwNzYgTCAyNzQuMzMzNDksMTEzLjA0NjM4IEwgMjcxLjg0MDMzLDExMy4wNDYzOCBMIDI3MS4zMTc4NywxMTQuNTMwNzYgTCAyNjkuODQzMjYsMTE0LjUzMDc2IEwgMjcyLjM2Mzc3LDEwNy44NjY3IEwgMjczLjg2NjcsMTA3Ljg2NjcgeiBNIDI3My45NTA2OCwxMTEuOTUyNjQgTCAyNzMuMTEwODQsMTA5LjUwOTI4IEwgMjczLjA5MjI5LDEwOS41MDkyOCBMIDI3Mi4yMjMxNSwxMTEuOTUyNjQgTCAyNzMuOTUwNjgsMTExLjk1MjY0IHoiCiAgIGlkPSJwYXRoMzAwIgogICBzdHlsZT0iZmlsbDojZmZmZmZmIiAvPgoKCTwvZz4KCgk8ZwogICBlbmFibGUtYmFja2dyb3VuZD0ibmV3ICAgICIKICAgaWQ9ImczMDIiPgoJCTxwYXRoCiAgIGQ9Ik0gMjM5LjE3ODIxLDEwNy44NjY3IEMgMjM5LjQ5NTU5LDEwNy44NjY3IDIzOS43ODU2MywxMDcuODk1MDIgMjQwLjA0NzM1LDEwNy45NTA2OCBDIDI0MC4zMDkwNywxMDguMDA2ODMgMjQwLjUzMzY4LDEwOC4wOTg2MyAyNDAuNzIxMTgsMTA4LjIyNjA3IEMgMjQwLjkwNzcsMTA4LjM1MzUxIDI0MS4wNTMyMSwxMDguNTIyOTUgMjQxLjE1NTc1LDEwOC43MzQzNyBDIDI0MS4yNTgyOSwxMDguOTQ1NzkgMjQxLjMxMDA1LDEwOS4yMDcwMyAyNDEuMzEwMDUsMTA5LjUxODA2IEMgMjQxLjMxMDA1LDEwOS44NTQgMjQxLjIzMzg4LDExMC4xMzMyOSAyNDEuMDgwNTYsMTEwLjM1NzQyIEMgMjQwLjkyODIyLDExMC41ODE1NCAyNDAuNzAxNjUsMTEwLjc2NDY1IDI0MC40MDI4MywxMTAuOTA3NzEgQyAyNDAuODE0OTQsMTExLjAyNTg3IDI0MS4xMjI1NiwxMTEuMjMyOTEgMjQxLjMyNTY4LDExMS41Mjg4IEMgMjQxLjUyODgsMTExLjgyNDY5IDI0MS42MzAzNywxMTIuMTgxMTQgMjQxLjYzMDM3LDExMi41OTgxNCBDIDI0MS42MzAzNywxMTIuOTM0MDggMjQxLjU2NDk0LDExMy4yMjUwOSAyNDEuNDM0MDgsMTEzLjQ3MTE5IEMgMjQxLjMwMzIyLDExMy43MTY4IDI0MS4xMjY0NiwxMTMuOTE3NDggMjQwLjkwNTc2LDExNC4wNzMyNCBDIDI0MC42ODQwOCwxMTQuMjI5IDI0MC40MzExNSwxMTQuMzQ0MjQgMjQwLjE0Nzk1LDExNC40MTg0NSBDIDIzOS44NjM3NywxMTQuNDkzNjUgMjM5LjU3Mjc1LDExNC41MzA3NSAyMzkuMjcyOTUsMTE0LjUzMDc1IEwgMjM2LjAzNjYyLDExNC41MzA3NSBMIDIzNi4wMzY2MiwxMDcuODY2NjkgTCAyMzkuMTc4MjEsMTA3Ljg2NjY5IEwgMjM5LjE3ODIxLDEwNy44NjY3IHogTSAyMzguOTkwNzEsMTEwLjU2MjAxIEMgMjM5LjI1MjQzLDExMC41NjIwMSAyMzkuNDY3MjcsMTEwLjUgMjM5LjYzNjIyLDExMC4zNzU5NyBDIDIzOS44MDQxOSwxMTAuMjUxNDYgMjM5Ljg4ODE3LDExMC4wNTAyOSAyMzkuODg4MTcsMTA5Ljc3MDk5IEMgMjM5Ljg4ODE3LDEwOS42MTU3MiAyMzkuODU5ODUsMTA5LjQ4ODI4IDIzOS44MDQxOSwxMDkuMzg5MTUgQyAyMzkuNzQ3NTUsMTA5LjI4OTU0IDIzOS42NzMzMywxMDkuMjEyMzkgMjM5LjU3OTU4LDEwOS4xNTYyNCBDIDIzOS40ODU4MywxMDkuMTAwNTggMjM5LjM3ODQxLDEwOS4wNjE1MSAyMzkuMjU3MzEsMTA5LjA0MDAzIEMgMjM5LjEzNTI0LDEwOS4wMTgwNiAyMzkuMDA5MjYsMTA5LjAwNzMyIDIzOC44Nzg0LDEwOS4wMDczMiBMIDIzNy41MDUzNSwxMDkuMDA3MzIgTCAyMzcuNTA1MzUsMTEwLjU2MjAxIEwgMjM4Ljk5MDcxLDExMC41NjIwMSB6IE0gMjM5LjA3NjY0LDExMy4zOTAxNCBDIDIzOS4yMjAxOSwxMTMuMzkwMTQgMjM5LjM1NjkxLDExMy4zNzY0NyAyMzkuNDg3NzcsMTEzLjM0ODE1IEMgMjM5LjYxODYzLDExMy4zMjAzMiAyMzkuNzM0ODQsMTEzLjI3MzQ0IDIzOS44MzQ0NSwxMTMuMjA4NSBDIDIzOS45MzQwNiwxMTMuMTQzMDcgMjQwLjAxMzE2LDExMy4wNTQyIDI0MC4wNzI3MywxMTIuOTQyMzkgQyAyNDAuMTMyMywxMTIuODMwNTggMjQwLjE2MTYsMTEyLjY4NzUxIDI0MC4xNjE2LDExMi41MTMxOSBDIDI0MC4xNjE2LDExMi4xNzEzOSAyNDAuMDY0OTIsMTExLjkyNzI1IDIzOS44NzE1NiwxMTEuNzgxMjYgQyAyMzkuNjc4MiwxMTEuNjM1MjcgMjM5LjQyMjM0LDExMS41NjIwMiAyMzkuMTA0OTYsMTExLjU2MjAyIEwgMjM3LjUwNTM1LDExMS41NjIwMiBMIDIzNy41MDUzNSwxMTMuMzkwMTQgTCAyMzkuMDc2NjQsMTEzLjM5MDE0IHoiCiAgIGlkPSJwYXRoMzA0IgogICBzdHlsZT0iZmlsbDojZmZmZmZmIiAvPgoKCQk8cGF0aAogICBkPSJNIDI0MS44ODkxNCwxMDcuODY2NyBMIDI0My41MzI2OSwxMDcuODY2NyBMIDI0NS4wOTMyNCwxMTAuNDk4NTQgTCAyNDYuNjQ0MDIsMTA3Ljg2NjcgTCAyNDguMjc3ODEsMTA3Ljg2NjcgTCAyNDUuODA0MTgsMTExLjk3MzE1IEwgMjQ1LjgwNDE4LDExNC41MzA3NyBMIDI0NC4zMzU0MywxMTQuNTMwNzcgTCAyNDQuMzM1NDMsMTExLjkzNjA0IEwgMjQxLjg4OTE0LDEwNy44NjY3IHoiCiAgIGlkPSJwYXRoMzA2IgogICBzdHlsZT0iZmlsbDojZmZmZmZmIiAvPgoKCTwvZz4KCgk8ZwogICBpZD0iZzYzMTZfMV8iCiAgIHRyYW5zZm9ybT0ibWF0cml4KDAuNjI0OTk1LDAsMCwwLjYyNDk5NSwzOTEuMjI5NCwxNzYuOTMzMikiPgoJCQoJCQk8cGF0aAogICBpZD0icGF0aDYzMThfMV8iCiAgIGN4PSI0NzUuOTcxMTkiCiAgIHJ5PSIyOS4yMDk4NzciCiAgIGN5PSIyNTIuMDg2NDYiCiAgIHR5cGU9ImFyYyIKICAgcng9IjI5LjIwOTg3NyIKICAgZD0iTSAtMTc1LjAwODMsLTEzOS4xMTUzIEMgLTE3NS4wMDIwNCwtMTI5LjcwMzUgLTE4Mi42MjU1NSwtMTIyLjA2NzUxIC0xOTIuMDM4MTIsLTEyMi4wNjA0OSBDIC0yMDEuNDQ5MTMsLTEyMi4wNTM0MSAtMjA5LjA4NTEyLC0xMjkuNjc3NzQgLTIwOS4wOTI5MywtMTM5LjA5MDI4IEMgLTIwOS4wOTI5MywtMTM5LjA5ODA5IC0yMDkuMDkyOTMsLTEzOS4xMDc0OSAtMjA5LjA5MjkzLC0xMzkuMTE1MyBDIC0yMDkuMDk5MTksLTE0OC41Mjc4NCAtMjAxLjQ3NDEzLC0xNTYuMTYyMyAtMTkyLjA2MzExLC0xNTYuMTcwMTEgQyAtMTgyLjY1MDU0LC0xNTYuMTc3MTMgLTE3NS4wMTQ1NiwtMTQ4LjU1MjA3IC0xNzUuMDA4MywtMTM5LjE0MDI2IEMgLTE3NS4wMDgzLC0xMzkuMTMwOTIgLTE3NS4wMDgzLC0xMzkuMTIzOSAtMTc1LjAwODMsLTEzOS4xMTUzIHoiCiAgIHN0eWxlPSJmaWxsOiNmZmZmZmYiIC8+CgoJCTxnCiAgIGlkPSJnNjMyMF8xXyIKICAgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoLTIzLjk1MjEsLTg5LjcyOTYyKSI+CgkJCTxwYXRoCiAgIGlkPSJwYXRoNjMyMl8xXyIKICAgZD0iTSAtMTY4LjIyMDQsLTY4LjA1NTM2IEMgLTE3My4zOTIzNCwtNjguMDU1MzYgLTE3Ny43Njg5MiwtNjYuMjUwNjcgLTE4MS4zNTE3NSwtNjIuNjQyMDMgQyAtMTg1LjAyODM2LC01OC45MDc1OSAtMTg2Ljg2NTg4LC01NC40ODg4MyAtMTg2Ljg2NTg4LC00OS4zODU2OCBDIC0xODYuODY1ODgsLTQ0LjI4MjUzIC0xODUuMDI4MzYsLTM5Ljg5NDE2IC0xODEuMzUxNzUsLTM2LjIyMzA4IEMgLTE3Ny42NzY3MywtMzIuNTUxMTQgLTE3My4yOTg1OSwtMzAuNzE1MjEgLTE2OC4yMjA0LC0zMC43MTUyMSBDIC0xNjMuMDc5NzQsLTMwLjcxNTIxIC0xNTguNjI1MDMsLTMyLjU2Njc3IC0xNTQuODUzMTIsLTM2LjI2OTk2IEMgLTE1MS4zMDMwNywtMzkuNzg1NTggLTE0OS41MjY1MiwtNDQuMTU4MjcgLTE0OS41MjY1MiwtNDkuMzg1NjggQyAtMTQ5LjUyNjUyLC01NC42MTIzIC0xNTEuMzM0MzIsLTU5LjAzMjY1IC0xNTQuOTQ4NDMsLTYyLjY0MjAzIEMgLTE1OC41NjI1LC02Ni4yNTA2NyAtMTYyLjk4NTk5LC02OC4wNTUzNiAtMTY4LjIyMDQsLTY4LjA1NTM2IHogTSAtMTY4LjE3MzUyLC02NC42OTUxOSBDIC0xNjMuOTM2LC02NC42OTUxOSAtMTYwLjMzNzUyLC02My4yMDIyMSAtMTU3LjM3NjU1LC02MC4yMTQ2NiBDIC0xNTQuMzg3NDgsLTU3LjI1ODM2IC0xNTIuODkyMTQsLTUzLjY0ODk5IC0xNTIuODkyMTQsLTQ5LjM4NTY4IEMgLTE1Mi44OTIxNCwtNDUuMDkxODYgLTE1NC4zNTQ2NiwtNDEuNTI4NTYgLTE1Ny4yODQzOCwtMzguNjk2NTMgQyAtMTYwLjM2ODc2LC0zNS42NDcyNyAtMTYzLjk5ODQ5LC0zNC4xMjMwNCAtMTY4LjE3MzUxLC0zNC4xMjMwNCBDIC0xNzIuMzQ4NTYsLTM0LjEyMzA0IC0xNzUuOTQ3MDEsLTM1LjYzMjQ0IC0xNzguOTY4OTIsLTM4LjY0OTY1IEMgLTE4MS45OTA4LC00MS42NjkxOCAtMTgzLjUwMTc2LC00NS4yNDY1NyAtMTgzLjUwMTc2LC00OS4zODU2NyBDIC0xODMuNTAxNzYsLTUzLjUyMzk4IC0xODEuOTc1MTgsLTU3LjEzNDE0IC0xNzguOTIyMDUsLTYwLjIxNDY1IEMgLTE3NS45OTM5LC02My4yMDIyMSAtMTcyLjQxMTA3LC02NC42OTUxOSAtMTY4LjE3MzUyLC02NC42OTUxOSB6IiAvPgoKCQkJPHBhdGgKICAgaWQ9InBhdGg2MzI0XzFfIgogICBkPSJNIC0xNzYuNDk1NDgsLTUyLjAyMDg3IEMgLTE3NS43NTE3MSwtNTYuNzE4NTYgLTE3Mi40NDM4NywtNTkuMjI5NDkgLTE2OC4zMDAwOCwtNTkuMjI5NDkgQyAtMTYyLjMzOTExLC01OS4yMjk0OSAtMTU4LjcwNzgzLC01NC45MDQ0OCAtMTU4LjcwNzgzLC00OS4xMzcyIEMgLTE1OC43MDc4MywtNDMuNTA5ODIgLTE2Mi41NzE5NCwtMzkuMTM3OTMgLTE2OC4zOTM4MywtMzkuMTM3OTMgQyAtMTcyLjM5ODU2LC0zOS4xMzc5MyAtMTc1Ljk4Mjk3LC00MS42MDI3NyAtMTc2LjYzNjExLC00Ni40Mzg3NyBMIC0xNzEuOTMyOTIsLTQ2LjQzODc3IEMgLTE3MS43OTIzLC00My45Mjc3OCAtMTcwLjE2MjYsLTQzLjA0NDE4IC0xNjcuODM0NDcsLTQzLjA0NDE4IEMgLTE2NS4xODEzLC00My4wNDQxOCAtMTYzLjQ1NjMsLTQ1LjUwOTA4IC0xNjMuNDU2MywtNDkuMjc3MDkgQyAtMTYzLjQ1NjMsLTUzLjIyOTQyIC0xNjQuOTQ2OTMsLTU1LjMyMjQ0IC0xNjcuNzQyMjgsLTU1LjMyMjQ0IEMgLTE2OS43OTA3NCwtNTUuMzIyNDQgLTE3MS41NTk0OCwtNTQuNTc3ODcgLTE3MS45MzI5MiwtNTIuMDIwODcgTCAtMTcwLjU2NDE4LC01Mi4wMjc4OSBMIC0xNzQuMjY3MzQsLTQ4LjMyNjI5IEwgLTE3Ny45Njg5NCwtNTIuMDI3ODkgTCAtMTc2LjQ5NTQ4LC01Mi4wMjA4NyB6IiAvPgoKCQk8L2c+CgoJPC9nPgoKCTxnCiAgIGlkPSJnMzEzIj4KCQk8Y2lyY2xlCiAgIGN4PSIyNDIuNTYyMjYiCiAgIGN5PSI5MC4yMjQ2MDkiCiAgIHI9IjEwLjgwNjQiCiAgIGlkPSJjaXJjbGUzMTUiCiAgIHNvZGlwb2RpOmN4PSIyNDIuNTYyMjYiCiAgIHNvZGlwb2RpOmN5PSI5MC4yMjQ2MDkiCiAgIHNvZGlwb2RpOnJ4PSIxMC44MDY0IgogICBzb2RpcG9kaTpyeT0iMTAuODA2NCIKICAgc3R5bGU9ImZpbGw6I2ZmZmZmZiIgLz4KCgkJPGcKICAgaWQ9ImczMTciPgoJCQk8cGF0aAogICBkPSJNIDI0NS42ODk5NCw4Ny4wOTc2NiBDIDI0NS42ODk5NCw4Ni42ODExNiAyNDUuMzUyMDUsODYuMzQ0MjQgMjQ0LjkzNjAzLDg2LjM0NDI0IEwgMjQwLjE2MzU3LDg2LjM0NDI0IEMgMjM5Ljc0NzU1LDg2LjM0NDI0IDIzOS40MDk2Niw4Ni42ODExNSAyMzkuNDA5NjYsODcuMDk3NjYgTCAyMzkuNDA5NjYsOTEuODcwNjEgTCAyNDAuNzQwNzEsOTEuODcwNjEgTCAyNDAuNzQwNzEsOTcuNTIyOTUgTCAyNDQuMzU3OSw5Ny41MjI5NSBMIDI0NC4zNTc5LDkxLjg3MDYxIEwgMjQ1LjY4OTkzLDkxLjg3MDYxIEwgMjQ1LjY4OTkzLDg3LjA5NzY2IEwgMjQ1LjY4OTk0LDg3LjA5NzY2IHoiCiAgIGlkPSJwYXRoMzE5IiAvPgoKCQkJPGNpcmNsZQogICBjeD0iMjQyLjU0OTgiCiAgIGN5PSI4NC4wODMwMDgiCiAgIHI9IjEuNjMyMzIiCiAgIGlkPSJjaXJjbGUzMjEiCiAgIHNvZGlwb2RpOmN4PSIyNDIuNTQ5OCIKICAgc29kaXBvZGk6Y3k9Ijg0LjA4MzAwOCIKICAgc29kaXBvZGk6cng9IjEuNjMyMzIiCiAgIHNvZGlwb2RpOnJ5PSIxLjYzMjMyIiAvPgoKCQk8L2c+CgoJCTxwYXRoCiAgIGNsaXAtcnVsZT0iZXZlbm9kZCIKICAgZD0iTSAyNDIuNTM0NjcsNzguMzE4MzYgQyAyMzkuMzAzMjIsNzguMzE4MzYgMjM2LjU2NjQxLDc5LjQ0NTggMjM0LjMyNzE1LDgxLjcwMjE1IEMgMjMyLjAyOTMsODQuMDM1MTYgMjMwLjg4MDg2LDg2Ljc5NzM2IDIzMC44ODA4Niw4OS45ODYzMyBDIDIzMC44ODA4Niw5My4xNzUzIDIzMi4wMjkzLDk1LjkxODQ2IDIzNC4zMjcxNSw5OC4yMTMzOCBDIDIzNi42MjUsMTAwLjUwNzgxIDIzOS4zNjEzMywxMDEuNjU1MjcgMjQyLjUzNDY3LDEwMS42NTUyNyBDIDI0NS43NDc1NiwxMDEuNjU1MjcgMjQ4LjUzMjcyLDEwMC40OTg1MyAyNTAuODg4MTksOTguMTgzNTkgQyAyNTMuMTA4ODksOTUuOTg2ODEgMjU0LjIxODI3LDkzLjI1MzkgMjU0LjIxODI3LDg5Ljk4NjMyIEMgMjU0LjIxODI3LDg2LjcxODc0IDI1My4wODkzNiw4My45NTc1MSAyNTAuODMwNTcsODEuNzAyMTQgQyAyNDguNTcxNzgsNzkuNDQ1OCAyNDUuODA2MTUsNzguMzE4MzYgMjQyLjUzNDY3LDc4LjMxODM2IHogTSAyNDIuNTYzOTYsODAuNDE3OTcgQyAyNDUuMjEyNCw4MC40MTc5NyAyNDcuNDYxNDIsODEuMzUxNTYgMjQ5LjMxMTAzLDgzLjIxODc1IEMgMjUxLjE4MTE1LDg1LjA2NTkyIDI1Mi4xMTU3Miw4Ny4zMjIyNyAyNTIuMTE1NzIsODkuOTg2MzMgQyAyNTIuMTE1NzIsOTIuNjY5OTIgMjUxLjIwMDY4LDk0Ljg5NzQ2IDI0OS4zNjk2Myw5Ni42NjY5OSBDIDI0Ny40NDE5LDk4LjU3Mjc1IDI0NS4xNzMzNCw5OS41MjUzOSAyNDIuNTYzOTcsOTkuNTI1MzkgQyAyMzkuOTU0Niw5OS41MjUzOSAyMzcuNzA1NTcsOTguNTgyNTIgMjM1LjgxNzM5LDk2LjY5NTggQyAyMzMuOTI3NzQsOTQuODA5NTcgMjMyLjk4Mzg5LDkyLjU3MzI0IDIzMi45ODM4OSw4OS45ODYzMyBDIDIzMi45ODM4OSw4Ny4zOTk5IDIzMy45Mzc5OSw4NS4xNDQwNCAyMzUuODQ2MTksODMuMjE4NzUgQyAyMzcuNjc2NzYsODEuMzUxNTYgMjM5LjkxNjUsODAuNDE3OTcgMjQyLjU2Mzk2LDgwLjQxNzk3IHoiCiAgIGlkPSJwYXRoMzIzIgogICBzdHlsZT0iZmlsbC1ydWxlOmV2ZW5vZGQiIC8+CgoJPC9nPgoKPC9nPgogIDwvZz4KPC9zdmc+Cg=="
+      />
+    </div>
+<h1 class='book-name'>Translation Notes</h1><h2>Introduction to Jude</h2>
+<h3>Part 1: General Introduction</h3>
+<h4>Outline of the Book of Jude</h4>
+<ol>
+<li>Introduction</li>
+<li>Warning against false teachers</li>
+<li>Old Testament examples</li>
+<li>Proper response</li>
+<li>Praises to God</li>
+</ol>
+<h4>Who wrote the Book of Jude?</h4>
+<p>The author identified himself as Jude the brother of James. Both Jude and James were half-brothers of Jesus. It is unknown whether this letter was intended for a specific church.</p>
+<h4>What is the Book of Jude about?</h4>
+<p>Jude wrote this letter to warn believers against false teachers. Jude often referred to the Old Testament. This may suggest that Jude was writing to a Jewish Christian audience. This letter and 2 Peter have similar content. They both speak about angels, Sodom and Gomorrah, and false teachers.</p>
+<h4>How should the title of this book be translated?</h4>
+<p>Translators may choose to call this book by its traditional title, &quot;Jude.&quot; Or they may choose a clearer title, such as &quot;The Letter from Jude&quot; or &quot;The Letter Jude Wrote.&quot;</p>
+<h3>Part 2: Important Religious and Cultural Concepts</h3>
+<h4>Who were the people Jude spoke against?</h4>
+<p>It is possible that the people Jude spoke against were those who would become known as Gnostics. These teachers distorted the teachings of scripture for their own gain. They lived in immoral ways and taught others to do the same.</p>
+<h1 class='book-name'>Unlocked Literal Bible</h1><div class="chapter">
+<span class="chaptermarker">1</span>
+<p>
+<span class="verse">
+<sup class="versemarker">1</sup>Jude, a servant of Jesus Christ and brother of James, to those who are called, beloved in God the Father, and kept for Jesus Christ:
+</span>
+<span class="verse">
+<sup class="versemarker">2</sup>May mercy and peace and love be multiplied to you.
+</span>
+<span class="verse">
+<sup class="versemarker">3</sup>Beloved, while I was making every effort to write to you about our common salvation, I had to write to you to exhort you to struggle earnestly for the faith that was entrusted once for all to God's holy people.
+</span>
+<span class="verse">
+<sup class="versemarker">4</sup>For certain men have slipped in secretly among you. These men were marked out for condemnation. They are ungodly men who have changed the grace of our God into sensuality, and who deny our only Master and Lord, Jesus Christ.
+</span>
+<span class="verse">
+<sup class="versemarker">5</sup>Now I wish to remind you—although once you fully knew it—that the Lord saved a people out of the land of Egypt, but that afterward he destroyed those who did not believe.
+</span>
+<span class="verse">
+<sup class="versemarker">6</sup>Also, angels who did not keep to their own position of authority, but who left their proper dwelling place—God has kept them in everlasting chains, in utter darkness, for the judgment on the great day.
+</span>
+<span class="verse">
+<sup class="versemarker">7</sup>So also Sodom and Gomorrah and the cities around them gave themselves over to sexual immorality and perverse sexual acts. They serve as an example of those who suffer the punishment of eternal fire.
+</span>
+<span class="verse">
+<sup class="versemarker">8</sup>Yet in the same way, these dreamers also defile their bodies. They reject authority and they slander the glorious ones.
+</span>
+<span class="verse">
+<sup class="versemarker">9</sup>But even Michael the archangel, when he was arguing with the devil and disputing with him about the body of Moses, did not dare to bring a slanderous judgment against him, but he said, "May the Lord rebuke you!"
+</span>
+<span class="verse">
+<sup class="versemarker">10</sup>But these people insult whatever they do not understand; and what they do understand naturally, like unreasoning animals, these are the very things that destroy them.
+</span>
+<span class="verse">
+<sup class="versemarker">11</sup>Woe to them! For they have walked in the way of Cain and have plunged into Balaam's error for profit. They have perished in Korah's rebellion.
+</span>
+<span class="verse">
+<sup class="versemarker">12</sup>These people are dangerous reefs at your love feasts, feasting with you fearlessly—shepherds who only feed themselves. They are clouds without rain, carried along by winds; autumn trees without fruit—twice dead, uprooted.
+</span>
+<span class="verse">
+<sup class="versemarker">13</sup>They are violent waves in the sea, foaming up their shame; wandering stars, for whom the gloom of complete darkness has been reserved forever.
+</span>
+<span class="verse">
+<sup class="versemarker">14</sup>Enoch, the seventh from Adam, prophesied about them, saying, "Look! The Lord is coming with thousands and thousands of his holy ones.
+</span>
+<span class="verse">
+<sup class="versemarker">15</sup>He is coming to execute judgment on everyone. He is coming to convict all the ungodly of all the works they have done in an ungodly way, and of all the bitter words that ungodly sinners have spoken against him."
+</span>
+<span class="verse">
+<sup class="versemarker">16</sup>These are grumblers, complainers, following their evil desires. Their mouths speak loud boasts, flattering others for profit.
+</span>
+<span class="verse">
+<sup class="versemarker">17</sup>But you, beloved, remember the words that were spoken in the past by the apostles of our Lord Jesus Christ.
+</span>
+<span class="verse">
+<sup class="versemarker">18</sup>They said to you, "In the last time there will be mockers who will follow their own ungodly desires."
+</span>
+<span class="verse">
+<sup class="versemarker">19</sup>It is these who cause divisions; they are worldly, and they do not have the Spirit.
+</span>
+<span class="verse">
+<sup class="versemarker">20</sup>But you, beloved, build yourselves up in your most holy faith, and pray in the Holy Spirit.
+</span>
+<span class="verse">
+<sup class="versemarker">21</sup>Keep yourselves in God's love, and wait for the mercy of our Lord Jesus Christ that brings you eternal life.
+</span>
+<span class="verse">
+<sup class="versemarker">22</sup>Be merciful to those who doubt.
+</span>
+<span class="verse">
+<sup class="versemarker">23</sup>Save others by snatching them out of the fire; to others show mercy with fear, hating even the garment defiled by the flesh.
+</span>
+<span class="verse">
+<sup class="versemarker">24</sup>Now to the one who is able to keep you from stumbling and to cause you to stand before his glorious presence without blemish and with great joy, 
+</span>
+<span class="verse">
+<sup class="versemarker">25</sup>to the only God our Savior through Jesus Christ our Lord, be glory, majesty, dominion, and authority, before all time, now, and forever. Amen.
+</span>
+</p>
+</div>
+<h1 class='book-name'>Translation Notes</h1><div><h4>Jude 1:1</h4>
+<h5>General Information:</h5>
+<p>Jude identifies himself as the writer of this letter and greets his readers. He was probably the half-brother of Jesus. There are two other Judes mentioned in the New Testament. The word &quot;you&quot; in this letter refers to the Christians to whom Jude was writing and is always plural.</p>
+<h5>Jude, a servant of</h5>
+<p>Jude is the brother of James. Alternate translation: &quot;I am Jude, a servant of&quot;</p>
+<h5>brother of James</h5>
+<p>James and Jude were half brothers of Jesus.</p>
+<h4>Jude 1:2</h4>
+<h5>May mercy and peace and love be multiplied to you</h5>
+<p>&quot;may mercy, peace, and love be increased many times for you.&quot; These ideas are spoken of as if they were objects that could grow in size or number. This can be restated to remove the abstract nouns &quot;mercy,&quot; &quot;peace,&quot; and &quot;love.&quot; Alternate translation: &quot;May God continue to be merciful to you so that you live peacefully and love one another more and more</p>
+<h4>Jude 1:3</h4>
+<h5>General Information:</h5>
+<p>The word &quot;our&quot; in this letter includes both Jude and believers.</p>
+<h5>Connecting Statement:</h5>
+<p>Jude tells the believers his reason for writing this letter.</p>
+<h5>our common salvation</h5>
+<p>&quot;the salvation we share&quot;</p>
+<h5>I had to write</h5>
+<p>&quot;I felt a great need to write&quot; or &quot;I felt an urgent need to write&quot;</p>
+<h5>to exhort you to struggle earnestly for the faith</h5>
+<p>&quot;to encourage you to defend the true teaching&quot;</p>
+<h5>once for all</h5>
+<p>&quot;finally and completely&quot;</p>
+<h4>Jude 1:4</h4>
+<h5>For certain men have slipped in secretly among you</h5>
+<p>&quot;For some men have come in among the believers without drawing attention to themselves&quot;</p>
+<h5>These men were marked out for condemnation</h5>
+<p>This can also be put into the active voice. Alternate translation: &quot;These were men whom God chose to condemn&quot;</p>
+<h5>who have changed the grace of our God into sensuality</h5>
+<p>God's grace is spoken of as if it were a thing that could be changed into something horrible. Alternate translation: &quot;who teach that God's grace permits one to continue to live in sexual sin&quot;</p>
+<h5>deny our only Master and Lord, Jesus Christ</h5>
+<p>Possible meanings are 1) they teach that he is not God or 2) these men do not obey Jesus Christ.</p>
+<h4>Jude 1:5</h4>
+<h5>Connecting Statement:</h5>
+<p>Jude gives examples from the past of those who did not follow the Lord.</p>
+<h5>the Lord saved a people out of the land of Egypt</h5>
+<p>&quot;the Lord rescued the Israelites long ago from Egypt&quot;</p>
+<h5>the Lord</h5>
+<p>Some texts read &quot;Jesus.&quot;</p>
+<h4>Jude 1:6</h4>
+<h5>their own position of authority</h5>
+<p>&quot;the responsibilities God entrusted to them&quot;</p>
+<h5>their proper dwelling place</h5>
+<p>The proper dwelling place of angels is heaven.</p>
+<h5>God has kept them in everlasting chains, in utter darkness</h5>
+<p>&quot;God has put these angels in a dark prison from which they will never escape&quot;</p>
+<h5>utter darkness</h5>
+<p>Here &quot;darkness&quot; is a metonym which represents the place of the dead or hell. Alternate translation: &quot;in utter darkness in hell&quot;</p>
+<h5>the great day</h5>
+<p>the final day when God will judge everyone</p>
+<h4>Jude 1:7</h4>
+<h5>Sodom and Gomorrah and the cities around them</h5>
+<p>Here &quot;Sodom,&quot; &quot;Gomorrah,&quot; and &quot;cities&quot; represent the people who lived in them. Alternate translation: &quot;the people of Sodom and Gomorrah and the people in the cities around them&quot;</p>
+<h5>gave themselves over to sexual immorality and perverse sexual acts</h5>
+<p>&quot;engaged in every kind of sexual immorality and all of the perverse sexual acts they desired.&quot; The sexual sins of Sodom and Gomorrah were the result of the same kind of rebellion as the angels' evil ways.</p>
+<h5>as an example of those who suffer the punishment</h5>
+<p>The destruction of the people of Sodom and Gomorrah became an example of the fate of all who reject God.</p>
+<h4>Jude 1:8</h4>
+<h5>these dreamers</h5>
+<p>These are the people who disobey God, probably because they claim to have seen visions that gave them authority to do so.</p>
+<h5>defile their bodies</h5>
+<p>The people sinning is spoken of as if they were making their bodies unclean. Alternate translation: &quot;sin and defile themselves&quot;</p>
+<h5>they slander</h5>
+<p>&quot;they speak insults about&quot;</p>
+<h5>glorious ones</h5>
+<p>This refers to spiritual beings, such as angels.</p>
+<h4>Jude 1:9</h4>
+<h5>General Information:</h5>
+<p>Balaam was a prophet who refused to curse Israel for an enemy but then taught that enemy to get the people to marry unbelievers and become idol worshipers. Korah was a man of Israel who rebelled against Moses's leadership and Aaron's priesthood.</p>
+<h5>did not dare to bring a slanderous judgment against him</h5>
+<p>&quot;did not dare to speak anything evil against him&quot; or &quot;did not dare to insult or condemn him&quot;</p>
+<h4>Jude 1:10</h4>
+<h5>these people</h5>
+<p>the ungodly people</p>
+<h5>whatever they do not understand</h5>
+<p>&quot;anything of which they do not know the meaning.&quot; Possible meanings are 1) &quot;everything good that they do not understand&quot; or 2) &quot;the glorious ones, which they do not understand&quot; (<a href="#en-065-ch-001-v-008">Jude 1:8</a>).</p>
+<h4>Jude 1:11</h4>
+<h5>walked in the way of Cain</h5>
+<p>&quot;Walked in the way&quot; here is a metaphor for &quot;lived in the same way as.&quot; Alternate translation: &quot;lived the same way Cain lived&quot;</p>
+<h4>Jude 1:12</h4>
+<h5>Connecting Statement:</h5>
+<p>Jude uses a series of metaphors to describe the ungodly men. He tells the believers how to recognize these men when they are among them.</p>
+<h5>These people</h5>
+<p>The word &quot;These&quot; refers to the &quot;ungodly men&quot; of Jude 1:4.</p>
+<h5>dangerous reefs</h5>
+<p>Reefs are large rocks that are very close to the surface of water in the sea. Because sailors cannot see them, they are very dangerous. Ships can easily be destroyed if they hit these rocks.</p>
+<h5>autumn trees without fruit—twice dead, uprooted</h5>
+<p>These words contain two metaphors for dead people and apply them both to &quot;these people.&quot;</p>
+<h5>autumn trees without fruit</h5>
+<p>This is the first metaphor for dead people. Trees in autumn look dead because their leaves have all fallen off, as has the fruit of fruit trees.</p>
+<h5>twice dead, uprooted</h5>
+<p>This is the second metaphor for dead people. After these &quot;autumn trees&quot; have lost their leaves and fruit, they die their first metaphorical death. Then people uproot them, and they die their second metaphorical death.</p>
+<h5>uprooted</h5>
+<p>completely pulled out of the ground so their roots dry out</p>
+<h4>Jude 1:13</h4>
+<h5>violent waves in the sea</h5>
+<p>As the sea's waves are blown by a strong wind, so the ungodly people are easily moved in many directions.</p>
+<h5>foaming up their shame</h5>
+<p>As wind causes wild waves to stir up dirty foam—so these men, through their false teaching and actions, shame themselves. Alternate translation: &quot;and just as waves bring up foam and dirt, these men pollute others with their shame&quot;</p>
+<p>wandering stars</p>
+<p>Those who studied the stars in ancient times noticed that some &quot;stars,&quot;—what we call planets—do not move the way that stars do, so they called them &quot;wandering stars.&quot; Alternate translation: &quot;They are like moving stars&quot;</p>
+<h5>for whom the gloom of complete darkness has been reserved forever</h5>
+<p>Here &quot;darkness&quot; is a metonym that represents the place of the dead or hell, and &quot;the gloom of complete darkness&quot; is an idiom that means &quot;a totally dark place.&quot; The phrase &quot;has been reserved&quot; can be stated in active form. Alternate translation: &quot;and God will put them in the gloom and complete darkness of hell forever&quot;</p>
+<h4>Jude 1:14</h4>
+<h5>the seventh from Adam</h5>
+<p>If Adam is counted as the first generation of mankind, Enoch is the seventh. If Adam's son is counted as the first, Enoch is sixth in line.</p>
+<h5>Look</h5>
+<p>&quot;Listen&quot; or &quot;Pay attention to this important thing I am going to say&quot;</p>
+<h5>holy ones</h5>
+<p>Possible meanings are 1) &quot;angels&quot; or 2) &quot;saints&quot; or 3) &quot;angels and saints&quot;</p>
+<h4>Jude 1:15</h4>
+<h5>to execute judgment on</h5>
+<p>&quot;to make judgment on&quot; or &quot;to judge&quot;</p>
+<h4>Jude 1:16</h4>
+<h5>grumblers, complainers</h5>
+<p>People who do not want to obey and speak against godly authority. &quot;Grumblers&quot; tend to speak quietly, while &quot;complainers&quot; speak openly.</p>
+<h5>Their mouths speak loud boasts</h5>
+<p>They praise themselves so that others can hear.</p>
+<h5>flattering others</h5>
+<p>&quot;giving false praise to others&quot;</p>
+<h4>Jude 1:18</h4>
+<h5>mockers who will follow their own ungodly desires</h5>
+<p>Ungodly desires are spoken of as if they were a path that a person will follow. Alternate translation: &quot;mockers who will continue to dishonor God by doing the evil things they wish to do&quot;</p>
+<h4>Jude 1:19</h4>
+<h5>It is these</h5>
+<p>&quot;It is these mockers&quot; or &quot;These mockers are the ones&quot;</p>
+<h5>they are worldly</h5>
+<p>Here &quot;worldly&quot; describes someone who is concerned with things of the world rather than things of God. Often in the Bible &quot;world&quot; represents all things opposed to God. Alternate translation: &quot;they are only concerned with doing what is evil&quot;</p>
+<h5>they do not have the Spirit</h5>
+<p>The Holy Spirit is spoken of as if he were something that people can possess. Alternate translation: &quot;the Spirit is not within them&quot;</p>
+<h4>Jude 1:20</h4>
+<h5>Connecting Statement:</h5>
+<p>Jude tells the believers how they should live and how they should treat others.</p>
+<h5>But you, beloved</h5>
+<p>&quot;Do not be like them, beloved. Instead&quot;</p>
+<h5>build yourselves up</h5>
+<p>Becoming increasingly able to trust in God and obey him is spoken of as if it were the process of constructing a building.</p>
+<h4>Jude 1:21</h4>
+<h5>Keep yourselves in God's love</h5>
+<p>Remaining able to receive God's love is spoken of as if one were keeping oneself in a certain place.</p>
+<h5>wait for</h5>
+<p>&quot;eagerly look forward to&quot;</p>
+<h5>the mercy of our Lord Jesus Christ that brings you eternal life</h5>
+<p>Here &quot;mercy&quot; stands for Jesus Christ himself, who will show his mercy to the believers by making them live forever with him.</p>
+<h4>Jude 1:22</h4>
+<h5>those who doubt</h5>
+<p>&quot;those who do not yet believe that Jesus is God&quot;</p>
+<h4>Jude 1:23</h4>
+<h5>snatching them out of the fire</h5>
+<p>The picture is that of pulling people from a fire before they start to burn. Alternate translation: &quot;doing for them whatever needs to be done to keep them from dying without Christ. This is like pulling them from the fire&quot;</p>
+<h5>to others show mercy with fear</h5>
+<p>&quot;be kind to others, but be afraid of sinning the way they do&quot;</p>
+<h5>hating even the garment defiled by the flesh</h5>
+<p>Jude exaggerates to warn his readers that they can become like those sinners. Alternate translation: &quot;treating them as though you could become guilty of sin just by touching their clothes&quot;</p>
+<h4>Jude 1:24</h4>
+<h5>Connecting Statement:</h5>
+<p>Jude closes with a blessing.</p>
+<h5>to cause you to stand before his glorious presence</h5>
+<p>His glory is brilliant light that represents his greatness. Alternate translation: &quot;and to allow you to enjoy and worship his glory&quot;</p>
+<h5>glorious presence without blemish and with</h5>
+<p>Here sin is spoken of as if it were dirt on one's body or a flaw on one's body. Alternate translation: &quot;glorious presence, where you will be without sin and have&quot;</p>
+<h4>Jude 1:25</h4>
+<h5>to the only God our Savior through Jesus Christ our Lord</h5>
+<p>&quot;to the only God, who saved us because of what Jesus Christ did.&quot; This emphasizes that God the Father as well as the Son is the Savior.</p>
+<h5>be glory, majesty, dominion, and authority, before all time, now, and forever</h5>
+<p>God has always had, now has, and always will have glory, absolute leadership, and complete control of all things.</p>
+</div>&nbsp;</body></html>

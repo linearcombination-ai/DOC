@@ -1,41 +1,38 @@
-name: Platform RS
-
-# The experiment's own workflow (branch exp/platform-rs on the fork only). It builds the images of the Rust build of the
-# DOC platform into the runner (no registry push, no secrets), runs the Rust and Python tests, brings the compose stack up
-# on the runner and runs DOC's own tests against it, next to the same tests against DOC's FastAPI stack.
+# DOC platform experiment, Rust build (branch exp/platform-rs on the fork). Builds the images on the runner only (no registry push, no secrets),
+# runs the Rust and Python checks, brings the compose stack up and proves it, then runs DOC's own end-to-end tests against it and against DOC's
+# FastAPI + Celery stack in the same run (see platform-rs/docs/P7-PLAN.md, section 4).
 #
-# Which job groups run:
-#   * workflow_dispatch: the `groups` input (comma list).
-#   * push: the groups named in the head commit message as `[ci: rust,images,smoke]`; default `rust,images,smoke`.
-# Groups: rust, images, smoke, e2e-rs, e2e-doc, frontend, ops. `images` is implied by anything that needs an image.
+# Which jobs run: a push runs `static`, `rust` and `stack` (build + smoke). Markers in the head commit message add more: [e2e] the API end-to-end
+# jobs on both stacks, [e2e-ui] the frontend tests on both stacks, [ops] the operations scenarios, [all] everything. workflow_dispatch takes the
+# `jobs` input instead (it only works for a workflow file on the default branch, so on this experiment branch the markers are the way).
+#
+# The CI scripts under platform-rs/ci (wait-healthy, smoke, ops, loadgen, e2e_table, stats) and the shape of the end-to-end jobs follow the
+# TypeScript build's (data/doc-full-ts), which found the volume-ownership and Calibre problems first; what was taken is listed in the report.
+name: platform-rs
 
 on:
   push:
-    branches: ["exp/platform-rs", "exp/platform-rs/**"]
+    branches:
+      - exp/platform-rs
+      - exp/platform-rs/**
   workflow_dispatch:
     inputs:
-      groups:
-        description: "Comma list of groups: rust,images,smoke,e2e-rs,e2e-doc,frontend,ops"
-        default: "rust,images,smoke"
+      jobs:
+        description: "Which jobs: all, static, rust, stack (build + smoke), e2e-api, e2e-ui, ops (a comma list also works)"
         required: false
-      e2e_marker:
-        description: "pytest -m expression for the e2e groups"
-        default: "not all and not randomized and not english_randomized"
-        required: false
-      e2e_k:
-        description: "optional pytest -k expression (to rerun a few tests)"
-        default: ""
-        required: false
+        default: all
 
+# A newer push cancels an older plain run on the same ref; a run that carries an end-to-end marker in its commit message is never cancelled by a
+# later push (its own group), because those runs take tens of minutes.
 concurrency:
-  group: platform-rs-${{ github.ref }}
-  cancel-in-progress: true
+  group: platform-rs-${{ github.ref }}-${{ contains(github.event.head_commit.message, '[e2e') && github.sha || 'plain' }}
+  cancel-in-progress: ${{ !contains(github.event.head_commit.message, '[e2e') }}
 
 permissions:
   contents: read
 
 env:
-  RUST_TOOLCHAIN: "1.100.0"
+  RUST_VERSION: "1.100.0"
   KITCHEN_REF: v0.1.24
   KITCHEN_REPO: https://github.com/WycliffeAssociates/scripture-kitchen
 
@@ -44,32 +41,86 @@ jobs:
     name: Plan
     runs-on: ubuntu-24.04
     outputs:
-      groups: ${{ steps.p.outputs.groups }}
+      static: ${{ steps.sel.outputs.static }}
+      rust: ${{ steps.sel.outputs.rust }}
+      stack: ${{ steps.sel.outputs.stack }}
+      e2e_api: ${{ steps.sel.outputs.e2e_api }}
+      e2e_ui: ${{ steps.sel.outputs.e2e_ui }}
+      ops: ${{ steps.sel.outputs.ops }}
     steps:
-      - id: p
+      - id: sel
         env:
-          INPUT_GROUPS: ${{ github.event.inputs.groups }}
-          HEAD_MSG: ${{ github.event.head_commit.message }}
           EVENT: ${{ github.event_name }}
+          INPUT: ${{ inputs.jobs }}
+          MSG: ${{ github.event.head_commit.message }}
         run: |
-          set -eu
-          groups="rust,images,smoke"
-          if [ "$EVENT" = "workflow_dispatch" ] && [ -n "$INPUT_GROUPS" ]; then
-            groups="$INPUT_GROUPS"
-          elif [ "$EVENT" = "push" ]; then
-            m=$(printf '%s' "$HEAD_MSG" | sed -n 's/.*\[ci: *\([a-z0-9,-]*\)\].*/\1/p' | head -1)
-            [ -n "$m" ] && groups="$m"
+          if [ "$EVENT" = workflow_dispatch ]; then want="${INPUT:-all}"; else
+            want="static,rust,stack"
+            case "$MSG" in *"[all]"*) want="all";; esac
+            case "$MSG" in *"[e2e]"*) want="$want,e2e-api";; esac
+            case "$MSG" in *"[e2e-ui]"*) want="$want,e2e-ui";; esac
+            case "$MSG" in *"[ops]"*) want="$want,ops";; esac
           fi
-          echo "groups=$groups" >> "$GITHUB_OUTPUT"
-          echo "Groups: $groups"
+          has() { case ",$want," in *,all,*|*,"$1",*) echo true;; *) echo false;; esac; }
+          # the stack job (build + smoke) is also needed by every end-to-end job
+          stack=$(has stack); [ "$(has e2e-api)" = true ] && stack=true; [ "$(has e2e-ui)" = true ] && stack=true; [ "$(has ops)" = true ] && stack=true
+          {
+            echo "static=$(has static)"; echo "rust=$(has rust)"; echo "stack=$stack"
+            echo "e2e_api=$(has e2e-api)"; echo "e2e_ui=$(has e2e-ui)"; echo "ops=$(has ops)"
+          } >> "$GITHUB_OUTPUT"
+          echo "selected: $want" | tee -a "$GITHUB_STEP_SUMMARY"
 
-  # ---------------------------------------------------------------------------------------------------------------
-  # Rust tests (against a real Redis), Python types, static checks of the container files.
-  # ---------------------------------------------------------------------------------------------------------------
+  # ---------------------------------------------------------------------------------------------------------------------------------------------
+  # Static checks: Dockerfile lint, compose files against the compose-spec schema and `docker compose config`, the workflow itself, mypy --strict.
+  # ---------------------------------------------------------------------------------------------------------------------------------------------
+  static:
+    name: Static checks
+    needs: [plan]
+    if: ${{ needs.plan.outputs.static == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install linters
+        run: |
+          curl -fsSL -o /usr/local/bin/hadolint https://github.com/hadolint/hadolint/releases/download/v2.15.1/hadolint-linux-x86_64
+          chmod +x /usr/local/bin/hadolint
+          curl -fsSL https://github.com/rhysd/actionlint/releases/download/v1.7.12/actionlint_1.7.12_linux_amd64.tar.gz | tar -xz -C /usr/local/bin actionlint
+          pip install --quiet mypy==2.4.1 jsonschema pyyaml types-jsonschema types-PyYAML fastapi httpx weasyprint
+      - name: hadolint
+        working-directory: platform-rs
+        run: |
+          for f in containers/core.Dockerfile containers/pyworker.Dockerfile containers/gateway/Dockerfile; do echo "== $f"; hadolint --config .hadolint.yaml "$f"; done
+      - name: actionlint
+        run: actionlint .github/workflows/platform-rs.yml
+      - name: compose files (schema and docker compose config)
+        working-directory: platform-rs
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/compose-spec/compose-spec/main/schema/compose-spec.json -o "$RUNNER_TEMP/compose-spec.json"
+          python ci/check_compose.py "$RUNNER_TEMP/compose-spec.json" docker-compose.yml docker-compose.e2e.yml ci/baseline-e2e.yml ci/docker-compose.doc-baseline.yml ci/docker-compose.doc-ui-baseline.yml
+          docker compose -f docker-compose.yml config --quiet
+          docker compose -f docker-compose.yml -f docker-compose.e2e.yml config --quiet
+      - name: shell scripts
+        working-directory: platform-rs
+        run: |
+          for f in ci/*.sh scripts/*.sh; do bash -n "$f"; done
+          shellcheck --severity=warning ci/*.sh
+      - name: mypy --strict, no typing.Any
+        working-directory: platform-rs
+        run: |
+          MYPYPATH=python/docx mypy --strict python/seam_server.py python/docx_worker.py python/pdf_worker.py e2e/e2e_remote.py ci/check_compose.py ci/e2e_table.py ci/loadgen.py ci/stats_summary.py
+          python ci/check_no_any.py python ci e2e scripts
+
+  # ---------------------------------------------------------------------------------------------------------------------------------------------
+  # The Rust workspace: clippy, the whole test suite against a real Valkey (the binary the stack runs) and a real Python seam service.
+  # ---------------------------------------------------------------------------------------------------------------------------------------------
   rust:
-    name: Rust and Python tests
-    needs: plan
-    if: contains(needs.plan.outputs.groups, 'rust')
+    name: Rust tests (clippy, unit and integration against Valkey)
+    needs: [plan]
+    if: ${{ needs.plan.outputs.rust == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     defaults:
@@ -77,163 +128,126 @@ jobs:
         working-directory: platform-rs
     steps:
       - uses: actions/checkout@v4
-
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
       - name: Toolchain
         run: |
-          rustup toolchain install "$RUST_TOOLCHAIN" --profile minimal -c clippy
-          rustup default "$RUST_TOOLCHAIN"
+          rustup toolchain install "$RUST_VERSION" --profile minimal -c clippy
+          rustup default "$RUST_VERSION"
           rustc --version; cargo --version
-
-      - name: Kitchen (read-only dependency of the core)
+      - name: Kitchen (the read-only dependency of the core)
         run: git clone --depth 1 --branch "$KITCHEN_REF" "$KITCHEN_REPO" _exp/kitchen && git -C _exp/kitchen rev-parse HEAD
-
-      - name: Cargo cache
-        uses: actions/cache@v4
+      - uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
             platform-rs/target
-          key: cargo-${{ runner.os }}-${{ env.RUST_TOOLCHAIN }}-${{ hashFiles('platform-rs/Cargo.lock') }}
-          restore-keys: |
-            cargo-${{ runner.os }}-${{ env.RUST_TOOLCHAIN }}-
-
-      - name: Python environment (mypy, WeasyPrint for the PDF test) and a Redis server for the integration tests
+          key: cargo-${{ runner.os }}-${{ env.RUST_VERSION }}-${{ hashFiles('platform-rs/Cargo.lock') }}
+          restore-keys: cargo-${{ runner.os }}-${{ env.RUST_VERSION }}-
+      - name: Valkey from the official image (the binary the stack runs) and WeasyPrint for the PDF test
         run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq redis-server > /dev/null
-          redis-server --version
-          echo "DOC_SERVER_BIN=$(command -v redis-server)" >> "$GITHUB_ENV"
-          python3 -m venv ../.venv-ci
-          ../.venv-ci/bin/pip install -q mypy==2.4.1 weasyprint check-jsonschema pyyaml jsonschema
-          echo "DOC_TEST_PYTHON=$GITHUB_WORKSPACE/.venv-ci/bin/python" >> "$GITHUB_ENV"
-
+          mkdir -p "$HOME/bin"
+          cid=$(docker create valkey/valkey:9.2.0)
+          docker cp "$cid:/usr/local/bin/valkey-server" "$HOME/bin/valkey-server"
+          docker rm "$cid"
+          "$HOME/bin/valkey-server" --version
+          echo "DOC_SERVER_BIN=$HOME/bin/valkey-server" >> "$GITHUB_ENV"
+          sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends libpango-1.0-0 libpangoft2-1.0-0 fonts-noto-core > /dev/null
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install -q weasyprint
+          echo "DOC_TEST_PYTHON=$RUNNER_TEMP/venv/bin/python" >> "$GITHUB_ENV"
       - name: Clippy
-        run: |
-          set -o pipefail
-          cargo clippy --workspace --all-targets --locked 2>&1 | tee ../clippy.log | tail -30
-
+        shell: bash
+        run: cargo clippy --workspace --all-targets --locked 2>&1 | tee ../clippy.log | tail -30
       - name: Tests
+        shell: bash
         run: |
-          set -o pipefail
-          /usr/bin/time -v cargo test --workspace --locked -- --test-threads=2 2>&1 | tee ../cargo-test.log | tail -60
-
-      - name: Python types (mypy --strict)
-        run: |
-          MYPYPATH=python/docx ../.venv-ci/bin/mypy --strict python/seam_server.py python/docx_worker.py python/pdf_worker.py ci/check_compose.py 2>&1 | tee ../mypy.log | tail -20
-
-      - name: Static checks of container and compose files
-        run: |
-          curl -fsSL https://raw.githubusercontent.com/compose-spec/compose-spec/main/schema/compose-spec.json -o ../compose-spec.json
-          ../.venv-ci/bin/python ci/check_compose.py ../compose-spec.json docker-compose.yml docker-compose.e2e.yml ci/baseline-e2e.yml 2>&1 | tee ../compose-schema.log
-          curl -fsSL -o ../hadolint https://github.com/hadolint/hadolint/releases/download/v2.12.0/hadolint-Linux-x86_64 && chmod +x ../hadolint
-          ../hadolint --config .hadolint.yaml containers/core.Dockerfile containers/pyworker.Dockerfile containers/gateway/Dockerfile 2>&1 | tee ../hadolint.log
-
+          mkdir -p ../ci-out
+          /usr/bin/time -v cargo test --workspace --locked -- --test-threads=2 2>&1 | tee ../ci-out/cargo-test.log | tail -80
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: rust-logs
           path: |
             clippy.log
-            cargo-test.log
-            mypy.log
-            compose-schema.log
-            hadolint.log
+            ci-out
           retention-days: 14
 
-  # ---------------------------------------------------------------------------------------------------------------
-  # Images: each built once into the runner, saved as a tarball, size and wall time recorded.
-  # ---------------------------------------------------------------------------------------------------------------
-  images:
+  # ---------------------------------------------------------------------------------------------------------------------------------------------
+  # Images: each built once into the runner, saved as a tarball (no registry), size and wall time recorded.
+  # ---------------------------------------------------------------------------------------------------------------------------------------------
+  build:
     name: Build ${{ matrix.name }} image
-    needs: plan
-    if: contains(needs.plan.outputs.groups, 'images') || contains(needs.plan.outputs.groups, 'smoke') || contains(needs.plan.outputs.groups, 'e2e') || contains(needs.plan.outputs.groups, 'frontend') || contains(needs.plan.outputs.groups, 'ops')
+    needs: [plan]
+    if: ${{ needs.plan.outputs.stack == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
         include:
-          - {name: core, context: ., file: platform-rs/containers/core.Dockerfile, tag: "doc-rs/core:local", needs: "rs"}
-          - {name: pyworker, context: ., file: platform-rs/containers/pyworker.Dockerfile, tag: "doc-rs/pyworker:local", needs: "rs"}
-          - {name: gateway, context: platform-rs/containers/gateway, file: platform-rs/containers/gateway/Dockerfile, tag: "doc-rs/gateway:local", needs: "rs"}
-          - {name: frontend, context: ./frontend, file: ./frontend/Dockerfile, tag: "doc-rs/frontend:local", needs: "rs"}
-          - {name: doc-api, context: ., file: ./Dockerfile.ci, tag: "wycliffeassociates/doc:local", needs: "doc"}
-          - {name: doc-usfmparser, context: ./dotnet/USFMParserApi, file: ./dotnet/USFMParserApi/Dockerfile, tag: "wycliffeassociates/doc-usfmparser:local", needs: "doc"}
-          - {name: doc-fileserver, context: ./web, file: ./web/Dockerfile, tag: "doc-fileserver:latest", needs: "doc"}
-          - {name: doc-frontend-tests, context: ./frontend, file: ./frontend/testsDockerfile, tag: "wycliffeassociates/doc-ui-tests:local", needs: "doc"}
+          - name: core
+            context: .
+            file: platform-rs/containers/core.Dockerfile
+            tag: doc-rs/core:local
+          - name: pyworker
+            context: .
+            file: platform-rs/containers/pyworker.Dockerfile
+            tag: doc-rs/pyworker:local
+          - name: gateway
+            context: platform-rs/containers/gateway
+            file: platform-rs/containers/gateway/Dockerfile
+            tag: doc-rs/gateway:local
+          - name: frontend
+            context: frontend
+            file: frontend/Dockerfile
+            tag: doc-rs/frontend:local
     steps:
       - uses: actions/checkout@v4
-
-      - name: Decide whether this image is needed in this run
-        id: need
-        env:
-          GROUPS_: ${{ needs.plan.outputs.groups }}
-          NEEDS: ${{ matrix.needs }}
-          NAME: ${{ matrix.name }}
-        run: |
-          set -eu
-          go=false
-          case "$GROUPS_" in *images*) go=true;; esac
-          case "$NEEDS" in
-            rs) case "$GROUPS_" in *smoke*|*e2e-rs*|*frontend*|*ops*) go=true;; esac;;
-            doc) case "$GROUPS_" in *e2e-doc*|*e2e-rs*|*frontend*) go=true;; esac;;
-          esac
-          # frontend tests image only matters for the frontend group
-          if [ "$NAME" = doc-frontend-tests ]; then case "$GROUPS_" in *frontend*|*images*) ;; *) go=false;; esac; fi
-          echo "go=$go" >> "$GITHUB_OUTPUT"
-
-      - name: Dockerfile.ci for DOC's API image (Calibre and ePub stripped, as upstream already did)
-        if: steps.need.outputs.go == 'true' && matrix.name == 'doc-api'
-        run: |
-          sed -e '/download.calibre-ebook.com/d' \
-              -e '/calibre-bin\/calibre:/d' \
-              -e '/^RUN ebook-convert --version/d' \
-              -e 's#chown -R appuser:appgroup /app /home/appuser/calibre-bin#chown -R appuser:appgroup /app#' \
-              Dockerfile > Dockerfile.ci
-          diff Dockerfile Dockerfile.ci || true
-          grep -ci calibre Dockerfile.ci || true
-
       - uses: docker/setup-buildx-action@v3
-        if: steps.need.outputs.go == 'true'
-
       - name: Start timer
-        if: steps.need.outputs.go == 'true'
-        run: echo "BUILD_T0=$(date +%s)" >> "$GITHUB_ENV"
-
+        run: echo "BUILD_START=$(date +%s)" >> "$GITHUB_ENV"
       - name: Build ${{ matrix.name }}
-        if: steps.need.outputs.go == 'true'
         uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context }}
           file: ${{ matrix.file }}
           tags: ${{ matrix.tag }}
+          build-args: ${{ matrix.name == 'frontend' && 'PUBLIC_DOC_VERSION_ARG=rs-build' || '' }}
           outputs: type=docker,dest=${{ runner.temp }}/${{ matrix.name }}.tar
-          cache-from: type=gha,scope=${{ matrix.name }}
-          cache-to: type=gha,scope=${{ matrix.name }},mode=max
-
-      - name: Record size and build time
-        if: steps.need.outputs.go == 'true'
+          cache-from: type=gha,scope=rs-${{ matrix.name }}
+          cache-to: type=gha,scope=rs-${{ matrix.name }},mode=max
+      - name: Record build time and image size
         run: |
-          t1=$(date +%s)
-          size=$(stat -c %s "${{ runner.temp }}/${{ matrix.name }}.tar")
-          printf '{"image":"%s","tag":"%s","tar_bytes":%s,"build_seconds":%s}\n' "${{ matrix.name }}" "${{ matrix.tag }}" "$size" "$((t1 - BUILD_T0))" | tee "${{ runner.temp }}/${{ matrix.name }}.json"
-
+          end=$(date +%s)
+          docker load -i "${{ runner.temp }}/${{ matrix.name }}.tar" >/dev/null
+          size=$(docker image inspect --format '{{.Size}}' "${{ matrix.tag }}")
+          layers=$(docker image inspect --format '{{len .RootFS.Layers}}' "${{ matrix.tag }}")
+          mkdir -p build-info
+          printf '{"image":"%s","build_seconds":%s,"size_bytes":%s,"layers":%s,"tar_bytes":%s}\n' \
+            "${{ matrix.name }}" "$((end - BUILD_START))" "$size" "$layers" "$(stat -c %s "${{ runner.temp }}/${{ matrix.name }}.tar")" | tee "build-info/${{ matrix.name }}.json"
+          echo "| ${{ matrix.name }} | $((end - BUILD_START)) s | $((size / 1048576)) MB | $layers |" >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
-        if: steps.need.outputs.go == 'true'
         with:
           name: image-${{ matrix.name }}
-          path: |
-            ${{ runner.temp }}/${{ matrix.name }}.tar
-            ${{ runner.temp }}/${{ matrix.name }}.json
+          path: ${{ runner.temp }}/${{ matrix.name }}.tar
           retention-days: 1
+          compression-level: 1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build-info-${{ matrix.name }}
+          path: build-info
+          retention-days: 14
 
-  # ---------------------------------------------------------------------------------------------------------------
-  # Smoke: the stack comes up, every health check passes, one document is made, the UI loads, memory is sampled.
-  # ---------------------------------------------------------------------------------------------------------------
+  # ---------------------------------------------------------------------------------------------------------------------------------------------
+  # Smoke: the stack comes up, every health check passes, documents are made (docx, html, pdf through Prince), the UI loads, memory is sampled.
+  # ---------------------------------------------------------------------------------------------------------------------------------------------
   smoke:
-    name: Smoke (compose up, health, one document)
-    needs: [plan, images]
-    if: contains(needs.plan.outputs.groups, 'smoke')
+    name: Stack up, health checks, smoke test
+    needs: [plan, build]
+    if: ${{ always() && needs.build.result == 'success' && needs.plan.outputs.stack == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -244,82 +258,124 @@ jobs:
           path: ${{ runner.temp }}/images
           merge-multiple: true
       - name: Load images
-        run: for n in core pyworker gateway frontend; do docker load -i "${{ runner.temp }}/images/$n.tar"; done; docker images
-      - name: Gateway config syntax (nginx -t inside the gateway image)
+        run: for f in "${{ runner.temp }}"/images/*.tar; do docker load -i "$f"; done
+      - name: Gateway configuration (nginx -t inside the gateway image)
         run: docker run --rm --add-host api:127.0.0.1 doc-rs/gateway:local nginx -t
-      - name: Up
+      - name: Start the stack (waits for every health check)
         working-directory: platform-rs
         run: |
-          set -x
+          start=$(date +%s)
           docker compose up -d --no-build
-          for i in $(seq 1 90); do
-            unhealthy=$(docker compose ps --format '{{.Service}} {{.Health}}' | grep -v ' healthy$' || true)
-            [ -z "$unhealthy" ] && break
-            sleep 4
-          done
-          docker compose ps
-          [ -z "$unhealthy" ] || { echo "not healthy: $unhealthy"; exit 1; }
-      - name: Probes through the gateway
+          bash ci/wait-healthy.sh 300 valkey pyworker api worker gateway frontend
+          echo "up_seconds=$(( $(date +%s) - start ))" | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Versions (docker, compose, runtimes inside the containers)
+        working-directory: platform-rs
         run: |
-          set -eux
-          curl -fsS http://localhost:5005/health/status | tee health.json
-          curl -fsS http://localhost:5005/gateway/health
-          curl -fsS http://localhost:8089/gateway/health
-          curl -fsS http://localhost:8001/health
-          curl -fsS -o /dev/null http://localhost:8001/
-          curl -fsS http://localhost:5005/resource_types/en/jud | head -c 400; echo
-      - name: One document, docx and html
+          mkdir -p ../ci-out
+          {
+            docker version --format 'docker server {{.Server.Version}} client {{.Client.Version}}'
+            docker compose version
+            docker compose exec -T pyworker sh -c 'python --version; prince --version | head -1; python -c "import weasyprint; print(\"weasyprint\", weasyprint.__version__)"'
+            docker compose exec -T valkey valkey-server --version
+            docker compose exec -T api cat /app/kitchen.rev
+          } 2>&1 | tee ../ci-out/versions.txt
+      - name: Smoke test
+        working-directory: platform-rs
         run: |
-          set -eux
-          body='{"assembly_strategy_kind":"lbo","document_request_source":"ui","generate_docx":true,"generate_pdf":false,"resource_requests":[{"lang_code":"en","resource_type":"ulb","book_code":"jud"},{"lang_code":"en","resource_type":"tn","book_code":"jud"}]}'
-          for route in documents_docx documents; do
-            if [ "$route" = documents ]; then b=$(printf '%s' "$body" | sed 's/"generate_docx":true/"generate_docx":false/'); else b="$body"; fi
-            id=$(curl -fsS -X POST "http://localhost:5005/$route" -H 'content-type: application/json' -d "$b" | python3 -c 'import json,sys; print(json.load(sys.stdin)["task_id"])')
-            for i in $(seq 1 120); do
-              st=$(curl -fsS "http://localhost:5005/task_status/$id"); echo "$st"
-              case "$st" in *SUCCESS*) break;; *FAILURE*) echo "job failed"; exit 1;; esac
-              sleep 3
-            done
-            case "$st" in *SUCCESS*) ;; *) echo "timeout"; exit 1;; esac
-            key=$(printf '%s' "$st" | python3 -c 'import json,sys; print(json.load(sys.stdin)["result"])')
-            ext=docx; [ "$route" = documents ] && ext=html
-            curl -fsS -o "doc.$ext" "http://localhost:8089/$key.$ext"; ls -l "doc.$ext"
-          done
-          python3 -c "import zipfile; z=zipfile.ZipFile('doc.docx'); print(z.testzip(), len(z.namelist()))"
-          grep -c 'versemarker' doc.html
-      - name: Memory and CPU per container
+          mkdir -p ../ci-out
+          SMOKE_PRINCE=1 OUT=../ci-out/smoke bash ci/smoke.sh 2>&1 | tee ../ci-out/smoke.txt
+      - name: Memory and CPU at rest and after the smoke test
         if: always()
         run: |
-          mkdir -p smoke-logs
-          for i in 1 2 3; do docker stats --no-stream --format '{{.Name}},{{.CPUPerc}},{{.MemUsage}},{{.MemPerc}},{{.PIDs}}' | tee -a smoke-logs/docker-stats.csv; sleep 5; done
+          mkdir -p ci-out
+          docker stats --no-stream --format 'table {{.Name}}\t{{.MemUsage}}\t{{.MemPerc}}\t{{.CPUPerc}}\t{{.PIDs}}' | tee ci-out/stats-after-smoke.txt
+          docker images --format '{{.Repository}}:{{.Tag}} {{.Size}}' | grep doc-rs | tee ci-out/image-sizes.txt
       - name: Logs
         if: always()
         working-directory: platform-rs
         run: |
-          docker compose ps > ../smoke-logs/ps.txt || true
-          docker compose logs --no-color --timestamps > ../smoke-logs/compose.log || true
-          cp ../health.json ../smoke-logs/ 2>/dev/null || true
-          cp ../doc.docx ../doc.html ../smoke-logs/ 2>/dev/null || true
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: smoke-logs
-          path: smoke-logs
-          retention-days: 14
-      - name: Down
+          mkdir -p ../ci-out
+          docker compose ps -a > ../ci-out/compose-ps.txt
+          docker compose logs --no-color --timestamps > ../ci-out/compose-logs.txt 2>&1
+      - name: Tear down
         if: always()
         working-directory: platform-rs
         run: docker compose down -v
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke-results
+          path: ci-out
+          retention-days: 14
 
-  # ---------------------------------------------------------------------------------------------------------------
-  # DOC's own API end-to-end tests against this stack (unmodified tests, in DOC's own image, pointed at the gateway).
-  # ---------------------------------------------------------------------------------------------------------------
-  e2e-rs:
-    name: DOC e2e against the Rust stack (group ${{ matrix.group }}/3)
-    needs: [plan, images]
-    if: contains(needs.plan.outputs.groups, 'e2e-rs')
+  # ---------------------------------------------------------------------------------------------------------------------------------------------
+  # DOC's own end-to-end tests (tests/e2e/doc), on this build's stack and on DOC's FastAPI + Celery baseline, in the same run.
+  # ---------------------------------------------------------------------------------------------------------------------------------------------
+  build-baseline:
+    name: Build DOC ${{ matrix.name }} image (baseline and test runner)
+    needs: [plan]
+    if: ${{ needs.plan.outputs.e2e_api == 'true' || needs.plan.outputs.e2e_ui == 'true' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: api
+            context: .
+            file: generated
+            tag: wycliffeassociates/doc:local
+          - name: usfmparser
+            context: dotnet/USFMParserApi
+            file: dotnet/USFMParserApi/Dockerfile
+            tag: wycliffeassociates/doc-usfmparser:local
+          - name: fileserver
+            context: web
+            file: web/Dockerfile
+            tag: doc-fileserver:latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: DOC's Dockerfile without the Calibre step and the mypy lines
+        if: ${{ matrix.name == 'api' }}
+        run: bash platform-rs/ci/make-baseline-dockerfile.sh > "${{ runner.temp }}/Dockerfile.baseline"
+      - name: Start timer
+        run: echo "BUILD_START=$(date +%s)" >> "$GITHUB_ENV"
+      - name: Build ${{ matrix.name }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file == 'generated' && format('{0}/Dockerfile.baseline', runner.temp) || matrix.file }}
+          tags: ${{ matrix.tag }}
+          outputs: type=docker,dest=${{ runner.temp }}/doc-${{ matrix.name }}.tar
+          cache-from: type=gha,scope=doc-${{ matrix.name }}
+          cache-to: type=gha,scope=doc-${{ matrix.name }},mode=max
+      - name: Record build time and image size
+        run: |
+          end=$(date +%s)
+          docker load -i "${{ runner.temp }}/doc-${{ matrix.name }}.tar" >/dev/null
+          size=$(docker image inspect --format '{{.Size}}' "${{ matrix.tag }}")
+          mkdir -p build-info
+          printf '{"image":"doc-%s","build_seconds":%s,"size_bytes":%s}\n' "${{ matrix.name }}" "$((end - BUILD_START))" "$size" | tee "build-info/doc-${{ matrix.name }}.json"
+          echo "| doc-${{ matrix.name }} | $((end - BUILD_START)) s | $((size / 1048576)) MB |" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: docimage-${{ matrix.name }}
+          path: ${{ runner.temp }}/doc-${{ matrix.name }}.tar
+          retention-days: 1
+          compression-level: 1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build-info-doc-${{ matrix.name }}
+          path: build-info
+          retention-days: 14
+
+  e2e-api-rs:
+    name: DOC e2e on the Rust stack (group ${{ matrix.group }}/3)
+    needs: [plan, build, build-baseline]
+    if: ${{ always() && needs.build.result == 'success' && needs.build-baseline.result == 'success' && needs.plan.outputs.e2e_api == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -327,73 +383,303 @@ jobs:
     env:
       PYTEST_SPLITS: "3"
       PYTEST_GROUP: ${{ matrix.group }}
-      E2E_MARKER: ${{ github.event.inputs.e2e_marker || 'not all and not randomized and not english_randomized' }}
-      E2E_K: ${{ github.event.inputs.e2e_k }}
-      E2E_RESULTS_DIR: ${{ github.workspace }}/e2e-results
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          pattern: image-*
+          pattern: "{image-*,docimage-api}"
           path: ${{ runner.temp }}/images
           merge-multiple: true
       - name: Load images
-        run: for n in core pyworker gateway frontend doc-api; do docker load -i "${{ runner.temp }}/images/$n.tar"; done
-      - name: Up
+        run: for f in "${{ runner.temp }}"/images/*.tar; do docker load -i "$f"; done
+      - name: Start the stack
         working-directory: platform-rs
         run: |
-          mkdir -m 777 -p "$E2E_RESULTS_DIR"
-          docker compose -f docker-compose.yml -f docker-compose.e2e.yml up -d --no-build valkey pyworker api worker gateway
-          for i in $(seq 1 90); do
-            unhealthy=$(docker compose ps --format '{{.Service}} {{.Health}}' | grep -v ' healthy$' || true)
-            [ -z "$unhealthy" ] && break
-            sleep 4
-          done
-          docker compose ps
-          [ -z "$unhealthy" ] || exit 1
-      - name: Stats sampler
+          mkdir -p -m 0777 e2e-results ../ci-out
+          docker compose up -d --no-build valkey pyworker api worker gateway
+          bash ci/wait-healthy.sh 300 valkey pyworker api worker gateway
+          bash ci/stats-sampler.sh ../ci-out/stats.csv 5 &
+      - name: DOC's tests/e2e/doc against the Rust stack
         working-directory: platform-rs
         run: |
-          mkdir -p "$E2E_RESULTS_DIR"
-          nohup sh -c 'while true; do docker stats --no-stream --format "{{.Name}},{{.CPUPerc}},{{.MemUsage}},{{.PIDs}}" | sed "s/^/$(date +%s),/"; sleep 10; done' > "$E2E_RESULTS_DIR/docker-stats.csv" 2>/dev/null &
-      - name: DOC's tests (unmodified), group ${{ matrix.group }} of 3
-        working-directory: platform-rs
-        timeout-minutes: 75
-        run: |
-          docker compose -f docker-compose.yml -f docker-compose.e2e.yml --profile e2e run --rm -T test-runner || echo "pytest exit: $?"
-      - name: Logs
+          start=$(date +%s)
+          set +e
+          docker compose -f docker-compose.yml -f docker-compose.e2e.yml --profile e2e run --rm -T test-runner 2>&1 | tee ../ci-out/pytest.txt
+          code=${PIPESTATUS[0]}
+          echo "pytest_seconds=$(( $(date +%s) - start )) exit=$code" | tee ../ci-out/timing.txt "$GITHUB_STEP_SUMMARY"
+          exit "$code"
+      - name: Logs and state
         if: always()
         working-directory: platform-rs
         run: |
-          docker compose -f docker-compose.yml -f docker-compose.e2e.yml logs --no-color --timestamps > "$E2E_RESULTS_DIR/compose.log" || true
-          docker compose -f docker-compose.yml -f docker-compose.e2e.yml ps > "$E2E_RESULTS_DIR/ps.txt" || true
+          mkdir -p ../ci-out
+          cp e2e-results/*.xml ../ci-out/ 2>/dev/null || true
+          docker compose ps -a > ../ci-out/compose-ps.txt
+          docker compose logs --no-color --timestamps > ../ci-out/compose-logs.txt 2>&1
+          docker run --rm -v doc-rs_output:/o:ro alpine sh -c 'ls /o | wc -l' > ../ci-out/documents-produced.txt 2>&1 || true
+      - name: Tear down
+        if: always()
+        working-directory: platform-rs
+        run: docker compose down -v
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: e2e-rs-${{ matrix.group }}
-          path: e2e-results
+          path: ci-out
           retention-days: 14
 
-  # ---------------------------------------------------------------------------------------------------------------
-  # The same tests against DOC's own FastAPI + Celery + sidecar stack (the baseline), same marker, same split.
-  # ---------------------------------------------------------------------------------------------------------------
-  e2e-doc:
-    name: DOC e2e against DOC's FastAPI stack (group ${{ matrix.group }}/3)
-    needs: [plan, images]
-    if: contains(needs.plan.outputs.groups, 'e2e-doc')
+  e2e-api-doc:
+    name: DOC e2e on DOC's own FastAPI stack (group ${{ matrix.group }}/3)
+    needs: [plan, build-baseline]
+    if: ${{ always() && needs.build-baseline.result == 'success' && needs.plan.outputs.e2e_api == 'true' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
         group: [1, 2, 3]
     env:
+      IMAGE_TAG: local
       PYTEST_SPLITS: "3"
       PYTEST_GROUP: ${{ matrix.group }}
+      COMPOSE: docker compose -f docker-compose.yml -f docker-compose.api-test.yml -f platform-rs/ci/docker-compose.doc-baseline.yml
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: docimage-*
+          path: ${{ runner.temp }}/images
+          merge-multiple: true
+      - name: Load images
+        run: for f in "${{ runner.temp }}"/images/*.tar; do docker load -i "$f"; done
+      - name: Prepare DOC's compose stack
+        run: |
+          mkdir -p -m 0777 e2e-results ci-out
+          $COMPOSE up --no-start
+      - name: DOC's tests/e2e/doc against DOC's own stack
+        run: |
+          start=$(date +%s)
+          set +e
+          # `run` starts the test runner's dependencies (waiting for their health checks), runs pytest, leaves the stack up
+          ( bash platform-rs/ci/stats-sampler.sh ci-out/stats.csv 5 & echo $! > ci-out/sampler.pid )
+          $COMPOSE run --rm -T test-runner 2>&1 | tee ci-out/pytest.txt
+          code=${PIPESTATUS[0]}
+          echo "pytest_seconds=$(( $(date +%s) - start )) exit=$code" | tee ci-out/timing.txt "$GITHUB_STEP_SUMMARY"
+          exit "$code"
+      - name: Logs and state
+        if: always()
+        run: |
+          cp e2e-results/*.xml ci-out/ 2>/dev/null || true
+          $COMPOSE ps -a > ci-out/compose-ps.txt
+          $COMPOSE logs --no-color --timestamps --tail=2000 > ci-out/compose-logs.txt 2>&1
+      - name: Tear down
+        if: always()
+        run: $COMPOSE down -v
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-doc-${{ matrix.group }}
+          path: ci-out
+          retention-days: 14
+
+  e2e-report:
+    name: DOC e2e pass table
+    needs: [e2e-api-rs, e2e-api-doc]
+    if: ${{ always() && (needs.e2e-api-rs.result != 'skipped' || needs.e2e-api-doc.result != 'skipped') }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: e2e-*-*
+          path: results
+      - name: Pass table (Rust stack against DOC's FastAPI baseline)
+        run: |
+          mkdir -p ci-out rs-xml doc-xml
+          for d in results/e2e-rs-*; do for x in "$d"/junit*.xml; do [ -f "$x" ] && cp "$x" "rs-xml/$(basename "$d")-$(basename "$x")"; done; done
+          for d in results/e2e-doc-*; do for x in "$d"/junit*.xml; do [ -f "$x" ] && cp "$x" "doc-xml/$(basename "$d")-$(basename "$x")"; done; done
+          python3 platform-rs/ci/e2e_table.py --rs rs-xml --doc doc-xml --out ci-out/e2e-table.md > /dev/null
+          tee -a "$GITHUB_STEP_SUMMARY" < ci-out/e2e-table.md
+          python3 platform-rs/ci/stats_summary.py results/e2e-rs-*/stats.csv > ci-out/memory-rs.md || true
+          python3 platform-rs/ci/stats_summary.py results/e2e-doc-*/stats.csv > ci-out/memory-doc.md || true
+          { echo '### Memory under the e2e load, Rust stack'; cat ci-out/memory-rs.md; echo '### Memory under the e2e load, DOC FastAPI stack'; cat ci-out/memory-doc.md; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: e2e-table
+          path: ci-out
+          retention-days: 30
+
+  # ---------------------------------------------------------------------------------------------------------------------------------------------
+  # DOC's own frontend tests (Playwright, frontend/tests/e2e/doc_test_*.ts; the STET and Passages files are excluded) against this stack and against
+  # DOC's own stack, four shards each, as DOC's CI does.
+  # ---------------------------------------------------------------------------------------------------------------------------------------------
+  build-ui-tests:
+    name: Build DOC UI tests image
+    needs: [plan]
+    if: ${{ needs.plan.outputs.e2e_ui == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: frontend
+          file: frontend/testsDockerfile
+          tags: wycliffeassociates/doc-ui-tests:local
+          outputs: type=docker,dest=${{ runner.temp }}/ui-tests.tar
+          cache-from: type=gha,scope=doc-ui-tests
+          cache-to: type=gha,scope=doc-ui-tests,mode=max
+      - uses: actions/upload-artifact@v4
+        with:
+          name: uiimage-tests
+          path: ${{ runner.temp }}/ui-tests.tar
+          retention-days: 1
+          compression-level: 1
+
+  e2e-ui-rs:
+    name: DOC frontend tests on the Rust stack (shard ${{ matrix.shard }}/4)
+    needs: [plan, build, build-ui-tests]
+    if: ${{ always() && needs.build.result == 'success' && needs.build-ui-tests.result == 'success' && needs.plan.outputs.e2e_ui == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: "{image-*,uiimage-tests}"
+          path: ${{ runner.temp }}/images
+          merge-multiple: true
+      - name: Load images
+        run: for f in "${{ runner.temp }}"/images/*.tar; do docker load -i "$f"; done
+      - name: Start the stack
+        working-directory: platform-rs
+        run: |
+          mkdir -p -m 0777 ../ci-out ../e2e-results
+          docker compose up -d --no-build
+          bash ci/wait-healthy.sh 300 valkey pyworker api worker gateway frontend
+          bash ci/stats-sampler.sh ../ci-out/stats.csv 5 &
+      - name: DOC's Playwright tests against the Rust stack
+        run: |
+          start=$(date +%s)
+          set +e
+          docker run --rm --network host --ipc host -e CI=true -e PLAYWRIGHT_SHARD="${{ matrix.shard }}/4" \
+            -e PLAYWRIGHT_JUNIT_OUTPUT_NAME=/results/junit.xml -v "$PWD/e2e-results:/results" wycliffeassociates/doc-ui-tests:local \
+            sh -c 'exec npx playwright test --shard="$PLAYWRIGHT_SHARD" --reporter=list,junit doc_test' 2>&1 | tee ci-out/playwright.txt
+          code=${PIPESTATUS[0]}
+          echo "playwright_seconds=$(( $(date +%s) - start )) exit=$code" | tee ci-out/timing.txt "$GITHUB_STEP_SUMMARY"
+          exit "$code"
+      - name: Logs and state
+        if: always()
+        working-directory: platform-rs
+        run: |
+          cp ../e2e-results/*.xml ../ci-out/ 2>/dev/null || true
+          docker compose ps -a > ../ci-out/compose-ps.txt
+          docker compose logs --no-color --timestamps > ../ci-out/compose-logs.txt 2>&1
+      - name: Tear down
+        if: always()
+        working-directory: platform-rs
+        run: docker compose down -v
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ui-rs-${{ matrix.shard }}
+          path: ci-out
+          retention-days: 14
+
+  e2e-ui-doc:
+    name: DOC frontend tests on DOC's own stack (shard ${{ matrix.shard }}/4)
+    needs: [plan, build, build-baseline, build-ui-tests]
+    if: ${{ always() && needs.build.result == 'success' && needs.build-baseline.result == 'success' && needs.build-ui-tests.result == 'success' && needs.plan.outputs.e2e_ui == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    env:
       IMAGE_TAG: local
-      E2E_MARKER: ${{ github.event.inputs.e2e_marker || 'not all and not randomized and not english_randomized' }}
-      E2E_K: ${{ github.event.inputs.e2e_k }}
-      E2E_RESULTS_DIR: ${{ github.workspace }}/e2e-results
+      PLAYWRIGHT_SHARD: ${{ matrix.shard }}/4
+      COMPOSE: docker compose -f docker-compose.yml -f docker-compose.frontend-test.yml -f platform-rs/ci/docker-compose.doc-ui-baseline.yml
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: "{docimage-*,image-frontend,uiimage-tests}"
+          path: ${{ runner.temp }}/images
+          merge-multiple: true
+      - name: Load images
+        run: for f in "${{ runner.temp }}"/images/*.tar; do docker load -i "$f"; done
+      - name: DOC's frontend image is the one this stack uses too (built unchanged from frontend/Dockerfile)
+        run: docker tag doc-rs/frontend:local wycliffeassociates/doc-ui:local
+      - name: Prepare DOC's compose stack
+        run: |
+          mkdir -p -m 0777 e2e-results ci-out
+          $COMPOSE up --no-start
+      - name: DOC's Playwright tests against DOC's own stack
+        run: |
+          start=$(date +%s)
+          set +e
+          $COMPOSE run --rm -T frontend-test-runner 2>&1 | tee ci-out/playwright.txt
+          code=${PIPESTATUS[0]}
+          echo "playwright_seconds=$(( $(date +%s) - start )) exit=$code" | tee ci-out/timing.txt "$GITHUB_STEP_SUMMARY"
+          exit "$code"
+      - name: Logs and state
+        if: always()
+        run: |
+          cp e2e-results/*.xml ci-out/ 2>/dev/null || true
+          $COMPOSE ps -a > ci-out/compose-ps.txt
+          $COMPOSE logs --no-color --timestamps --tail=2000 > ci-out/compose-logs.txt 2>&1
+      - name: Tear down
+        if: always()
+        run: $COMPOSE down -v
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ui-doc-${{ matrix.shard }}
+          path: ci-out
+          retention-days: 14
+
+  e2e-ui-report:
+    name: DOC frontend pass table
+    needs: [e2e-ui-rs, e2e-ui-doc]
+    if: ${{ always() && (needs.e2e-ui-rs.result != 'skipped' || needs.e2e-ui-doc.result != 'skipped') }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: ui-*-*
+          path: results
+      - name: Pass table (Rust stack against DOC's own stack)
+        run: |
+          mkdir -p ci-out rs-xml doc-xml
+          for d in results/ui-rs-*; do for x in "$d"/junit*.xml; do [ -f "$x" ] && cp "$x" "rs-xml/$(basename "$d")-$(basename "$x")"; done; done
+          for d in results/ui-doc-*; do for x in "$d"/junit*.xml; do [ -f "$x" ] && cp "$x" "doc-xml/$(basename "$d")-$(basename "$x")"; done; done
+          python3 platform-rs/ci/e2e_table.py --rs rs-xml --doc doc-xml --out ci-out/ui-table.md > /dev/null
+          tee -a "$GITHUB_STEP_SUMMARY" < ci-out/ui-table.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ui-table
+          path: ci-out
+          retention-days: 30
+
+  # ---------------------------------------------------------------------------------------------------------------------------------------------
+  # Operations in containers (the P6 fault, burst and soak work carried over): limits, SIGTERM drain, SIGKILL mid-job, crash of the Python service,
+  # Valkey restart, API crash, 24 documents at once, rollback to another image tag on the same volumes, and a soak with memory sampled per container.
+  # ---------------------------------------------------------------------------------------------------------------------------------------------
+  ops:
+    name: Operations scenarios on the compose stack
+    needs: [plan, build]
+    if: ${{ always() && needs.build.result == 'success' && needs.plan.outputs.ops == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      SOAK_MINUTES: "10"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
@@ -402,21 +688,35 @@ jobs:
           path: ${{ runner.temp }}/images
           merge-multiple: true
       - name: Load images
-        run: for n in doc-api doc-usfmparser doc-fileserver; do docker load -i "${{ runner.temp }}/images/$n.tar"; done
-      - name: Prepare compose stack
+        run: for f in "${{ runner.temp }}"/images/*.tar; do docker load -i "$f"; done
+      - name: Start the stack
+        working-directory: platform-rs
         run: |
-          mkdir -m 777 -p "$E2E_RESULTS_DIR"
-          docker compose -f docker-compose.yml -f docker-compose.api-test.yml -f platform-rs/ci/baseline-e2e.yml up --no-start
-      - name: DOC's tests (unmodified) on DOC's stack, group ${{ matrix.group }} of 3
-        timeout-minutes: 75
+          mkdir -p ../ci-out
+          docker compose up -d --no-build
+          bash ci/wait-healthy.sh 300 valkey pyworker api worker gateway frontend
+          docker stats --no-stream --format 'table {{.Name}}\t{{.MemUsage}}\t{{.MemPerc}}\t{{.CPUPerc}}\t{{.PIDs}}' | tee ../ci-out/ops-stats-at-rest.txt
+      - name: Scenarios
+        working-directory: platform-rs
+        shell: bash
+        run: OUT=../ci-out bash ci/ops.sh 2>&1 | tee ../ci-out/ops.txt
+      - name: Summary
+        if: always()
         run: |
-          docker compose -f docker-compose.yml -f docker-compose.api-test.yml -f platform-rs/ci/baseline-e2e.yml run --rm -T test-runner || echo "pytest exit: $?"
+          { echo '### Operations scenarios'; echo '```'; cat ci-out/ops.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
       - name: Logs
         if: always()
-        run: docker compose -f docker-compose.yml -f docker-compose.api-test.yml -f platform-rs/ci/baseline-e2e.yml logs --no-color --timestamps --tail=2000 > "$E2E_RESULTS_DIR/compose.log" || true
+        working-directory: platform-rs
+        run: |
+          docker compose ps -a > ../ci-out/compose-ps.txt
+          docker compose logs --no-color --timestamps --tail=3000 > ../ci-out/compose-logs.txt 2>&1
+      - name: Tear down
+        if: always()
+        working-directory: platform-rs
+        run: docker compose down -v
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: e2e-doc-${{ matrix.group }}
-          path: e2e-results
+          name: ops-results
+          path: ci-out
           retention-days: 14

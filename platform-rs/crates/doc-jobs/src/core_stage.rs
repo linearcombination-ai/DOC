@@ -51,9 +51,14 @@ impl CoreConfig {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CoreItem {
+    /// Index of the request in the validated request list.
+    pub index: usize,
     pub url: String,
     pub segment: String,
+    pub resource_type: String,
     pub lang_name: String,
+    pub localized_lang_name: String,
+    pub direction: String,
     /// The version directory of the repository on disk.
     pub dir: PathBuf,
 }
@@ -61,8 +66,11 @@ pub struct CoreItem {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct CoreInput {
     pub request: Value,
-    /// One per resource request, in order.
+    /// One per resolved resource request, in request order.
     pub items: Vec<CoreItem>,
+    /// The requests DOC's lookup found no repository for (`{lang_code, resource_type, book_code}`): left out, each reported as a finding.
+    #[serde(default)]
+    pub unresolved: Vec<Value>,
     pub structure: String,
     pub generate_docx: bool,
     #[serde(default)]
@@ -76,6 +84,11 @@ pub struct CoreOutput {
     pub parts: Value,
     #[serde(default)]
     pub findings: Value,
+    /// DOC's title page strings (`get_languages_title_page_strings`).
+    #[serde(default)]
+    pub title1: String,
+    #[serde(default)]
+    pub title2: String,
     #[serde(default)]
     pub code: String,
     #[serde(default)]
@@ -87,15 +100,25 @@ pub struct CoreOutput {
 impl CoreOutput {
     fn failure(e: &JobError) -> CoreOutput {
         let f = e.failure();
-        CoreOutput { ok: false, parts: Value::Null, findings: Value::Null, code: f.code, message: f.message, permanent: !f.retryable }
+        CoreOutput { ok: false, parts: Value::Null, findings: Value::Null, title1: String::new(), title2: String::new(), code: f.code, message: f.message, permanent: !f.retryable }
     }
 }
 
+/// What the core stage returns: the interleaved parts, the findings and DOC's title page strings.
+#[derive(Clone, Debug)]
+pub struct CoreResult {
+    pub parts: Value,
+    pub findings: Value,
+    pub title1: String,
+    pub title2: String,
+}
+
 /// Parse and assemble from readers (the same code in the child and inline).
-pub fn run_core_with_readers(request: &Value, infos: &[RepoInfo], readers: &HashMap<String, Arc<dyn RepoReader>>, structure: &str, generate_docx: bool, html_shapes: bool) -> Result<(Value, Value), JobError> {
+pub fn run_core_with_readers(request: &Value, infos: &[RepoInfo], unresolved: &[Value], readers: &HashMap<String, Arc<dyn RepoReader>>, structure: &str, generate_docx: bool, html_shapes: bool) -> Result<CoreResult, JobError> {
     let p = prepare(request).map_err(|v| JobError::permanent("invalid_request", v.iter().map(|x| x.message.clone()).collect::<Vec<_>>().join("; ")))?;
-    let books = parse(&p, infos, readers, generate_docx, html_shapes)?;
-    assemble(&p, books, structure)
+    let parsed = parse(&p, infos, readers, generate_docx, html_shapes)?;
+    let (parts, findings) = assemble(&p, parsed.books, structure, unresolved, parsed.findings)?;
+    Ok(CoreResult { parts, findings, title1: parsed.title1, title2: parsed.title2 })
 }
 
 /// Test hook, never set in production: make the core hang or crash for the first N runs.
@@ -132,13 +155,13 @@ pub fn child_main(input: &Path, output: &Path) -> i32 {
     }
     let out = match std::fs::read(input).map_err(|e| e.to_string()).and_then(|b| serde_json::from_slice::<CoreInput>(&b).map_err(|e| e.to_string())) {
         Ok(inp) => {
-            let infos: Vec<RepoInfo> = inp.items.iter().map(|i| RepoInfo { url: i.url.clone(), segment: i.segment.clone(), lang_name: i.lang_name.clone() }).collect();
+            let infos: Vec<RepoInfo> = inp.items.iter().map(|i| RepoInfo { index: i.index, url: i.url.clone(), segment: i.segment.clone(), resource_type: i.resource_type.clone(), lang_name: i.lang_name.clone(), localized_lang_name: i.localized_lang_name.clone(), direction: i.direction.clone() }).collect();
             let mut readers: HashMap<String, Arc<dyn RepoReader>> = HashMap::new();
             for i in &inp.items {
                 readers.entry(i.segment.clone()).or_insert_with(|| Arc::new(DiskRepo::new(i.dir.clone())));
             }
-            match run_core_with_readers(&inp.request, &infos, &readers, &inp.structure, inp.generate_docx, inp.html_shapes) {
-                Ok((parts, findings)) => CoreOutput { ok: true, parts, findings, code: String::new(), message: String::new(), permanent: false },
+            match run_core_with_readers(&inp.request, &infos, &inp.unresolved, &readers, &inp.structure, inp.generate_docx, inp.html_shapes) {
+                Ok(r) => CoreOutput { ok: true, parts: r.parts, findings: r.findings, title1: r.title1, title2: r.title2, code: String::new(), message: String::new(), permanent: false },
                 Err(e) => CoreOutput::failure(&e),
             }
         }
@@ -155,7 +178,7 @@ pub fn child_main(input: &Path, output: &Path) -> i32 {
 
 /// Run the core stage in a child process under a deadline and the job's cancel signal. The whole process group
 /// is killed and reaped on every exit path.
-pub async fn run_core_child(cfg: &CoreConfig, input: &CoreInput, dir: &Path, ctx: Option<&JobCtx>) -> Result<(Value, Value), JobError> {
+pub async fn run_core_child(cfg: &CoreConfig, input: &CoreInput, dir: &Path, ctx: Option<&JobCtx>) -> Result<CoreResult, JobError> {
     let exe = match &cfg.exe {
         Some(p) => p.clone(),
         None => std::env::current_exe().map_err(|e| JobError::transient("core_spawn", format!("cannot find this executable: {e}")))?,
@@ -213,7 +236,7 @@ pub async fn run_core_child(cfg: &CoreConfig, input: &CoreInput, dir: &Path, ctx
     let out: CoreOutput = serde_json::from_slice(&data).map_err(|e| JobError::transient("core_protocol", format!("unreadable core answer: {e}")))?;
     tracing::debug!(pid, ms = started.elapsed().as_millis() as u64, "core stage finished");
     if out.ok {
-        Ok((out.parts, out.findings))
+        Ok(CoreResult { parts: out.parts, findings: out.findings, title1: out.title1, title2: out.title2 })
     } else if out.permanent {
         Err(JobError::permanent(leak_code(&out.code), out.message))
     } else {
@@ -223,7 +246,7 @@ pub async fn run_core_child(cfg: &CoreConfig, input: &CoreInput, dir: &Path, ctx
 
 /// Error codes are `&'static str`; the child's code is mapped back to the known ones (anything else is `core_failed`).
 fn leak_code(code: &str) -> &'static str {
-    const KNOWN: [&str; 12] = ["invalid_request", "book_not_found", "usfm_unreadable", "resource_unreadable", "core_output", "core_rejected", "repo_unavailable", "core_input", "internal_panic", "resource_not_found", "core_failed", "unsupported_request"];
+    const KNOWN: [&str; 13] = ["invalid_request", "book_not_found", "usfm_unreadable", "resource_unreadable", "core_output", "core_rejected", "repo_unavailable", "core_input", "internal_panic", "resource_not_found", "core_failed", "unsupported_request", "resource_unavailable"];
     KNOWN.iter().find(|k| **k == code).copied().unwrap_or("core_failed")
 }
 
