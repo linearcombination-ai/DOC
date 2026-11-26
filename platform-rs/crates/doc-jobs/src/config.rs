@@ -201,7 +201,7 @@ impl JobdConfig {
         }
 
         // runner
-        let worker_id = e.get("DOC_JOBD_WORKER_ID").map(str::to_string).unwrap_or_else(|| format!("w{}", std::process::id()));
+        let worker_id = e.get("DOC_JOBD_WORKER_ID").map(str::to_string).unwrap_or_else(fresh_worker_id);
         let mut r = RunnerConfig::production(&worker_id);
         r.concurrency = e.num("DOC_JOBD_CONCURRENCY", r.concurrency, 1, 256);
         r.lease_ttl = e.ms("DOC_JOBD_LEASE_TTL_MS", r.lease_ttl, 300, 3_600_000);
@@ -366,4 +366,28 @@ impl JobdConfig {
 
 fn templates_text_email(t: &Templates) -> Option<PathBuf> {
     t.dir().parent().map(|p| p.join("text").join("email.txt")).filter(|p| p.is_file())
+}
+
+/// A worker id that is unique to this start of the process: `w<pid>-<start token>`. The process id alone is not enough: in a container the
+/// service runs under an init process and gets the same pid on every restart, so a restarted worker had the id of its dead predecessor, and
+/// the reaper (which skips deliveries held by the calling worker's own id while their job is `running`) never took the dead one's job back
+/// (found by the container operations run: a job in flight when the worker crashed stayed in "Locating assets" for good).
+pub fn fresh_worker_id() -> String {
+    use std::sync::atomic::{AtomicU32, Ordering};
+    static SEQ: AtomicU32 = AtomicU32::new(0);
+    let nanos = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0);
+    let token = (nanos as u64) ^ (u64::from(SEQ.fetch_add(1, Ordering::Relaxed)) << 40) ^ (nanos >> 64) as u64;
+    format!("w{}-{:08x}", std::process::id(), token & 0xffff_ffff)
+}
+
+#[cfg(test)]
+mod worker_id_tests {
+    use super::fresh_worker_id;
+
+    #[test]
+    fn two_starts_with_the_same_pid_get_different_ids() {
+        let (a, b) = (fresh_worker_id(), fresh_worker_id());
+        assert_ne!(a, b);
+        assert!(a.starts_with(&format!("w{}-", std::process::id())));
+    }
 }
