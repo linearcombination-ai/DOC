@@ -167,13 +167,15 @@ All RAN on GitHub Actions on the fork `linearcombination-ai/DOC`, workflow `plat
 
 | Run | Commit | What it proved | Wall |
 |---|---|---|---:|
-| 45739179994 | `31a34eef` | Rust job green (clippy, 117 tests against Valkey, 3 m 51 s cold); core image built; two red findings: hadolint 2.15 (JSON-form `HEALTHCHECK`) and `pip -c` refusing the extras in DOC's `requirements.txt` | 10 min 40 s |
+| 45739179994 | `31a34eef` | Rust job green (clippy and the Rust tests against Valkey, 3 m 51 s); core image built; two red findings: hadolint 2.15 (JSON-form `HEALTHCHECK`) and `pip -c` refusing the extras in DOC's `requirements.txt` | 10 min 40 s |
 | **45740243168** | `276ccb6f` | **M2: stack up and healthy in 26 s, smoke passed (Prince PDF, no fallback)**; **M3: DOC's `tests/e2e/doc` 334 / 0 / 132 on this stack and on DOC's FastAPI stack, 0 tests differ** | **7 min 54 s** |
 | 45741220207 | `38b714d3` | DOC's Playwright tests: 17 / 1 / 10 against DOC's 18 / 0 / 10 (the book-name rule); ops run: **found the worker-id bug** (job lost after a container crash) | 31 min 53 s (ops) |
 | 45744743681 | `62a6eb4b` | the proof job: with `DOC_BOOK_NAME_RULE=doc` the failing shard passes (7 of 7) | 9 min 47 s |
-| 45744949895 | `6f17edd3` | worker-id fix; ops scenarios repeated (see "Fault tolerance") | see below |
+| **45744949895** | `6f17edd3` | **M5: worker-id fix; every ops scenario passes** (soak 600 requests, 0 failed) | 15 min |
+| **45746933784** | `7ea614cd` | **the final run with every job** (`[all]`): static, Rust job (119 tests), 4 images, smoke, API tests on both stacks (334 / 0 / 132 = 334 / 0 / 132, 0 differ), Playwright (17 / 1 / 10 by default, the proof job 7 of 7), ops all pass; red only by the expected shard 1 | 15 min 30 s |
+| 45748703874 | `d84ec596` | the same workflow with the expected shard-1 difference tolerated (`continue-on-error` on that one shard; the proof job stays strict): **the workflow run is green**, the tolerated job shows red inside it | 7 min 49 s |
 
-Jobs of run 2 (seconds): Plan 3, Static checks 38, Rust tests 185 (cache warm), builds 23 to 127 (cache warm), smoke 102 (includes loading the images), e2e on this stack 295 / 315 / 321 per group, e2e on DOC's stack 330 / 340 / 274, pass table 15. The whole workflow without `ops` and the UI jobs is **7 min 54 s**; with the UI jobs about 10 minutes; `ops` (with its 10-minute soak) about 30 minutes.
+Jobs of run 2 (seconds): Plan 3, Static checks 38, Rust tests 185 (cache warm), builds 23 to 127 (cache warm), smoke 102 (includes loading the images), e2e on this stack 295 / 315 / 321 per group, e2e on DOC's stack 330 / 340 / 274, pass table 15. The whole workflow without `ops` and the UI jobs is **7 min 54 s**; with the UI jobs about 10 minutes; `ops` (with its 10-minute soak) 14 min 30 s when every scenario passes (run 5; run 3 waited out its timeouts and took 30 minutes).
 
 **What the first CI runs found that no host test could:** (1) the API role of the compose file had no `DOC_PDF_ENGINE` (every PDF request was a typed 501), found by the first local e2e run before any container existed; (2) hadolint 2.15's `DL3025` (the host had 2.12); (3) `pip` refuses `fonttools[woff]` in a constraints file; (4) **the worker id collision after a container restart** (below).
 
@@ -239,13 +241,13 @@ RAN in CI (`docker stats`; at rest after the smoke test in run 2; under load sam
 
 **In the 10-minute soak** (run 5, one request per second, sampled every 10 s, 48 samples per container): `worker` median 116 / peak 118 MiB, `pyworker` 16 / 92, `api` 5 / 5, `frontend` 54 / 59, `valkey` 5 / 6, `gateway` 6 / 6 MiB; CPU peaks pyworker 124 %, worker 24 %. At rest before the ops scenarios: `api` 4, `worker` 4, `pyworker` 14, `valkey` 4, `gateway` 5, `frontend` 56 MiB (a freshly started stack; the catalog is not loaded until a lookup is made).
 
-Notes: the API's 206 MiB after the smoke test is the catalog snapshot (about 21,000 rows, held once a lookup endpoint has been used); under the e2e load the API only enqueues, so it stays small. The pyworker's peak (861 MiB) is Prince and WeasyPrint on whole books; its 3 GiB limit was never approached. **CPU peaks** (percent of one core): pyworker 203, worker 112, api 3; DOC's Celery worker 394. At rest and after the smoke test the whole Rust stack holds about 375 MiB.
+Notes: the API's 206 MiB after the smoke test is the catalog snapshot (about 21,000 rows, held once a lookup endpoint has been used); under the e2e load the API only enqueues, so it stays small. The pyworker's peak (861 MiB) is Prince and WeasyPrint on whole books; its 3 GiB limit was never approached. **CPU peaks** (percent of one core): pyworker 203, worker 112, api 3; DOC's Celery worker 394. After the smoke test the whole Rust stack holds about 375 MiB; a freshly started stack about 87 MiB (the soak paragraph below).
 
 ## Weaknesses
 
 * **One of DOC's 28 UI tests differs by default** (the book-name rule, above): a captain decision with a one-line switch and a CI proof, but the default table reads 17 / 1 / 10 until the captain says whether DOC's normalisation or the translators' text should be the default.
 * **The docx is still the hand-written generator** (the proposed look's Word styles), not DOC's python-docx output; DOC's docx tests are text-based and pass, but nothing was opened in Word (the captain's check). HTML and PDF are DOC's own markup and CSS.
-* More hand-written code to own than the other build's queue library would be: about 1,700 lines of runner, store, lock and Lua, plus the SMTP client; 118 tests, all written by the same author.
+* More hand-written code to own than the other build's queue library would be: about 1,700 lines of runner, store, lock and Lua, plus the SMTP client; 119 Rust tests (117 in run 2, plus the book-name-rule and worker-id tests), all written by the same author.
 * **A deterministic environment found a bug the host could not:** the worker id was the process id, and in a container the process id repeats on every restart (the reaper then never took a dead worker's job back). Fixed and unit-tested, but it shows that the P6 fault tests (which restart with a different pid) did not cover "same identity after restart"; the ops run found it on its first execution.
 * Email is at most once, not exactly once (stated above). The core child costs about 10 ms per job and forces `Assembling content` to be published after it returns.
 * Prince runs in its non-commercial mode (a notice on page one), as DOC's own image does; the licence is not decided. Where the CPU architecture has no Prince package the build succeeds and PDFs come from WeasyPrint with a finding (CI built x86_64 only).

@@ -83,6 +83,7 @@ redacted, status 0, or the problems, status 2). DOC's own names are kept where D
 | `DOC_REDIS_PASSWORD` / `DOC_REDIS_PASSWORD_FILE`, `DOC_REDIS_USERNAME` | none | Credentials kept out of the URL (the URL is redacted in logs). |
 | `DOC_REDIS_CA_FILE` | system roots | PEM root to trust for a private CA (needs `rediss://`). |
 | `DOC_JOBD_NAMESPACE` | `docjobs` | Key prefix; several services can share one Redis. |
+| `DOC_JOBD_WORKER_ID` | `w<pid>-<start token>` | Identity of this process in the queue and in the metrics. **Must be unique per start**: a restarted process that reuses its predecessor's id is treated as that predecessor, and the reaper never takes the dead one's job back (found in the container operations run; in a container the pid alone repeats on every restart, hence the token). Set it only if you can guarantee that. |
 | `DOC_SHELL_ADDR` | `127.0.0.1:8081` | Listen address of the API. |
 | `DOC_SHELL_MODE` | `fixed` | `fixed` (production) or `as_built` (comparison with DOC). |
 | `DOC_JOBD_OUTPUT_DIR` | `document_output_rs` | Where documents (`<key>.docx`, `<key>.html`, `<key>.findings.json`) are placed. Scratch is `.scratch/` inside it. |
