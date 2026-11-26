@@ -10,6 +10,7 @@ failure message, then the failures both stacks share. mypy --strict clean, no ty
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
@@ -23,7 +24,10 @@ class Outcome:
 
 
 def module_of(classname: str) -> str:
-    """`tests.e2e.doc.test_api.TestX` or `tests.e2e.doc.test_api` -> `test_api.py`."""
+    """`tests.e2e.doc.test_api.TestX` or `tests.e2e.doc.test_api` -> `test_api.py`; a Playwright class name containing `doc_test_3.ts` -> `doc_test_3.ts`."""
+    playwright = re.search(r"[A-Za-z_]+_test(?:_\d+)?\.ts", classname)
+    if playwright:
+        return playwright.group(0)
     parts = classname.split(".")
     for i, part in enumerate(parts):
         if part.startswith("test_"):

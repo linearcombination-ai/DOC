@@ -48,5 +48,12 @@ services:
       SEND_EMAIL: "False"
     volumes:
       - ./tools/e2e:/shim:ro
-      - output:/app/document_output:ro
+      # nocopy matters: without it the first mount copies the image's /app/document_output ownership (DOC's appuser) into the still-empty volume,
+      # and the worker (uid 1000) can no longer write its documents (found in CI run 5: every job failed with EACCES at placement)
+      - type: volume
+        source: output
+        target: /app/document_output
+        read_only: true
+        volume:
+          nocopy: true
       - ./e2e-results:/results

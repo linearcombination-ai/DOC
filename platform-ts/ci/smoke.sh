@@ -52,6 +52,16 @@ if submit html /documents "{\"email_address\":null,$REQ_BASE,\"generate_pdf\":fa
 fi
 if submit pdf /documents "{\"email_address\":null,$REQ_BASE,\"generate_pdf\":true,\"generate_docx\":false,\"use_prince\":${USE_PRINCE:-false}}"; then fetch pdf "$(cat "$OUT/pdf.key")" pdf 5000 '%PDF'; fi
 
+# A PDF through Prince (set SMOKE_PRINCE=1 where Prince is installed: the worker image): the request asks for it with use_prince, and the document must not
+# carry a PdfEngineFallback finding (that finding means Prince was missing or failed and WeasyPrint made the PDF instead).
+if [ "${SMOKE_PRINCE:-0}" = 1 ]; then
+  if submit pdf-prince /documents "{\"email_address\":null,$REQ_BASE,\"generate_pdf\":true,\"generate_docx\":false,\"use_prince\":true}"; then
+    fetch pdf-prince "$(cat "$OUT/pdf-prince.key")" pdf 5000 '%PDF'
+    t=$(now); curl -fsS --max-time 30 "$API/findings/documents/$(cat "$OUT/pdf-prince.key")" -o "$OUT/pdf-prince.findings.json" 2>/dev/null || echo '[]' > "$OUT/pdf-prince.findings.json"
+    if grep -q PdfEngineFallback "$OUT/pdf-prince.findings.json"; then bad pdf-prince-engine "Prince was not used: $(head -c 300 "$OUT/pdf-prince.findings.json")"; else ok pdf-prince-engine "$t" "no fallback finding"; fi
+  fi
+fi
+
 if [ "${SKIP_UI:-0}" != 1 ]; then
   t=$(now)
   if curl -fsS --max-time 30 "$UI/" -o "$OUT/ui.html" && grep -q -i '<html' "$OUT/ui.html"; then ok ui-home "$t"; else bad ui-home "no HTML from $UI/"; fi

@@ -42,7 +42,7 @@ services:
     entrypoint:
       - sh
       - -c
-      - mkdir -p /data/output /data/work /data/assets && find /data -xdev ! -user 1000 -exec chown 1000:1000 {} + && chmod 0775 /data/output /data/work /data/assets
+      - mkdir -p /data/output /data/work /data/assets && find /data/output /data/work /data/assets ! -user 1000 -exec chown 1000:1000 {} + && chmod 0775 /data/output /data/work /data/assets
     volumes:
       - assets:/data/assets
       - output:/data/output
@@ -146,7 +146,13 @@ services:
       - ${API_HOST_PORT:-5005}:5005
       - ${FILESERVER_HOST_PORT:-8089}:8089
     volumes:
-      - output:/srv/content:ro
+      # nocopy: a volume's first mount copies the image directory's ownership into an empty volume; only volume-init (and the uid 1000 images) may set it
+      - type: volume
+        source: output
+        target: /srv/content
+        read_only: true
+        volume:
+          nocopy: true
     depends_on:
       api:
         condition: service_healthy
